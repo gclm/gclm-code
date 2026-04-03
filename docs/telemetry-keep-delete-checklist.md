@@ -240,8 +240,8 @@
 
 当前代表模块：
 
-- `src/components/FeedbackSurvey/*`
-- `src/commands/feedback/*`
+- 第一批已删除，第二批只需要继续清理配置、注释和空壳接线残留
+- 详见：`docs/telemetry-second-batch-checklist.md`
 
 ### B. Settings / REPL / Main / Query 的行为埋点
 

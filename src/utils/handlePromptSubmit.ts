@@ -195,7 +195,7 @@ export async function handlePromptSubmit(
     !skipSlashCommands &&
     ['exit', 'quit', ':q', ':q!', ':wq', ':wq!'].includes(input.trim())
   ) {
-    // Trigger the exit command which will show the feedback dialog
+    // Trigger the exit command for centralized shutdown handling
     const exitCommand = commands.find(cmd => cmd.name === 'exit')
     if (exitCommand) {
       // Submit the /exit command instead - recursive call needs to be handled

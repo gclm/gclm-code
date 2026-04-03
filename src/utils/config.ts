@@ -282,11 +282,6 @@ export type GlobalConfig = {
   companion?: import('../buddy/types.js').StoredCompanion
   companionMuted?: boolean
 
-  // Feedback survey tracking
-  feedbackSurveyState?: {
-    lastShownTime?: number
-  }
-
   // Transcript share prompt tracking ("Don't ask again")
   transcriptShareDismissed?: boolean
 
