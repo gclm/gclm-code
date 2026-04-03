@@ -26,6 +26,10 @@ import { getPackageManager } from 'src/utils/nativeInstaller/packageManagers.js'
 import { writeToStdout } from 'src/utils/process.js'
 import { gte } from 'src/utils/semver.js'
 import { getInitialSettings } from 'src/utils/settings/settings.js'
+import {
+  getUpdatePackageUrl,
+  isDefaultAnthropicPackage,
+} from 'src/utils/updateSourceConfig.js'
 
 export async function update() {
   logEvent('tengu_update_check', {})
@@ -265,9 +269,10 @@ export async function update() {
   }
 
   logForDebugging('update: Checking npm registry for latest version')
-  logForDebugging(`update: Package URL: ${MACRO.PACKAGE_URL}`)
+  const packageUrl = getUpdatePackageUrl()
+  logForDebugging(`update: Package URL: ${packageUrl}`)
   const npmTag = channel === 'stable' ? 'stable' : 'latest'
-  const npmCommand = `npm view ${MACRO.PACKAGE_URL}@${npmTag} version`
+  const npmCommand = `npm view ${packageUrl}@${npmTag} version`
   logForDebugging(`update: Running: ${npmCommand}`)
   const latestVersion = await getLatestVersion(channel)
   logForDebugging(
@@ -283,7 +288,7 @@ export async function update() {
     process.stderr.write('  • Network connectivity issues\n')
     process.stderr.write('  • npm registry is unreachable\n')
     process.stderr.write('  • Corporate proxy/firewall blocking npm\n')
-    if (MACRO.PACKAGE_URL && !MACRO.PACKAGE_URL.startsWith('@anthropic')) {
+    if (packageUrl && !isDefaultAnthropicPackage(packageUrl)) {
       process.stderr.write(
         '  • Internal/development build not published to npm\n',
       )
@@ -293,7 +298,7 @@ export async function update() {
     process.stderr.write('  • Check your internet connection\n')
     process.stderr.write('  • Run with --debug flag for more details\n')
     const packageName =
-      MACRO.PACKAGE_URL ||
+      packageUrl ||
       (process.env.USER_TYPE === 'ant'
         ? '@anthropic-ai/claude-cli'
         : '@anthropic-ai/claude-code')
@@ -386,7 +391,7 @@ export async function update() {
       if (useLocalUpdate) {
         process.stderr.write('Try manually updating with:\n')
         process.stderr.write(
-          `  cd ~/.claude/local && npm update ${MACRO.PACKAGE_URL}\n`,
+          `  cd ~/.claude/local && npm update ${packageUrl}\n`,
         )
       } else {
         process.stderr.write('Try running with sudo or fix npm permissions\n')
@@ -401,7 +406,7 @@ export async function update() {
       if (useLocalUpdate) {
         process.stderr.write('Try manually updating with:\n')
         process.stderr.write(
-          `  cd ~/.claude/local && npm update ${MACRO.PACKAGE_URL}\n`,
+          `  cd ~/.claude/local && npm update ${packageUrl}\n`,
         )
       } else {
         process.stderr.write(

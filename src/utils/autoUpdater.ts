@@ -26,9 +26,11 @@ import {
   writeFileLines,
 } from './shellConfig.js'
 import { jsonParse } from './slowOperations.js'
-
-const GCS_BUCKET_URL =
-  'https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases'
+import {
+  getNativeUpdatePackageUrl,
+  getUpdateGcsBucketUrl,
+  getUpdatePackageUrl,
+} from './updateSourceConfig.js'
 
 class AutoUpdaterError extends ClaudeError {}
 
@@ -325,7 +327,12 @@ export async function getLatestVersion(
   // which could be maliciously crafted to redirect to an attacker's registry
   const result = await execFileNoThrowWithCwd(
     'npm',
-    ['view', `${MACRO.PACKAGE_URL}@${npmTag}`, 'version', '--prefer-online'],
+    [
+      'view',
+      `${getUpdatePackageUrl()}@${npmTag}`,
+      'version',
+      '--prefer-online',
+    ],
     { abortSignal: AbortSignal.timeout(5000), cwd: homedir() },
   )
   if (result.code !== 0) {
@@ -356,7 +363,13 @@ export async function getNpmDistTags(): Promise<NpmDistTags> {
   // Run from home directory to avoid reading project-level .npmrc
   const result = await execFileNoThrowWithCwd(
     'npm',
-    ['view', MACRO.PACKAGE_URL, 'dist-tags', '--json', '--prefer-online'],
+    [
+      'view',
+      getUpdatePackageUrl(),
+      'dist-tags',
+      '--json',
+      '--prefer-online',
+    ],
     { abortSignal: AbortSignal.timeout(5000), cwd: homedir() },
   )
 
@@ -385,7 +398,7 @@ export async function getLatestVersionFromGcs(
   channel: ReleaseChannel,
 ): Promise<string | null> {
   try {
-    const response = await axios.get(`${GCS_BUCKET_URL}/${channel}`, {
+    const response = await axios.get(`${getUpdateGcsBucketUrl()}/${channel}`, {
       timeout: 5000,
       responseType: 'text',
     })
@@ -425,7 +438,7 @@ export async function getVersionHistory(limit: number): Promise<string[]> {
 
   // Use native package URL when available to ensure we only show versions
   // that have native binaries (not all JS package versions have native builds)
-  const packageUrl = MACRO.NATIVE_PACKAGE_URL ?? MACRO.PACKAGE_URL
+  const packageUrl = getNativeUpdatePackageUrl()
 
   // Run from home directory to avoid reading project-level .npmrc
   const result = await execFileNoThrowWithCwd(
@@ -500,8 +513,8 @@ To fix this issue:
 
     // Use specific version if provided, otherwise use latest
     const packageSpec = specificVersion
-      ? `${MACRO.PACKAGE_URL}@${specificVersion}`
-      : MACRO.PACKAGE_URL
+      ? `${getUpdatePackageUrl()}@${specificVersion}`
+      : getUpdatePackageUrl()
 
     // Run from home directory to avoid reading project-level .npmrc/.bunfig.toml
     // which could be maliciously crafted to redirect to an attacker's registry
