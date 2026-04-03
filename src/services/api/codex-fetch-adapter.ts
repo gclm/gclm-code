@@ -15,7 +15,7 @@
  * Endpoint: https://chatgpt.com/backend-api/codex/responses
  */
 
-import { getCodexOAuthTokens } from '../../utils/auth.js'
+import { getAnthropicApiKey, getCodexOAuthTokens } from '../../utils/auth.js'
 
 // ── Available Codex models ──────────────────────────────────────────
 export const CODEX_MODELS = [
@@ -41,7 +41,7 @@ export function mapClaudeModelToCodex(claudeModel: string | null): string {
   if (lower.includes('opus')) return 'gpt-5.1-codex-max'
   if (lower.includes('haiku')) return 'gpt-5.1-codex-mini'
   if (lower.includes('sonnet')) return 'gpt-5.2-codex'
-  return DEFAULT_CODEX_MODEL
+  return claudeModel
 }
 
 /**
@@ -737,6 +737,22 @@ async function translateCodexStreamToAnthropic(
 // ── Main fetch interceptor ──────────────────────────────────────────
 
 const CODEX_BASE_URL = 'https://chatgpt.com/backend-api/codex/responses'
+const DEFAULT_OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
+
+function trimTrailingSlash(url: string): string {
+  return url.endsWith('/') ? url.slice(0, -1) : url
+}
+
+function getCompatibleResponsesUrl(): string {
+  const base = process.env.OPENAI_BASE_URL
+  if (!base) return DEFAULT_OPENAI_RESPONSES_URL
+  const path = process.env.OPENAI_RESPONSES_PATH || '/responses'
+  return `${trimTrailingSlash(base)}${path.startsWith('/') ? path : `/${path}`}`
+}
+
+function shouldUseOpenAICompatibleEndpoint(): boolean {
+  return !!(process.env.OPENAI_BASE_URL || process.env.OPENAI_API_KEY)
+}
 
 /**
  * Creates a fetch function that intercepts Anthropic API calls and routes them to Codex.
@@ -746,7 +762,13 @@ const CODEX_BASE_URL = 'https://chatgpt.com/backend-api/codex/responses'
 export function createCodexFetch(
   accessToken: string,
 ): (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> {
-  const accountId = extractAccountId(accessToken)
+  const codexAccountId = (() => {
+    try {
+      return extractAccountId(accessToken)
+    } catch {
+      return null
+    }
+  })()
 
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = input instanceof Request ? input.url : String(input)
@@ -772,22 +794,36 @@ export function createCodexFetch(
 
     // Get current token (may have been refreshed)
     const tokens = getCodexOAuthTokens()
-    const currentToken = tokens?.accessToken || accessToken
+    const currentToken =
+      process.env.OPENAI_API_KEY ||
+      tokens?.accessToken ||
+      accessToken ||
+      getAnthropicApiKey() ||
+      ''
 
-    // Translate to Codex format
+    // Translate to responses format
     const { codexBody, codexModel } = translateToCodexBody(anthropicBody)
 
-    // Call Codex API
-    const codexResponse = await globalThis.fetch(CODEX_BASE_URL, {
+    const useCompatibleEndpoint = shouldUseOpenAICompatibleEndpoint()
+    const endpoint = useCompatibleEndpoint
+      ? getCompatibleResponsesUrl()
+      : CODEX_BASE_URL
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+      Authorization: `Bearer ${currentToken}`,
+    }
+
+    if (!useCompatibleEndpoint && codexAccountId) {
+      headers['chatgpt-account-id'] = codexAccountId
+      headers.originator = 'pi'
+      headers['OpenAI-Beta'] = 'responses=experimental'
+    }
+
+    const codexResponse = await globalThis.fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-        Authorization: `Bearer ${currentToken}`,
-        'chatgpt-account-id': accountId,
-        originator: 'pi',
-        'OpenAI-Beta': 'responses=experimental',
-      },
+      headers,
       body: JSON.stringify(codexBody),
     })
 
@@ -797,7 +833,7 @@ export function createCodexFetch(
         type: 'error',
         error: {
           type: 'api_error',
-          message: `Codex API error (${codexResponse.status}): ${errorText}`,
+          message: `OpenAI-compatible API error (${codexResponse.status}): ${errorText}`,
         },
       }
       return new Response(JSON.stringify(errorBody), {
