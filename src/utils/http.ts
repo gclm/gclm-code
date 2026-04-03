@@ -5,7 +5,6 @@
 import axios from 'axios'
 import { OAUTH_BETA_HEADER } from '../constants/oauth.js'
 import {
-  getAnthropicApiKeyWithSource,
   getAnthropicApiKey,
   getClaudeAIOAuthTokens,
   handleOAuth401Error,
@@ -63,10 +62,6 @@ export type AuthHeaders = {
   error?: string
 }
 
-export type FirstPartyAuthHeaderOptions = {
-  skipApiKeyHelper?: boolean
-}
-
 /**
  * Get authentication headers for API requests
  * Returns either OAuth headers for Max/Pro users or API key headers for regular users
@@ -100,44 +95,6 @@ export function getAuthHeaders(): AuthHeaders {
     headers: {
       'x-api-key': apiKey,
     },
-  }
-}
-
-/**
- * Build first-party auth headers without touching settings-derived helpers.
- * This is used by modules that must avoid getSettings() during initialization.
- */
-export function getFirstPartyAuthHeadersWithoutSettings(
-  options: FirstPartyAuthHeaderOptions = {},
-): AuthHeaders {
-  try {
-    const { key: apiKey } = getAnthropicApiKeyWithSource({
-      skipRetrievingKeyFromApiKeyHelper: options.skipApiKeyHelper ?? false,
-    })
-    if (apiKey) {
-      return {
-        headers: {
-          'x-api-key': apiKey,
-        },
-      }
-    }
-  } catch {
-    // No API key available - continue to check OAuth
-  }
-
-  const oauthTokens = getClaudeAIOAuthTokens()
-  if (oauthTokens?.accessToken) {
-    return {
-      headers: {
-        Authorization: `Bearer ${oauthTokens.accessToken}`,
-        'anthropic-beta': OAUTH_BETA_HEADER,
-      },
-    }
-  }
-
-  return {
-    headers: {},
-    error: 'No authentication available',
   }
 }
 

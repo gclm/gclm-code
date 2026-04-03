@@ -14,6 +14,3 @@
 - 完成 `src/services/analytics/index.ts` 类型边界中性化：统一改为 `SafeEventValue / PiiEventValue`，并通过 `bun run verify`。
 - 确认兼容层已按策略移除后提交检查点：`3745dc6`（runtimeConfig 迁移、旧路径删除、状态文件回写）。
 - 完成 `Phase 3 / step 1` 入口收敛：定位 `provider/auth` 下一刀应先收敛 first-party auth header 分叉实现，再进入更大范围 provider/auth 重构。
-- 确认新执行序列：`Phase A+B -> Phase C -> Phase D -> Phase E`，并新增实施文档 `docs/overview/provider-auth-implementation-plan.md`（含 provider 能力矩阵与阶段验收标准）。
-- 完成 Phase A 第一批实现：新增 `getFirstPartyAuthHeadersWithoutSettings` 公共 helper，并迁移 `remoteManagedSettings` 与 `policyLimits` 两个高重复模块。
-- 本批次验证通过：`bun run verify`。

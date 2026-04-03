@@ -20,6 +20,7 @@ import { join } from 'path'
 import {
   CLAUDE_AI_INFERENCE_SCOPE,
   getOauthConfig,
+  OAUTH_BETA_HEADER,
 } from '../../constants/oauth.js'
 import {
   checkAndRefreshOAuthTokenIfNeeded,
@@ -30,7 +31,6 @@ import { registerCleanup } from '../../utils/cleanupRegistry.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { getClaudeConfigHomeDir } from '../../utils/envUtils.js'
 import { classifyAxiosError } from '../../utils/errors.js'
-import { getFirstPartyAuthHeadersWithoutSettings } from '../../utils/http.js'
 import { safeParseJSON } from '../../utils/json.js'
 import {
   getAPIProvider,
@@ -228,7 +228,37 @@ function getAuthHeaders(): {
   headers: Record<string, string>
   error?: string
 } {
-  return getFirstPartyAuthHeadersWithoutSettings({ skipApiKeyHelper: true })
+  // Try API key first (for Console users)
+  try {
+    const { key: apiKey } = getAnthropicApiKeyWithSource({
+      skipRetrievingKeyFromApiKeyHelper: true,
+    })
+    if (apiKey) {
+      return {
+        headers: {
+          'x-api-key': apiKey,
+        },
+      }
+    }
+  } catch {
+    // No API key available - continue to check OAuth
+  }
+
+  // Fall back to OAuth tokens (for Claude.ai users)
+  const oauthTokens = getClaudeAIOAuthTokens()
+  if (oauthTokens?.accessToken) {
+    return {
+      headers: {
+        Authorization: `Bearer ${oauthTokens.accessToken}`,
+        'anthropic-beta': OAUTH_BETA_HEADER,
+      },
+    }
+  }
+
+  return {
+    headers: {},
+    error: 'No authentication available',
+  }
 }
 
 /**

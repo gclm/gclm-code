@@ -4,11 +4,11 @@
 
 ## 当前阶段
 
-- Active phase：`Phase A+B - 身份层稳定化（进行中）`
+- Active phase：`Phase 3 - 后续结构性收口准备`
 - 当前 focus：
-  - 按已确认的 A-E 顺序推进 provider/auth 改造
-  - 完成 Phase A 第一批：first-party auth header 公共 helper 收口
-  - 准备进入 Phase B：OAuth 双链路语义对齐
+  - 已完成 `provider/auth` 改造入口收敛（步骤 1）
+  - 将下一刀锁定到 first-party auth header 能力收口
+  - 保持 `runtimeConfig / toolLogging / analytics` 当前边界稳定
 
 ## 当前判断
 
@@ -45,25 +45,20 @@
 - `analytics/index.ts` 类型边界已完成中性化：
   - `AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS` -> `SafeEventValue`
   - `AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED` -> `PiiEventValue`
-- Phase A 第一批已完成：
-  - 新增 `src/utils/http.ts:getFirstPartyAuthHeadersWithoutSettings`
-  - `remoteManagedSettings` 已迁移到公共 helper
-  - `policyLimits` 已迁移到公共 helper
-  - 已通过 `bun run verify`
 
 ## 进行中
 
-- Phase B（OAuth 双链路稳定化）准备中：先对齐 `Gclm OAuth / Codex OAuth` 的 session、刷新、诊断语义
+- 当前没有必须立刻继续的同批 must-fix；当前已完成 Phase 3 的入口收敛，下一步进入最小重构实现
 
 ## 已知未完成项
 
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否进一步去品牌化或去历史产品语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
-- first-party auth header 逻辑已完成第一批收口，但仍有后续迁移点：
-  - `src/services/api/bootstrap.ts` 仍为内联 auth header 组装
-  - 其他 first-party 读配置模块仍有重复实现待评估
-- OAuth 双链路仍缺少统一 auth profile/session 类型边界
-- 第三方 compatible 请求层与 `/models` 动态发现尚未落地
+- first-party auth header 逻辑仍分散在多个模块，存在重复实现：
+  - `src/utils/http.ts:getAuthHeaders`
+  - `src/services/remoteManagedSettings/index.ts:getRemoteSettingsAuthHeaders`
+  - `src/services/policyLimits/index.ts:getAuthHeaders`
+  - `src/services/api/bootstrap.ts` 内联 auth header 组装
 
 ## 执行边界
 
@@ -73,13 +68,6 @@
   - provider 枚举进一步中性化（如 `firstParty`）
   - `runtimeConfig/growthbook.ts` 是否继续去品牌化
   - 第三方兼容 API 与 auth 策略层重构
-
-## 已确认执行顺序（A-E）
-
-1. Phase A + B：身份层稳定化（当前）
-2. Phase C：第三方 compatible 请求接入
-3. Phase D：`/models` 动态发现与刷新
-4. Phase E：收尾清理
 
 ## Phase 3 - Step 1 结论
 
@@ -97,4 +85,4 @@
 - 运行环境：Bun 1.3.11 项目
 - 当前统一验收门槛：`bun run verify`
 - 当前策略已调整为“不保留兼容层，直接修复断点”
-- 最新验证结果：2026-04-04 已执行本轮 `bun run verify`，通过；包含 Phase A 第一批 auth header 收口改动
+- 最新验证结果：2026-04-04 已执行本轮 `bun run verify`，通过；包含 `analytics/index.ts` 类型边界重命名后的全量验证
