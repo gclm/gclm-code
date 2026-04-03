@@ -1,7 +1,5 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { format } from 'util'
-import { shutdownDatadog } from '../../services/analytics/datadog.js'
-import { shutdown1PEventLogging } from '../../services/analytics/firstPartyEventLogger.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -259,8 +257,7 @@ export async function runClaudeInChromeMcpServer(): Promise<void> {
       return
     }
     exiting = true
-    await shutdown1PEventLogging()
-    await shutdownDatadog()
+    await Promise.resolve()
     // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(0)
   }
