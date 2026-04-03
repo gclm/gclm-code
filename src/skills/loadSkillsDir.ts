@@ -14,7 +14,7 @@ import {
   getSessionId,
 } from '../bootstrap/state.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { roughTokenCountEstimation } from '../services/tokenEstimation.js'
@@ -961,7 +961,7 @@ export async function addSkillDirectories(dirs: string[]): Promise<void> {
     if (addedSkills.length > 0) {
       logEvent('tengu_dynamic_skills_changed', {
         source:
-          'file_operation' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'file_operation' as SafeEventValue,
         previousCount: previousSkillNamesForLogging.size,
         newCount: dynamicSkills.size,
         addedCount: addedSkills.length,
@@ -1043,7 +1043,7 @@ export function activateConditionalSkillsForPaths(
   if (activated.length > 0) {
     logEvent('tengu_dynamic_skills_changed', {
       source:
-        'conditional_paths' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'conditional_paths' as SafeEventValue,
       previousCount: dynamicSkills.size - activated.length,
       newCount: dynamicSkills.size,
       addedCount: activated.length,

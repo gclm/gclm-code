@@ -2,10 +2,10 @@ import { useCallback, useMemo, useState } from 'react'
 import { useAppState } from 'src/state/AppState.js'
 import { useKeybindings } from '../../../keybindings/useKeybinding.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../../services/analytics/index.js'
-import { sanitizeToolNameForAnalytics } from '../../../services/analytics/metadata.js'
+import { sanitizeToolNameForLogging } from '../../../services/toolLogging/metadata.js'
 import type { PermissionUpdate } from '../../../utils/permissions/PermissionUpdateSchema.js'
 import type { CompletionType } from '../../../utils/unaryLogging.js'
 import type { ToolUseConfirm } from '../PermissionRequest.js'
@@ -169,9 +169,9 @@ export function useFilePermissionDialog<T extends ToolInput>({
   const handleInputModeToggle = useCallback(
     (value: string) => {
       const analyticsProps = {
-        toolName: sanitizeToolNameForAnalytics(
+        toolName: sanitizeToolNameForLogging(
           toolUseConfirm.tool.name,
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeEventValue,
         isMcp: toolUseConfirm.tool.isMcp ?? false,
       }
 

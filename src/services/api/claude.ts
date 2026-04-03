@@ -93,7 +93,7 @@ import {
   type SystemPrompt,
 } from '../../utils/systemPromptType.js'
 import { tokenCountFromLastAPIResponse } from '../../utils/tokens.js'
-import { getDynamicConfig_BLOCKS_ON_INIT } from '../analytics/growthbook.js'
+import { getDynamicConfig_BLOCKS_ON_INIT } from '../runtimeConfig/growthbook.js'
 import {
   currentLimits,
   extractQuotaStatusFromError,
@@ -144,7 +144,7 @@ import {
 import type { QuerySource } from 'src/constants/querySource.js'
 import type { Notification } from 'src/context/notifications.js'
 import { addToTotalSessionCost } from 'src/cost-tracker.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/runtimeConfig/growthbook.js'
 import type { AgentId } from 'src/types/ids.js'
 import {
   ADVISOR_TOOL_INSTRUCTIONS,
@@ -216,7 +216,7 @@ import {
 } from '../../utils/telemetry/sessionTracing.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../analytics/index.js'
 import {
@@ -881,15 +881,15 @@ export async function* executeNonStreamingRequest(
         logForDiagnosticsNoPII('error', 'cli_nonstreaming_fallback_error')
         logEvent('tengu_nonstreaming_fallback_error', {
           model:
-            clientOptions.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            clientOptions.model as SafeEventValue,
           error:
             err instanceof Error
-              ? (err.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
-              : ('unknown' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS),
+              ? (err.name as SafeEventValue)
+              : ('unknown' as SafeEventValue),
           attempt,
           timeout_ms: fallbackTimeoutMs,
           request_id: (originatingRequestId ??
-            'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'unknown') as SafeEventValue,
         })
         throw err
       }
@@ -1918,9 +1918,9 @@ async function* queryModel(
         logForDiagnosticsNoPII('error', 'cli_streaming_idle_timeout')
         logEvent('tengu_streaming_idle_timeout', {
           model:
-            options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            options.model as SafeEventValue,
           request_id: (streamRequestId ??
-            'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'unknown') as SafeEventValue,
           timeout_ms: STREAM_IDLE_TIMEOUT_MS,
         })
         releaseStreamResources()
@@ -1956,11 +1956,11 @@ async function* queryModel(
               stall_count: stallCount,
               total_stall_time_ms: totalStallTime,
               event_type:
-                part.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                part.type as SafeEventValue,
               model:
-                options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                options.model as SafeEventValue,
               request_id: (streamRequestId ??
-                'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                'unknown') as SafeEventValue,
             })
           }
         }
@@ -2010,9 +2010,9 @@ async function* queryModel(
                   logForDebugging(`[AdvisorTool] Advisor tool called`)
                   logEvent('tengu_advisor_tool_call', {
                     model:
-                      options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                      options.model as SafeEventValue,
                     advisor_model: (advisorModel ??
-                      'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                      'unknown') as SafeEventValue,
                   })
                 }
                 break
@@ -2056,9 +2056,9 @@ async function* queryModel(
             if (!contentBlock) {
               logEvent('tengu_streaming_error', {
                 error_type:
-                  'content_block_not_found_delta' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  'content_block_not_found_delta' as SafeEventValue,
                 part_type:
-                  part.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  part.type as SafeEventValue,
                 part_index: part.index,
               })
               throw new RangeError('Content block not found')
@@ -2070,11 +2070,11 @@ async function* queryModel(
               if (contentBlock.type !== 'connector_text') {
                 logEvent('tengu_streaming_error', {
                   error_type:
-                    'content_block_type_mismatch_connector_text' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                    'content_block_type_mismatch_connector_text' as SafeEventValue,
                   expected_type:
-                    'connector_text' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                    'connector_text' as SafeEventValue,
                   actual_type:
-                    contentBlock.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                    contentBlock.type as SafeEventValue,
                 })
                 throw new Error('Content block is not a connector_text block')
               }
@@ -2091,20 +2091,20 @@ async function* queryModel(
                   ) {
                     logEvent('tengu_streaming_error', {
                       error_type:
-                        'content_block_type_mismatch_input_json' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        'content_block_type_mismatch_input_json' as SafeEventValue,
                       expected_type:
-                        'tool_use' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        'tool_use' as SafeEventValue,
                       actual_type:
-                        contentBlock.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        contentBlock.type as SafeEventValue,
                     })
                     throw new Error('Content block is not a input_json block')
                   }
                   if (typeof contentBlock.input !== 'string') {
                     logEvent('tengu_streaming_error', {
                       error_type:
-                        'content_block_input_not_string' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        'content_block_input_not_string' as SafeEventValue,
                       input_type:
-                        typeof contentBlock.input as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        typeof contentBlock.input as SafeEventValue,
                     })
                     throw new Error('Content block input is not a string')
                   }
@@ -2114,11 +2114,11 @@ async function* queryModel(
                   if (contentBlock.type !== 'text') {
                     logEvent('tengu_streaming_error', {
                       error_type:
-                        'content_block_type_mismatch_text' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        'content_block_type_mismatch_text' as SafeEventValue,
                       expected_type:
-                        'text' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        'text' as SafeEventValue,
                       actual_type:
-                        contentBlock.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        contentBlock.type as SafeEventValue,
                     })
                     throw new Error('Content block is not a text block')
                   }
@@ -2135,11 +2135,11 @@ async function* queryModel(
                   if (contentBlock.type !== 'thinking') {
                     logEvent('tengu_streaming_error', {
                       error_type:
-                        'content_block_type_mismatch_thinking_signature' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        'content_block_type_mismatch_thinking_signature' as SafeEventValue,
                       expected_type:
-                        'thinking' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        'thinking' as SafeEventValue,
                       actual_type:
-                        contentBlock.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        contentBlock.type as SafeEventValue,
                     })
                     throw new Error('Content block is not a thinking block')
                   }
@@ -2149,11 +2149,11 @@ async function* queryModel(
                   if (contentBlock.type !== 'thinking') {
                     logEvent('tengu_streaming_error', {
                       error_type:
-                        'content_block_type_mismatch_thinking_delta' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        'content_block_type_mismatch_thinking_delta' as SafeEventValue,
                       expected_type:
-                        'thinking' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        'thinking' as SafeEventValue,
                       actual_type:
-                        contentBlock.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        contentBlock.type as SafeEventValue,
                     })
                     throw new Error('Content block is not a thinking block')
                   }
@@ -2173,9 +2173,9 @@ async function* queryModel(
             if (!contentBlock) {
               logEvent('tengu_streaming_error', {
                 error_type:
-                  'content_block_not_found_stop' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  'content_block_not_found_stop' as SafeEventValue,
                 part_type:
-                  part.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  part.type as SafeEventValue,
                 part_index: part.index,
               })
               throw new RangeError('Content block not found')
@@ -2183,9 +2183,9 @@ async function* queryModel(
             if (!partialMessage) {
               logEvent('tengu_streaming_error', {
                 error_type:
-                  'partial_message_not_found' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  'partial_message_not_found' as SafeEventValue,
                 part_type:
-                  part.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  part.type as SafeEventValue,
               })
               throw new Error('Message not found')
             }
@@ -2321,12 +2321,12 @@ async function* queryModel(
         )
         logEvent('tengu_stream_loop_exited_after_watchdog', {
           request_id: (streamRequestId ??
-            'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'unknown') as SafeEventValue,
           exit_delay_ms: exitDelayMs,
           exit_path:
-            'clean' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'clean' as SafeEventValue,
           model:
-            options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            options.model as SafeEventValue,
         })
         // Prevent double-emit: this throw lands in the catch block below,
         // whose exit_path='error' probe guards on streamWatchdogFiredAt.
@@ -2356,9 +2356,9 @@ async function* queryModel(
         )
         logEvent('tengu_stream_no_events', {
           model:
-            options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            options.model as SafeEventValue,
           request_id: (streamRequestId ??
-            'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'unknown') as SafeEventValue,
         })
         throw new Error('Stream ended without receiving any events')
       }
@@ -2373,9 +2373,9 @@ async function* queryModel(
           stall_count: stallCount,
           total_stall_time_ms: totalStallTime,
           model:
-            options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            options.model as SafeEventValue,
           request_id: (streamRequestId ??
-            'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'unknown') as SafeEventValue,
         })
       }
 
@@ -2418,16 +2418,16 @@ async function* queryModel(
         )
         logEvent('tengu_stream_loop_exited_after_watchdog', {
           request_id: (streamRequestId ??
-            'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'unknown') as SafeEventValue,
           exit_delay_ms: exitDelayMs,
           exit_path:
-            'error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'error' as SafeEventValue,
           error_name:
             streamingError instanceof Error
-              ? (streamingError.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
-              : ('unknown' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS),
+              ? (streamingError.name as SafeEventValue)
+              : ('unknown' as SafeEventValue),
           model:
-            options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            options.model as SafeEventValue,
         })
       }
 
@@ -2443,9 +2443,9 @@ async function* queryModel(
           if (isAdvisorInProgress) {
             logEvent('tengu_advisor_tool_interrupted', {
               model:
-                options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                options.model as SafeEventValue,
               advisor_model: (advisorModel ??
-                'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                'unknown') as SafeEventValue,
             })
           }
           throw streamingError
@@ -2480,23 +2480,23 @@ async function* queryModel(
         )
         logEvent('tengu_streaming_fallback_to_non_streaming', {
           model:
-            options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            options.model as SafeEventValue,
           error:
             streamingError instanceof Error
-              ? (streamingError.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+              ? (streamingError.name as SafeEventValue)
               : (String(
                   streamingError,
-                ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS),
+                ) as SafeEventValue),
           attemptNumber,
           maxOutputTokens,
           thinkingType:
-            thinkingConfig.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            thinkingConfig.type as SafeEventValue,
           fallback_disabled: true,
           request_id: (streamRequestId ??
-            'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'unknown') as SafeEventValue,
           fallback_cause: (streamIdleAborted
             ? 'watchdog'
-            : 'other') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            : 'other') as SafeEventValue,
         })
         throw streamingError
       }
@@ -2512,23 +2512,23 @@ async function* queryModel(
 
       logEvent('tengu_streaming_fallback_to_non_streaming', {
         model:
-          options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          options.model as SafeEventValue,
         error:
           streamingError instanceof Error
-            ? (streamingError.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+            ? (streamingError.name as SafeEventValue)
             : (String(
                 streamingError,
-              ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS),
+              ) as SafeEventValue),
         attemptNumber,
         maxOutputTokens,
         thinkingType:
-          thinkingConfig.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          thinkingConfig.type as SafeEventValue,
         fallback_disabled: false,
         request_id: (streamRequestId ??
-          'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'unknown') as SafeEventValue,
         fallback_cause: (streamIdleAborted
           ? 'watchdog'
-          : 'other') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          : 'other') as SafeEventValue,
       })
 
       // Fall back to non-streaming mode with retries.
@@ -2541,12 +2541,12 @@ async function* queryModel(
       logForDiagnosticsNoPII('info', 'cli_nonstreaming_fallback_started')
       logEvent('tengu_nonstreaming_fallback_started', {
         request_id: (streamRequestId ??
-          'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'unknown') as SafeEventValue,
         model:
-          options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          options.model as SafeEventValue,
         fallback_cause: (streamIdleAborted
           ? 'watchdog'
-          : 'other') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          : 'other') as SafeEventValue,
       })
       const result = yield* executeNonStreamingRequest(
         { model: options.model, source: options.querySource },
@@ -2632,17 +2632,17 @@ async function* queryModel(
 
       logEvent('tengu_streaming_fallback_to_non_streaming', {
         model:
-          options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          options.model as SafeEventValue,
         error:
-          '404_stream_creation' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          '404_stream_creation' as SafeEventValue,
         attemptNumber,
         maxOutputTokens,
         thinkingType:
-          thinkingConfig.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          thinkingConfig.type as SafeEventValue,
         request_id:
-          failedRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          failedRequestId as SafeEventValue,
         fallback_cause:
-          '404_stream_creation' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          '404_stream_creation' as SafeEventValue,
       })
 
       try {

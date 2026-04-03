@@ -1,5 +1,5 @@
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { saveGlobalConfig } from '../utils/config.js'
@@ -52,6 +52,6 @@ export function migrateLegacyOpusToCurrent(): void {
   }))
   logEvent('tengu_legacy_opus_migration', {
     from_model:
-      model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      model as SafeEventValue,
   })
 }

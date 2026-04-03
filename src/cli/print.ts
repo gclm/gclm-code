@@ -24,9 +24,9 @@ import { uniq } from 'src/utils/array.js'
 import { mergeAndFilterTools } from 'src/utils/toolPool.js'
 import {
   logEvent,
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
 } from 'src/services/analytics/index.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/runtimeConfig/growthbook.js'
 import { logForDebugging } from 'src/utils/debug.js'
 import {
   logForDiagnosticsNoPII,
@@ -348,7 +348,7 @@ import { getRunningTasks } from '../utils/task/framework.js'
 import { isBackgroundTask } from '../tasks/types.js'
 import { stopTask } from '../tasks/stopTask.js'
 import { drainSdkEvents } from '../utils/sdkEventQueue.js'
-import { initializeGrowthBook } from '../services/analytics/growthbook.js'
+import { initializeGrowthBook } from '../services/runtimeConfig/growthbook.js'
 import { errorMessage, toError } from '../utils/errors.js'
 import { sleep } from '../utils/sleep.js'
 import { isExtractModeActive } from '../memdir/paths.js'
@@ -1288,7 +1288,7 @@ function runHeadlessStreaming(
             const mode = request.params.mode === 'url' ? 'url' : 'form'
 
             logEvent('tengu_mcp_elicitation_shown', {
-              mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              mode: mode as SafeEventValue,
             })
 
             // Run elicitation hooks first — they can provide a response programmatically
@@ -1303,9 +1303,9 @@ function runHeadlessStreaming(
                 `Elicitation resolved by hook: ${jsonStringify(hookResponse)}`,
               )
               logEvent('tengu_mcp_elicitation_response', {
-                mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                mode: mode as SafeEventValue,
                 action:
-                  hookResponse.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  hookResponse.action as SafeEventValue,
               })
               return hookResponse
             }
@@ -1346,9 +1346,9 @@ function runHeadlessStreaming(
             )
 
             logEvent('tengu_mcp_elicitation_response', {
-              mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              mode: mode as SafeEventValue,
               action:
-                result.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                result.action as SafeEventValue,
             })
             return result
           },
@@ -4722,7 +4722,7 @@ function handleChannelEnable(
   }
 
   const pluginId =
-    `${entry.name}@${entry.marketplace}` as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    `${entry.name}@${entry.marketplace}` as SafeEventValue
   logMCPDebug(serverName, 'Channel notifications registered')
   logEvent('tengu_mcp_channel_enable', { plugin: pluginId })
 
@@ -4742,7 +4742,7 @@ function handleChannelEnable(
         content_length: content.length,
         meta_key_count: Object.keys(meta ?? {}).length,
         entry_kind:
-          'plugin' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'plugin' as SafeEventValue,
         is_dev: false,
         plugin: pluginId,
       })
@@ -4799,7 +4799,7 @@ function reregisterChannelHandlerAfterReconnect(
   const entry = findChannelEntry(connection.name, getAllowedChannels())
   const pluginId =
     entry?.kind === 'plugin'
-      ? (`${entry.name}@${entry.marketplace}` as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+      ? (`${entry.name}@${entry.marketplace}` as SafeEventValue)
       : undefined
 
   logMCPDebug(
@@ -4818,7 +4818,7 @@ function reregisterChannelHandlerAfterReconnect(
         content_length: content.length,
         meta_key_count: Object.keys(meta ?? {}).length,
         entry_kind:
-          entry?.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          entry?.kind as SafeEventValue,
         is_dev: entry?.dev ?? false,
         plugin: pluginId,
       })

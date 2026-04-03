@@ -2,7 +2,7 @@ import { c as _c } from "react/compiler-runtime";
 import React from 'react';
 import { handlePlanModeTransition } from '../../../bootstrap/state.js';
 import { Box, Text } from '../../../ink.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../../services/analytics/index.js';
+import { type SafeEventValue, logEvent } from '../../../services/analytics/index.js';
 import { useAppState } from '../../../state/AppState.js';
 import { isPlanModeInterviewPhaseEnabled } from '../../../utils/planModeV2.js';
 import { Select } from '../../CustomSelect/index.js';
@@ -23,7 +23,7 @@ export function EnterPlanModePermissionRequest(t0) {
       if (value === "yes") {
         logEvent("tengu_plan_enter", {
           interviewPhaseEnabled: isPlanModeInterviewPhaseEnabled(),
-          entryMethod: "tool" as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          entryMethod: "tool" as SafeEventValue
         });
         handlePlanModeTransition(toolPermissionContextMode, "plan");
         onDone();

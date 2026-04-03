@@ -16,10 +16,10 @@ import { randomUUID, type UUID } from 'crypto'
 import isObject from 'lodash-es/isObject.js'
 import last from 'lodash-es/last.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
-import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata.js'
+import { sanitizeToolNameForLogging } from 'src/services/toolLogging/metadata.js'
 import type { AgentId } from 'src/types/ids.js'
 import { companionIntroText } from '../buddy/prompt.js'
 import { NO_CONTENT_MESSAGE } from '../constants/messages.js'
@@ -28,7 +28,7 @@ import { isAutoMemoryEnabled } from '../memdir/paths.js'
 import {
   checkStatsigFeatureGate_CACHED_MAY_BE_STALE,
   getFeatureValue_CACHED_MAY_BE_STALE,
-} from '../services/analytics/growthbook.js'
+} from '../services/runtimeConfig/growthbook.js'
 import {
   getImageTooLargeErrorMessage,
   getPdfInvalidErrorMessage,
@@ -2681,7 +2681,7 @@ export function normalizeContentFromAPI(
             // sees empty input. The raw prefix goes to debug log only — no
             // PII-tagged proto column exists for it yet.
             logEvent('tengu_tool_input_json_parse_fail', {
-              toolName: sanitizeToolNameForAnalytics(contentBlock.name),
+              toolName: sanitizeToolNameForLogging(contentBlock.name),
               inputLen: contentBlock.input.length,
             })
             if (process.env.USER_TYPE === 'ant') {
@@ -4805,7 +4805,7 @@ function filterTrailingThinkingFromLastAssistant(
 
   logEvent('tengu_filtered_trailing_thinking_block', {
     messageUUID:
-      lastMessage.uuid as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      lastMessage.uuid as SafeEventValue,
     blocksRemoved: content.length - lastValidIndex - 1,
     remainingBlocks: lastValidIndex + 1,
   })
@@ -4892,7 +4892,7 @@ export function filterWhitespaceOnlyAssistantMessages(
       hasChanges = true
       logEvent('tengu_filtered_whitespace_only_assistant', {
         messageUUID:
-          message.uuid as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          message.uuid as SafeEventValue,
       })
       return false
     }
@@ -4955,7 +4955,7 @@ function ensureNonEmptyAssistantContent(
       hasChanges = true
       logEvent('tengu_fixed_empty_assistant_content', {
         messageUUID:
-          message.uuid as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          message.uuid as SafeEventValue,
         messageIndex: index,
       })
 
@@ -5046,9 +5046,9 @@ export function filterOrphanedThinkingOnlyMessages(
     // Truly orphaned - no other message with same id has content to merge with
     logEvent('tengu_filtered_orphaned_thinking_message', {
       messageUUID:
-        msg.uuid as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        msg.uuid as SafeEventValue,
       messageId: msg.message
-        .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        .id as SafeEventValue,
       blockCount: content.length,
     })
     return false
@@ -5447,7 +5447,7 @@ export function ensureToolResultPairing(
       repairedMessageCount: result.length,
       messageTypes: messageTypes.join(
         '; ',
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
     })
     logError(
       new Error(

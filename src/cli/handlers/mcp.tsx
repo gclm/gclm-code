@@ -10,7 +10,7 @@ import React from 'react';
 import { MCPServerDesktopImportDialog } from '../../components/MCPServerDesktopImportDialog.js';
 import { render } from '../../ink.js';
 import { KeybindingSetup } from '../../keybindings/KeybindingProviderSetup.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
+import { type SafeEventValue, logEvent } from '../../services/analytics/index.js';
 import { clearMcpClientConfig, clearServerTokensFromLocalStorage, getMcpClientConfig, readClientSecret, saveMcpClientSecret } from '../../services/mcp/auth.js';
 import { connectToServer, getMcpServerConnectionBatchSize } from '../../services/mcp/client.js';
 import { addMcpConfig, getAllMcpConfigs, getMcpConfigByName, getMcpConfigsByScope, removeMcpConfig } from '../../services/mcp/config.js';
@@ -86,8 +86,8 @@ export async function mcpRemoveHandler(name: string, options: {
     if (options.scope) {
       const scope = ensureConfigScope(options.scope);
       logEvent('tengu_mcp_delete', {
-        name: name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        name: name as SafeEventValue,
+        scope: scope as SafeEventValue
       });
       await removeMcpConfig(name, scope);
       cleanupSecureStorage();
@@ -116,8 +116,8 @@ export async function mcpRemoveHandler(name: string, options: {
       // Server exists in only one scope, remove it
       const scope = scopes[0]!;
       logEvent('tengu_mcp_delete', {
-        name: name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        name: name as SafeEventValue,
+        scope: scope as SafeEventValue
       });
       await removeMcpConfig(name, scope);
       cleanupSecureStorage();
@@ -192,7 +192,7 @@ export async function mcpListHandler(): Promise<void> {
 // mcp get (lines 4694–4786)
 export async function mcpGetHandler(name: string): Promise<void> {
   logEvent('tengu_mcp_get', {
-    name: name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    name: name as SafeEventValue
   });
   const server = getMcpConfigByName(name);
   if (!server) {
@@ -303,9 +303,9 @@ export async function mcpAddJsonHandler(name: string, json: string, options: {
       }, clientSecret);
     }
     logEvent('tengu_mcp_add', {
-      scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      source: 'json' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      type: transportType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      scope: scope as SafeEventValue,
+      source: 'json' as SafeEventValue,
+      type: transportType as SafeEventValue
     });
     cliOk(`Added ${transportType} MCP server ${name} to ${scope} config`);
   } catch (error) {
@@ -321,9 +321,9 @@ export async function mcpAddFromDesktopHandler(options: {
     const scope = ensureConfigScope(options.scope);
     const platform = getPlatform();
     logEvent('tengu_mcp_add', {
-      scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      platform: platform as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      source: 'desktop' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      scope: scope as SafeEventValue,
+      platform: platform as SafeEventValue,
+      source: 'desktop' as SafeEventValue
     });
     const {
       readClaudeDesktopMcpServers

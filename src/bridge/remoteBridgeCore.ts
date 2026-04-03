@@ -59,7 +59,7 @@ import { errorMessage } from '../utils/errors.js'
 import { sleep } from '../utils/sleep.js'
 import { registerCleanup } from '../utils/cleanupRegistry.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import type { ReplBridgeHandle, BridgeState } from './replBridge.js'
@@ -304,7 +304,7 @@ export async function initEnvLessBridgeCore(
       v2: true,
       elapsed_ms: cfg.connect_timeout_ms,
       cause:
-        cause as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        cause as SafeEventValue,
     })
   }
 
@@ -385,7 +385,7 @@ export async function initEnvLessBridgeCore(
       logEvent('tengu_bridge_repl_ws_connected', {
         v2: true,
         cause:
-          connectCause as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          connectCause as SafeEventValue,
       })
 
       if (!initialFlushDone && initialMessages && initialMessages.length > 0) {
@@ -735,7 +735,7 @@ export async function initEnvLessBridgeCore(
       {
         v2: true,
         archive_status:
-          archiveStatus as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          archiveStatus as SafeEventValue,
         archive_ok: typeof status === 'number' && status < 400,
         archive_http_status: typeof status === 'number' ? status : undefined,
         archive_timeout: status === 'timeout',

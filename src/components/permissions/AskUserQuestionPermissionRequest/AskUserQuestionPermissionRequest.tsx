@@ -6,7 +6,7 @@ import { useTerminalSize } from '../../../hooks/useTerminalSize.js';
 import { stringWidth } from '../../../ink/stringWidth.js';
 import { useTheme } from '../../../ink.js';
 import { useKeybindings } from '../../../keybindings/useKeybinding.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../../services/analytics/index.js';
+import { type SafeEventValue, logEvent } from '../../../services/analytics/index.js';
 import { useAppState } from '../../../state/AppState.js';
 import type { Question } from '../../../tools/AskUserQuestionTool/AskUserQuestionTool.js';
 import { AskUserQuestionTool } from '../../../tools/AskUserQuestionTool/AskUserQuestionTool.js';
@@ -267,7 +267,7 @@ function AskUserQuestionPermissionRequestBody(t0) {
     t12 = () => {
       if (metadataSource) {
         logEvent("tengu_ask_user_question_rejected", {
-          source: metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          source: metadataSource as SafeEventValue,
           questionCount: questions.length,
           isInPlanMode,
           interviewPhaseEnabled: isInPlanMode && isPlanModeInterviewPhaseEnabled()
@@ -306,7 +306,7 @@ function AskUserQuestionPermissionRequestBody(t0) {
     Questions asked:\n${questionsWithAnswers}`;
       if (metadataSource) {
         logEvent("tengu_ask_user_question_respond_to_claude", {
-          source: metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          source: metadataSource as SafeEventValue,
           questionCount: questions.length,
           isInPlanMode,
           interviewPhaseEnabled: isInPlanMode && isPlanModeInterviewPhaseEnabled()
@@ -344,7 +344,7 @@ Stop asking clarifying questions and proceed to finish the plan with the informa
 Questions asked and answers provided:\n${questionsWithAnswers_0}`;
       if (metadataSource) {
         logEvent("tengu_ask_user_question_finish_plan_interview", {
-          source: metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          source: metadataSource as SafeEventValue,
           questionCount: questions.length,
           isInPlanMode,
           interviewPhaseEnabled: isInPlanMode && isPlanModeInterviewPhaseEnabled()
@@ -371,7 +371,7 @@ Questions asked and answers provided:\n${questionsWithAnswers_0}`;
     t15 = async answersToSubmit => {
       if (metadataSource) {
         logEvent("tengu_ask_user_question_accepted", {
-          source: metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          source: metadataSource as SafeEventValue,
           questionCount: questions.length,
           answerCount: Object.keys(answersToSubmit).length,
           isInPlanMode,

@@ -15,7 +15,7 @@ import type { QuerySource } from '../constants/querySource.js'
 import type { CanUseToolFn } from '../hooks/useCanUseTool.js'
 import { query } from '../query.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { accumulateUsage, updateUsage } from '../services/api/claude.js'
@@ -656,9 +656,9 @@ function logForkAgentQueryEvent({
   logEvent('tengu_fork_agent_query', {
     // Metadata
     forkLabel:
-      forkLabel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      forkLabel as SafeEventValue,
     querySource:
-      querySource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      querySource as SafeEventValue,
     durationMs,
     messageCount,
 
@@ -668,7 +668,7 @@ function logForkAgentQueryEvent({
     cacheReadInputTokens: totalUsage.cache_read_input_tokens,
     cacheCreationInputTokens: totalUsage.cache_creation_input_tokens,
     serviceTier:
-      totalUsage.service_tier as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      totalUsage.service_tier as SafeEventValue,
     cacheCreationEphemeral1hTokens:
       totalUsage.cache_creation.ephemeral_1h_input_tokens,
     cacheCreationEphemeral5mTokens:
@@ -681,7 +681,7 @@ function logForkAgentQueryEvent({
     ...(queryTracking
       ? {
           queryChainId:
-            queryTracking.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            queryTracking.chainId as SafeEventValue,
           queryDepth: queryTracking.depth,
         }
       : {}),

@@ -9,7 +9,7 @@ import type { AssistantMessage, AttachmentMessage, Message, NormalizedUserMessag
 import { addInvokedSkill, getSessionId } from '../../bootstrap/state.js';
 import { COMMAND_MESSAGE_TAG, COMMAND_NAME_TAG } from '../../constants/xml.js';
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED, logEvent, logOTelEvent, redactIfDisabled } from '../../services/analytics/index.js';
+import { type SafeEventValue, type PiiEventValue, logEvent, logOTelEvent, redactIfDisabled } from '../../services/analytics/index.js';
 import { getDumpPromptsPath } from '../../services/api/dumpPrompts.js';
 import { buildPostCompactMessages } from '../../services/compact/compact.js';
 import { resetMicrocompactState } from '../../services/compact/microCompact.js';
@@ -61,12 +61,12 @@ async function executeForkedSlashCommand(command: CommandBase & PromptCommand, a
   const agentId = createAgentId();
   const pluginMarketplace = command.pluginInfo ? parsePluginIdentifier(command.pluginInfo.repository).marketplace : undefined;
   logEvent('tengu_slash_command_forked', {
-    command_name: command.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    invocation_trigger: 'user-slash' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    command_name: command.name as SafeEventValue,
+    invocation_trigger: 'user-slash' as SafeEventValue,
     ...(command.pluginInfo && {
-      _PROTO_plugin_name: command.pluginInfo.pluginManifest.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+      _PROTO_plugin_name: command.pluginInfo.pluginManifest.name as PiiEventValue,
       ...(pluginMarketplace && {
-        _PROTO_marketplace_name: pluginMarketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED
+        _PROTO_marketplace_name: pluginMarketplace as PiiEventValue
       })
     })
   });
@@ -339,7 +339,7 @@ export async function processSlashCommand(inputString: string, precedingInputBlo
     }
     if (looksLikeCommand(commandName) && !isFilePath) {
       logEvent('tengu_input_slash_invalid', {
-        input: commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        input: commandName as SafeEventValue
       });
       const unknownMessage = `Unknown skill: ${commandName}`;
       return {
@@ -394,7 +394,7 @@ export async function processSlashCommand(inputString: string, precedingInputBlo
   // Local slash commands that skip messages
   if (newMessages.length === 0) {
     const eventData: Record<string, boolean | number | undefined> = {
-      input: sanitizedCommandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      input: sanitizedCommandName as SafeEventValue
     };
 
     // Add plugin metadata if this is a plugin command
@@ -410,29 +410,29 @@ export async function processSlashCommand(inputString: string, precedingInputBlo
       // _PROTO_* routes to PII-tagged plugin_name/marketplace_name BQ columns
       // (unredacted, all users); plugin_name/plugin_repository stay in
       // additional_metadata as redacted variants for general-access dashboards.
-      eventData._PROTO_plugin_name = pluginManifest.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED;
+      eventData._PROTO_plugin_name = pluginManifest.name as PiiEventValue;
       if (marketplace) {
-        eventData._PROTO_marketplace_name = marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED;
+        eventData._PROTO_marketplace_name = marketplace as PiiEventValue;
       }
-      eventData.plugin_repository = (isOfficial ? repository : 'third-party') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
-      eventData.plugin_name = (isOfficial ? pluginManifest.name : 'third-party') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
+      eventData.plugin_repository = (isOfficial ? repository : 'third-party') as SafeEventValue;
+      eventData.plugin_name = (isOfficial ? pluginManifest.name : 'third-party') as SafeEventValue;
       if (isOfficial && pluginManifest.version) {
-        eventData.plugin_version = pluginManifest.version as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
+        eventData.plugin_version = pluginManifest.version as SafeEventValue;
       }
     }
     logEvent('tengu_input_command', {
       ...eventData,
-      invocation_trigger: 'user-slash' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      invocation_trigger: 'user-slash' as SafeEventValue,
       ...("external" === 'ant' && {
-        skill_name: commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        skill_name: commandName as SafeEventValue,
         ...(returnedCommand.type === 'prompt' && {
-          skill_source: returnedCommand.source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          skill_source: returnedCommand.source as SafeEventValue
         }),
         ...(returnedCommand.loadedFrom && {
-          skill_loaded_from: returnedCommand.loadedFrom as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          skill_loaded_from: returnedCommand.loadedFrom as SafeEventValue
         }),
         ...(returnedCommand.kind && {
-          skill_kind: returnedCommand.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          skill_kind: returnedCommand.kind as SafeEventValue
         })
       })
     });
@@ -451,7 +451,7 @@ export async function processSlashCommand(inputString: string, precedingInputBlo
     const looksLikeFilePath = inputString.startsWith('/var') || inputString.startsWith('/tmp') || inputString.startsWith('/private');
     if (!looksLikeFilePath) {
       logEvent('tengu_input_slash_invalid', {
-        input: commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        input: commandName as SafeEventValue
       });
     }
     return {
@@ -464,7 +464,7 @@ export async function processSlashCommand(inputString: string, precedingInputBlo
 
   // A valid command
   const eventData: Record<string, boolean | number | undefined> = {
-    input: sanitizedCommandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    input: sanitizedCommandName as SafeEventValue
   };
 
   // Add plugin metadata if this is a plugin command
@@ -477,29 +477,29 @@ export async function processSlashCommand(inputString: string, precedingInputBlo
       marketplace
     } = parsePluginIdentifier(repository);
     const isOfficial = isOfficialMarketplaceName(marketplace);
-    eventData._PROTO_plugin_name = pluginManifest.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED;
+    eventData._PROTO_plugin_name = pluginManifest.name as PiiEventValue;
     if (marketplace) {
-      eventData._PROTO_marketplace_name = marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED;
+      eventData._PROTO_marketplace_name = marketplace as PiiEventValue;
     }
-    eventData.plugin_repository = (isOfficial ? repository : 'third-party') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
-    eventData.plugin_name = (isOfficial ? pluginManifest.name : 'third-party') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
+    eventData.plugin_repository = (isOfficial ? repository : 'third-party') as SafeEventValue;
+    eventData.plugin_name = (isOfficial ? pluginManifest.name : 'third-party') as SafeEventValue;
     if (isOfficial && pluginManifest.version) {
-      eventData.plugin_version = pluginManifest.version as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
+      eventData.plugin_version = pluginManifest.version as SafeEventValue;
     }
   }
   logEvent('tengu_input_command', {
     ...eventData,
-    invocation_trigger: 'user-slash' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    invocation_trigger: 'user-slash' as SafeEventValue,
     ...("external" === 'ant' && {
-      skill_name: commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      skill_name: commandName as SafeEventValue,
       ...(returnedCommand.type === 'prompt' && {
-        skill_source: returnedCommand.source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        skill_source: returnedCommand.source as SafeEventValue
       }),
       ...(returnedCommand.loadedFrom && {
-        skill_loaded_from: returnedCommand.loadedFrom as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        skill_loaded_from: returnedCommand.loadedFrom as SafeEventValue
       }),
       ...(returnedCommand.kind && {
-        skill_kind: returnedCommand.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        skill_kind: returnedCommand.kind as SafeEventValue
       })
     })
   });

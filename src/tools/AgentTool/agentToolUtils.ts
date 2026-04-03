@@ -9,7 +9,7 @@ import {
 } from '../../constants/tools.js'
 import { startAgentSummarization } from '../../services/AgentSummary/agentSummary.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import { clearDumpState } from '../../services/api/dumpPrompts.js'
@@ -321,9 +321,9 @@ export function finalizeAgentTool(
 
   logEvent('tengu_agent_tool_completed', {
     agent_type:
-      agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      agentType as SafeEventValue,
     model:
-      resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      resolvedAgentModel as SafeEventValue,
     prompt_char_count: prompt.length,
     response_char_count: content.length,
     assistant_message_count: agentMessages.length,
@@ -339,9 +339,9 @@ export function finalizeAgentTool(
   if (lastRequestId) {
     logEvent('tengu_cache_eviction_hint', {
       scope:
-        'subagent_end' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'subagent_end' as SafeEventValue,
       last_request_id:
-        lastRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        lastRequestId as SafeEventValue,
     })
   }
 
@@ -430,32 +430,32 @@ export async function classifyHandoffIfNeeded({
         : 'allowed'
     logEvent('tengu_auto_mode_decision', {
       decision:
-        handoffDecision as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        handoffDecision as SafeEventValue,
       toolName:
         // Use legacy name for analytics continuity across the Task→Agent rename
-        LEGACY_AGENT_TOOL_NAME as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        LEGACY_AGENT_TOOL_NAME as SafeEventValue,
       inProtectedNamespace: isInProtectedNamespace(),
       classifierModel:
-        classifierResult.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        classifierResult.model as SafeEventValue,
       agentType:
-        subagentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        subagentType as SafeEventValue,
       toolUseCount: totalToolUseCount,
       isHandoff: true,
       // For handoff, the relevant agent completion is the subagent's final
       // assistant message — the last thing the classifier transcript shows
       // before the handoff review prompt.
       agentMsgId: getLastAssistantMessage(agentMessages)?.message
-        .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        .id as SafeEventValue,
       classifierStage:
-        classifierResult.stage as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        classifierResult.stage as SafeEventValue,
       classifierStage1RequestId:
-        classifierResult.stage1RequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        classifierResult.stage1RequestId as SafeEventValue,
       classifierStage1MsgId:
-        classifierResult.stage1MsgId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        classifierResult.stage1MsgId as SafeEventValue,
       classifierStage2RequestId:
-        classifierResult.stage2RequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        classifierResult.stage2RequestId as SafeEventValue,
       classifierStage2MsgId:
-        classifierResult.stage2MsgId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        classifierResult.stage2MsgId as SafeEventValue,
     })
 
     if (classifierResult.shouldBlock) {
@@ -645,14 +645,14 @@ export async function runAsyncAgentLifecycle({
       killAsyncAgent(taskId, rootSetAppState)
       logEvent('tengu_agent_tool_terminated', {
         agent_type:
-          metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          metadata.agentType as SafeEventValue,
         model:
-          metadata.resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          metadata.resolvedAgentModel as SafeEventValue,
         duration_ms: Date.now() - metadata.startTime,
         is_async: true,
         is_built_in_agent: metadata.isBuiltInAgent,
         reason:
-          'user_kill_async' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'user_kill_async' as SafeEventValue,
       })
       const worktreeResult = await getWorktreeResult()
       const partialResult = extractPartialResult(agentMessages)

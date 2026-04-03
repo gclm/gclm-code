@@ -4,7 +4,7 @@ import { randomUUID, type UUID } from 'crypto';
 import figures from 'figures';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
+import { type SafeEventValue, logEvent } from 'src/services/analytics/index.js';
 import { useAppState } from 'src/state/AppState.js';
 import { type DiffStats, fileHistoryCanRestore, fileHistoryEnabled, fileHistoryGetDiffStats } from 'src/utils/fileHistory.js';
 import { logError } from 'src/utils/log.js';
@@ -157,7 +157,7 @@ export function MessageSelector({
     const indexFromEnd = messages.length - 1 - index;
     logEvent('tengu_message_selector_selected', {
       index_from_end: indexFromEnd,
-      message_type: message_0.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      message_type: message_0.type as SafeEventValue,
       is_current_prompt: false
     });
 
@@ -176,7 +176,7 @@ export function MessageSelector({
   }
   async function onSelectRestoreOption(option: RestoreOption) {
     logEvent('tengu_message_selector_restore_option_selected', {
-      option: option as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      option: option as SafeEventValue
     });
     if (!messageToRestore) {
       setError('Message not found.');

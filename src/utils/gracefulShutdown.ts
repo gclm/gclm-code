@@ -30,7 +30,7 @@ import {
   wrapForMultiplexer,
 } from '../ink/termio/osc.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import type { AppState } from '../state/AppState.js'
@@ -303,7 +303,7 @@ export const setupGracefulShutdown = memoize(() => {
     })
     logEvent('tengu_uncaught_exception', {
       error_name:
-        error.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        error.name as SafeEventValue,
     })
   })
 
@@ -326,7 +326,7 @@ export const setupGracefulShutdown = memoize(() => {
     logForDiagnosticsNoPII('error', 'unhandled_rejection', errorInfo)
     logEvent('tengu_unhandled_rejection', {
       error_name:
-        errorName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        errorName as SafeEventValue,
     })
   })
 })
@@ -490,9 +490,9 @@ export async function gracefulShutdown(
   if (lastRequestId) {
     logEvent('tengu_cache_eviction_hint', {
       scope:
-        'session_end' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'session_end' as SafeEventValue,
       last_request_id:
-        lastRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        lastRequestId as SafeEventValue,
     })
   }
 

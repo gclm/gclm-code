@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { useTerminalFocus } from '../ink/hooks/use-terminal-focus.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { abortSpeculation } from '../services/PromptSuggestion/speculation.js'
@@ -119,20 +119,20 @@ export function usePromptSuggestion({
 
       logEvent('tengu_prompt_suggestion', {
         source:
-          'cli' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'cli' as SafeEventValue,
         outcome: (wasAccepted
           ? 'accepted'
-          : 'ignored') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          : 'ignored') as SafeEventValue,
         prompt_id:
-          promptId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          promptId as SafeEventValue,
         ...(generationRequestId && {
           generationRequestId:
-            generationRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            generationRequestId as SafeEventValue,
         }),
         ...(wasAccepted && {
           acceptMethod: (tabWasPressed
             ? 'tab'
-            : 'enter') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            : 'enter') as SafeEventValue,
         }),
         ...(wasAccepted && {
           timeToAcceptMs: timeMs - shownAt,
@@ -150,9 +150,9 @@ export function usePromptSuggestion({
           ) / 100,
         ...(process.env.USER_TYPE === 'ant' && {
           suggestion:
-            suggestionText as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            suggestionText as SafeEventValue,
           userInput:
-            finalInput as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            finalInput as SafeEventValue,
         }),
       })
       if (!opts?.skipReset) resetSuggestion()

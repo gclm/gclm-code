@@ -3,7 +3,7 @@
 import { feature } from 'bun:bundle'
 import chalk from 'chalk'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import { getCwd } from 'src/utils/cwd.js'
@@ -467,7 +467,7 @@ export async function setup(
       last_session_fps_average: projectConfig.lastFpsAverage,
       last_session_fps_low_1_pct: projectConfig.lastFpsLow1Pct,
       last_session_id:
-        projectConfig.lastSessionId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        projectConfig.lastSessionId as SafeEventValue,
       ...projectConfig.lastSessionMetrics,
     })
     // Note: We intentionally don't clear these values after logging.

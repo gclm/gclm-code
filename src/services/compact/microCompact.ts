@@ -15,7 +15,7 @@ import { getMainLoopModel } from '../../utils/model/model.js'
 import { SHELL_TOOL_NAMES } from '../../utils/shell/shellToolUtils.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../analytics/index.js'
 import { notifyCacheDeletion } from '../api/promptCacheBreakDetection.js'
@@ -347,10 +347,10 @@ async function cachedMicrocompactPath(
       toolsDeleted: toolsToDelete.length,
       deletedToolIds: toolsToDelete.join(
         ',',
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
       activeToolCount: state.toolOrder.length - state.deletedRefs.size,
       triggerType:
-        'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'auto' as SafeEventValue,
       threshold: config.triggerThreshold,
       keepRecent: config.keepRecent,
     })

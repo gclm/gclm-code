@@ -1,9 +1,9 @@
 import { feature } from 'bun:bundle'
 import { z } from 'zod/v4'
 import { getKairosActive, setUserMsgOptIn } from '../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import type { ToolUseContext } from '../Tool.js'
@@ -71,7 +71,7 @@ const brief = {
             enabled: false,
             gated: true,
             source:
-              'slash_command' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              'slash_command' as SafeEventValue,
           })
           onDone('Brief tool is not enabled for your account', {
             display: 'system',
@@ -95,7 +95,7 @@ const brief = {
           enabled: newState,
           gated: false,
           source:
-            'slash_command' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'slash_command' as SafeEventValue,
         })
 
         // The tool list change alone isn't a strong enough signal mid-session

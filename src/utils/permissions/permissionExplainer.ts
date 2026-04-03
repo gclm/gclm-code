@@ -1,6 +1,6 @@
 import { z } from 'zod/v4'
 import { logEvent } from '../../services/analytics/index.js'
-import { sanitizeToolNameForAnalytics } from '../../services/analytics/metadata.js'
+import { sanitizeToolNameForLogging } from '../../services/toolLogging/metadata.js'
 import type { AssistantMessage, Message } from '../../types/message.js'
 import { getGlobalConfig } from '../config.js'
 import { logForDebugging } from '../debug.js'
@@ -207,7 +207,7 @@ Explain this command in context.`
         }
 
         logEvent('tengu_permission_explainer_generated', {
-          tool_name: sanitizeToolNameForAnalytics(toolName),
+          tool_name: sanitizeToolNameForLogging(toolName),
           risk_level: RISK_LEVEL_NUMERIC[explanation.riskLevel],
           latency_ms: latencyMs,
         })
@@ -220,7 +220,7 @@ Explain this command in context.`
 
     // No valid JSON in response
     logEvent('tengu_permission_explainer_error', {
-      tool_name: sanitizeToolNameForAnalytics(toolName),
+      tool_name: sanitizeToolNameForLogging(toolName),
       error_type: ERROR_TYPE_PARSE,
       latency_ms: latencyMs,
     })
@@ -238,7 +238,7 @@ Explain this command in context.`
     logForDebugging(`Permission explainer error: ${errorMessage(error)}`)
     logError(error)
     logEvent('tengu_permission_explainer_error', {
-      tool_name: sanitizeToolNameForAnalytics(toolName),
+      tool_name: sanitizeToolNameForLogging(toolName),
       error_type:
         error instanceof Error && error.name === 'AbortError'
           ? ERROR_TYPE_NETWORK

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
+import { type SafeEventValue, logEvent } from 'src/services/analytics/index.js';
 import { useInterval } from 'usehooks-ts';
 import { useUpdateNotification } from '../hooks/useUpdateNotification.js';
 import { Box, Text } from '../ink.js';
@@ -132,20 +132,20 @@ export function AutoUpdater({
       onChangeIsUpdating(false);
       if (installStatus === 'success') {
         logEvent('tengu_auto_updater_success', {
-          fromVersion: currentVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          toVersion: latestVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          fromVersion: currentVersion as SafeEventValue,
+          toVersion: latestVersion as SafeEventValue,
           durationMs: Date.now() - startTime,
           wasMigrated: updateMethod === 'local',
-          installationType: installationType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          installationType: installationType as SafeEventValue
         });
       } else {
         logEvent('tengu_auto_updater_fail', {
-          fromVersion: currentVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          attemptedVersion: latestVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          status: installStatus as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          fromVersion: currentVersion as SafeEventValue,
+          attemptedVersion: latestVersion as SafeEventValue,
+          status: installStatus as SafeEventValue,
           durationMs: Date.now() - startTime,
           wasMigrated: updateMethod === 'local',
-          installationType: installationType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          installationType: installationType as SafeEventValue
         });
       }
       onAutoUpdaterResult({

@@ -5,7 +5,7 @@ import type { SettingSource } from 'src/utils/settings/constants.js'
 import { z } from 'zod/v4'
 import { isAutoMemoryEnabled } from '../../memdir/paths.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import {
@@ -331,9 +331,9 @@ export const getAgentDefinitionsWithOverrides = memoize(
             )
             logEvent('tengu_agent_parse_error', {
               error:
-                errorMsg as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                errorMsg as SafeEventValue,
               location:
-                source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                source as SafeEventValue,
             })
             return null
           }

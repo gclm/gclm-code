@@ -18,9 +18,9 @@ import {
 } from '../../utils/messages.js'
 import { getInitialSettings } from '../../utils/settings/settings.js'
 import { isTeammate } from '../../utils/teammate.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../analytics/index.js'
 import { currentLimits } from '../claudeAiLimits.js'
@@ -41,7 +41,7 @@ export function shouldEnablePromptSuggestion(): boolean {
     logEvent('tengu_prompt_suggestion_init', {
       enabled: false,
       source:
-        'env' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'env' as SafeEventValue,
     })
     return false
   }
@@ -49,7 +49,7 @@ export function shouldEnablePromptSuggestion(): boolean {
     logEvent('tengu_prompt_suggestion_init', {
       enabled: true,
       source:
-        'env' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'env' as SafeEventValue,
     })
     return true
   }
@@ -59,7 +59,7 @@ export function shouldEnablePromptSuggestion(): boolean {
     logEvent('tengu_prompt_suggestion_init', {
       enabled: false,
       source:
-        'growthbook' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'growthbook' as SafeEventValue,
     })
     return false
   }
@@ -69,7 +69,7 @@ export function shouldEnablePromptSuggestion(): boolean {
     logEvent('tengu_prompt_suggestion_init', {
       enabled: false,
       source:
-        'non_interactive' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'non_interactive' as SafeEventValue,
     })
     return false
   }
@@ -79,7 +79,7 @@ export function shouldEnablePromptSuggestion(): boolean {
     logEvent('tengu_prompt_suggestion_init', {
       enabled: false,
       source:
-        'swarm_teammate' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'swarm_teammate' as SafeEventValue,
     })
     return false
   }
@@ -88,7 +88,7 @@ export function shouldEnablePromptSuggestion(): boolean {
   logEvent('tengu_prompt_suggestion_init', {
     enabled,
     source:
-      'setting' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      'setting' as SafeEventValue,
   })
   return enabled
 }
@@ -472,15 +472,15 @@ export function logSuggestionOutcome(
   const timeMs = Math.max(0, Date.now() - emittedAt)
 
   logEvent('tengu_prompt_suggestion', {
-    source: 'sdk' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    source: 'sdk' as SafeEventValue,
     outcome: (wasAccepted
       ? 'accepted'
-      : 'ignored') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      : 'ignored') as SafeEventValue,
     prompt_id:
-      promptId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      promptId as SafeEventValue,
     ...(generationRequestId && {
       generationRequestId:
-        generationRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        generationRequestId as SafeEventValue,
     }),
     ...(wasAccepted && {
       timeToAcceptMs: timeMs,
@@ -489,9 +489,9 @@ export function logSuggestionOutcome(
     similarity,
     ...(process.env.USER_TYPE === 'ant' && {
       suggestion:
-        suggestion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        suggestion as SafeEventValue,
       userInput:
-        userInput as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        userInput as SafeEventValue,
     }),
   })
 }
@@ -506,18 +506,18 @@ export function logSuggestionSuppressed(
   logEvent('tengu_prompt_suggestion', {
     ...(source && {
       source:
-        source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        source as SafeEventValue,
     }),
     outcome:
-      'suppressed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      'suppressed' as SafeEventValue,
     reason:
-      reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      reason as SafeEventValue,
     prompt_id:
-      resolvedPromptId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      resolvedPromptId as SafeEventValue,
     ...(process.env.USER_TYPE === 'ant' &&
       suggestion && {
         suggestion:
-          suggestion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          suggestion as SafeEventValue,
       }),
   })
 }

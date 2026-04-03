@@ -9,9 +9,9 @@
 
 import chalk from 'chalk'
 import type { QuerySource } from '../../constants/querySource.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import { queryHaiku } from '../../services/api/claude.js'
@@ -257,7 +257,7 @@ async function getCommandPrefixImpl(
       logEvent(eventName, {
         success: false,
         error:
-          'API error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'API error' as SafeEventValue,
         durationMs,
       })
       result = null
@@ -266,7 +266,7 @@ async function getCommandPrefixImpl(
       logEvent(eventName, {
         success: false,
         error:
-          'command_injection_detected' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'command_injection_detected' as SafeEventValue,
         durationMs,
       })
       result = {
@@ -280,7 +280,7 @@ async function getCommandPrefixImpl(
       logEvent(eventName, {
         success: false,
         error:
-          'dangerous_shell_prefix' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'dangerous_shell_prefix' as SafeEventValue,
         durationMs,
       })
       result = {
@@ -291,7 +291,7 @@ async function getCommandPrefixImpl(
       logEvent(eventName, {
         success: false,
         error:
-          'prefix "none"' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'prefix "none"' as SafeEventValue,
         durationMs,
       })
       result = {
@@ -305,7 +305,7 @@ async function getCommandPrefixImpl(
         logEvent(eventName, {
           success: false,
           error:
-            'command did not start with prefix' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'command did not start with prefix' as SafeEventValue,
           durationMs,
         })
         result = {

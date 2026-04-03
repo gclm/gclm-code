@@ -14,8 +14,8 @@ import { parsePluginIdentifier } from '../../utils/plugins/pluginIdentifier.js'
 import type { PluginScope } from '../../utils/plugins/schemas.js'
 import { writeToStdout } from '../../utils/process.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+  type SafeEventValue,
+  type PiiEventValue,
   logEvent,
 } from '../analytics/index.js'
 import {
@@ -86,20 +86,20 @@ function handlePluginCommandError(
         const { name, marketplace } = parsePluginIdentifier(plugin)
         return {
           _PROTO_plugin_name:
-            name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+            name as PiiEventValue,
           ...(marketplace && {
             _PROTO_marketplace_name:
-              marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+              marketplace as PiiEventValue,
           }),
         }
       })()
     : {}
   logEvent('tengu_plugin_command_failed', {
     command:
-      command as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      command as SafeEventValue,
     error_category: classifyPluginCommandError(
       error,
-    ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    ) as SafeEventValue,
     ...telemetryFields,
   })
   // eslint-disable-next-line custom-rules/no-process-exit
@@ -137,15 +137,15 @@ export async function installPlugin(
     )
     logEvent('tengu_plugin_installed_cli', {
       _PROTO_plugin_name:
-        name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+        name as PiiEventValue,
       ...(marketplace && {
         _PROTO_marketplace_name:
-          marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+          marketplace as PiiEventValue,
       }),
       scope: (result.scope ||
-        scope) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        scope) as SafeEventValue,
       install_source:
-        'cli-explicit' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'cli-explicit' as SafeEventValue,
     })
 
     // eslint-disable-next-line custom-rules/no-process-exit
@@ -180,13 +180,13 @@ export async function uninstallPlugin(
     )
     logEvent('tengu_plugin_uninstalled_cli', {
       _PROTO_plugin_name:
-        name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+        name as PiiEventValue,
       ...(marketplace && {
         _PROTO_marketplace_name:
-          marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+          marketplace as PiiEventValue,
       }),
       scope: (result.scope ||
-        scope) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        scope) as SafeEventValue,
     })
 
     // eslint-disable-next-line custom-rules/no-process-exit
@@ -220,13 +220,13 @@ export async function enablePlugin(
     )
     logEvent('tengu_plugin_enabled_cli', {
       _PROTO_plugin_name:
-        name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+        name as PiiEventValue,
       ...(marketplace && {
         _PROTO_marketplace_name:
-          marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+          marketplace as PiiEventValue,
       }),
       scope:
-        result.scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        result.scope as SafeEventValue,
     })
 
     // eslint-disable-next-line custom-rules/no-process-exit
@@ -260,13 +260,13 @@ export async function disablePlugin(
     )
     logEvent('tengu_plugin_disabled_cli', {
       _PROTO_plugin_name:
-        name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+        name as PiiEventValue,
       ...(marketplace && {
         _PROTO_marketplace_name:
-          marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+          marketplace as PiiEventValue,
       }),
       scope:
-        result.scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        result.scope as SafeEventValue,
     })
 
     // eslint-disable-next-line custom-rules/no-process-exit
@@ -327,15 +327,15 @@ export async function updatePluginCli(
       )
       logEvent('tengu_plugin_updated_cli', {
         _PROTO_plugin_name:
-          name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+          name as PiiEventValue,
         ...(marketplace && {
           _PROTO_marketplace_name:
-            marketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+            marketplace as PiiEventValue,
         }),
         old_version: (result.oldVersion ||
-          'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'unknown') as SafeEventValue,
         new_version: (result.newVersion ||
-          'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'unknown') as SafeEventValue,
       })
     }
 

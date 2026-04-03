@@ -10,12 +10,12 @@ import {
 } from '../../constants/apiLimits.js'
 import { hasBinaryExtension } from '../../constants/files.js'
 import { memoryFreshnessNote } from '../../memdir/memoryAge.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import { logEvent } from '../../services/analytics/index.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  getFileExtensionForAnalytics,
-} from '../../services/analytics/metadata.js'
+  type SafeEventValue,
+  getFileExtensionForLogging,
+} from '../../services/toolLogging/metadata.js'
 import {
   countTokensWithAPI,
   roughTokenCountEstimationForFileType,
@@ -555,7 +555,7 @@ export const FileReadTool = buildTool({
         try {
           const mtimeMs = await getFileModificationTimeAsync(fullFilePath)
           if (mtimeMs === existingState.timestamp) {
-            const analyticsExt = getFileExtensionForAnalytics(fullFilePath)
+            const analyticsExt = getFileExtensionForLogging(fullFilePath)
             logEvent('tengu_file_read_dedup', {
               ...(analyticsExt !== undefined && { ext: analyticsExt }),
             })
@@ -1065,7 +1065,7 @@ async function callInner(
   })
 
   const sessionFileType = detectSessionFileType(fullFilePath)
-  const analyticsExt = getFileExtensionForAnalytics(fullFilePath)
+  const analyticsExt = getFileExtensionForLogging(fullFilePath)
   logEvent('tengu_session_file_read', {
     totalLines,
     readLines: lineCount,
@@ -1076,7 +1076,7 @@ async function callInner(
     ...(analyticsExt !== undefined && { ext: analyticsExt }),
     ...(messageId !== undefined && {
       messageID:
-        messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        messageId as SafeEventValue,
     }),
     is_session_memory: sessionFileType === 'session_memory',
     is_session_transcript: sessionFileType === 'session_transcript',

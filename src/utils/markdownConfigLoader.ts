@@ -5,7 +5,7 @@ import memoize from 'lodash-es/memoize.js'
 import { homedir } from 'os'
 import { dirname, join, resolve, sep } from 'path'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import { getProjectRoot } from '../bootstrap/state.js'
@@ -420,7 +420,7 @@ export const loadMarkdownFilesForSubdir = memoize(
       projectFilesFound: projectFiles.length,
       projectDirsSearched: projectDirs.length,
       subdir:
-        subdir as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        subdir as SafeEventValue,
     })
 
     return deduplicatedFiles

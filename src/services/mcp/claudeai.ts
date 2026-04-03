@@ -2,7 +2,7 @@ import axios from 'axios'
 import memoize from 'lodash-es/memoize.js'
 import { getOauthConfig } from 'src/constants/oauth.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import { getClaudeAIOAuthTokens } from 'src/utils/auth.js'
@@ -43,7 +43,7 @@ export const fetchClaudeAIMcpConfigsIfEligible = memoize(
         logForDebugging('[claudeai-mcp] Disabled via env var')
         logEvent('tengu_claudeai_mcp_eligibility', {
           state:
-            'disabled_env_var' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'disabled_env_var' as SafeEventValue,
         })
         return {}
       }
@@ -53,7 +53,7 @@ export const fetchClaudeAIMcpConfigsIfEligible = memoize(
         logForDebugging('[claudeai-mcp] No access token')
         logEvent('tengu_claudeai_mcp_eligibility', {
           state:
-            'no_oauth_token' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'no_oauth_token' as SafeEventValue,
         })
         return {}
       }
@@ -69,7 +69,7 @@ export const fetchClaudeAIMcpConfigsIfEligible = memoize(
         )
         logEvent('tengu_claudeai_mcp_eligibility', {
           state:
-            'missing_scope' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'missing_scope' as SafeEventValue,
         })
         return {}
       }
@@ -123,7 +123,7 @@ export const fetchClaudeAIMcpConfigsIfEligible = memoize(
       )
       logEvent('tengu_claudeai_mcp_eligibility', {
         state:
-          'eligible' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'eligible' as SafeEventValue,
       })
       return configs
     } catch {

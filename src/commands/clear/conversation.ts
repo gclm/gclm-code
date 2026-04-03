@@ -11,7 +11,7 @@ import {
   regenerateSessionId,
 } from '../../bootstrap/state.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import type { AppState } from '../../state/AppState.js'
@@ -78,9 +78,9 @@ export async function clearConversation({
   if (lastRequestId) {
     logEvent('tengu_cache_eviction_hint', {
       scope:
-        'conversation_clear' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'conversation_clear' as SafeEventValue,
       last_request_id:
-        lastRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        lastRequestId as SafeEventValue,
     })
   }
 

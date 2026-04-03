@@ -1,13 +1,12 @@
 /**
  * Analytics service - public API for event logging
  *
- * The open build intentionally ships without product telemetry. We keep this
- * module as a compatibility boundary so existing call sites can remain
- * unchanged while all analytics become inert.
+ * The open build intentionally ships without product telemetry. This module
+ * remains as the stable no-op event logging boundary for the open build.
  */
 
-export type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS = never
-export type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED = never
+export type SafeEventValue = never
+export type PiiEventValue = never
 
 export function stripProtoFields<V>(
   metadata: Record<string, V>,

@@ -6,7 +6,7 @@ import memoize from 'lodash-es/memoize.js'
 import { join } from 'path'
 import { CLAUDE_AI_PROFILE_SCOPE } from 'src/constants/oauth.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import { getModelStrings } from 'src/utils/model/modelStrings.js'
@@ -1128,7 +1128,7 @@ export async function saveApiKey(apiKey: string): Promise<void> {
       logEvent('tengu_api_key_keychain_error', {
         error: errorMessage(
           e,
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeEventValue,
       })
       logEvent('tengu_api_key_saved_to_config', {})
     }
@@ -1209,7 +1209,7 @@ export function saveOAuthTokensIfNeeded(tokens: OAuthTokens): {
 
   const secureStorage = getSecureStorage()
   const storageBackend =
-    secureStorage.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    secureStorage.name as SafeEventValue
 
   try {
     const storageData = secureStorage.read() || {}
@@ -1247,7 +1247,7 @@ export function saveOAuthTokensIfNeeded(tokens: OAuthTokens): {
       storageBackend,
       error: errorMessage(
         error,
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
     })
     return { success: false, warning: 'Failed to save OAuth tokens' }
   }
@@ -1567,7 +1567,7 @@ async function checkAndRefreshOAuthTokenIfNeededImpl(
     logEvent('tengu_oauth_token_refresh_lock_error', {
       error: errorMessage(
         err,
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
     })
     return false
   }

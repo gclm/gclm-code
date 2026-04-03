@@ -7,9 +7,9 @@
  */
 
 import memoize from 'lodash-es/memoize.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import type { Tool } from '../Tool.js'
@@ -400,17 +400,17 @@ export async function isToolSearchEnabled(
   ): void {
     logEvent('tengu_tool_search_mode_decision', {
       enabled,
-      mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      mode: mode as SafeEventValue,
       reason:
-        reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason as SafeEventValue,
       // Log the actual model being checked, not the session's main model.
       // This is important for debugging subagent tool search decisions where
       // the subagent model (e.g., haiku) differs from the session model (e.g., opus).
       checkedModel:
-        model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        model as SafeEventValue,
       mcpToolCount,
       userType: (process.env.USER_TYPE ??
-        'external') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'external') as SafeEventValue,
       ...extraProps,
     })
   }
@@ -690,12 +690,12 @@ export function getDeferredToolsDelta(
     attachmentCount,
     dtdCount,
     callSite: (scanContext?.callSite ??
-      'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      'unknown') as SafeEventValue,
     querySource: (scanContext?.querySource ??
-      'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      'unknown') as SafeEventValue,
     attachmentTypesSeen: [...attachmentTypesSeen]
       .sort()
-      .join(',') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      .join(',') as SafeEventValue,
   })
 
   return {

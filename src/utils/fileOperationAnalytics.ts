@@ -1,5 +1,5 @@
 import { createHash } from 'crypto'
-import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/index.js'
+import type { SafeEventValue } from 'src/services/analytics/index.js'
 import { logEvent } from 'src/services/analytics/index.js'
 
 /**
@@ -8,11 +8,11 @@ import { logEvent } from 'src/services/analytics/index.js'
  */
 function hashFilePath(
   filePath: string,
-): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS {
+): SafeEventValue {
   return createHash('sha256')
     .update(filePath)
     .digest('hex')
-    .slice(0, 16) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    .slice(0, 16) as SafeEventValue
 }
 
 /**
@@ -21,10 +21,10 @@ function hashFilePath(
  */
 function hashFileContent(
   content: string,
-): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS {
+): SafeEventValue {
   return createHash('sha256')
     .update(content)
-    .digest('hex') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    .digest('hex') as SafeEventValue
 }
 
 // Maximum content size to hash (100KB)
@@ -43,13 +43,13 @@ export function logFileOperation(params: {
 }): void {
   const metadata: Record<
     string,
-    | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    | SafeEventValue
     | number
     | boolean
   > = {
     operation:
-      params.operation as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    tool: params.tool as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      params.operation as SafeEventValue,
+    tool: params.tool as SafeEventValue,
     filePathHash: hashFilePath(params.filePath),
   }
 
@@ -64,7 +64,7 @@ export function logFileOperation(params: {
 
   if (params.type !== undefined) {
     metadata.type =
-      params.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      params.type as SafeEventValue
   }
 
   logEvent('tengu_file_operation', metadata)

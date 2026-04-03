@@ -29,7 +29,7 @@ import {
 } from './bootstrap/state.js'
 import type { ModelUsage } from './entrypoints/agentSdkTypes.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from './services/analytics/index.js'
 import { getAdvisorUsage } from './utils/advisor.js'
@@ -305,7 +305,7 @@ export function addToTotalSessionCost(
     const advisorCost = calculateUSDCost(advisorUsage.model, advisorUsage)
     logEvent('tengu_advisor_tool_token_usage', {
       advisor_model:
-        advisorUsage.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        advisorUsage.model as SafeEventValue,
       input_tokens: advisorUsage.input_tokens,
       output_tokens: advisorUsage.output_tokens,
       cache_read_input_tokens: advisorUsage.cache_read_input_tokens ?? 0,

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { useOptionalKeybindingContext } from './KeybindingContext.js'
@@ -44,13 +44,13 @@ export function useShortcutDisplay(
       hasLoggedRef.current = true
       logEvent('tengu_keybinding_fallback_used', {
         action:
-          action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          action as SafeEventValue,
         context:
-          context as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          context as SafeEventValue,
         fallback:
-          fallback as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          fallback as SafeEventValue,
         reason:
-          reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          reason as SafeEventValue,
       })
     }
   }, [isFallback, action, context, fallback, reason])

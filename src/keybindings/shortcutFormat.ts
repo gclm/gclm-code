@@ -1,5 +1,5 @@
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { loadKeybindingsSync } from './loadUserBindings.js'
@@ -48,13 +48,13 @@ export function getShortcutDisplay(
       LOGGED_FALLBACKS.add(key)
       logEvent('tengu_keybinding_fallback_used', {
         action:
-          action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          action as SafeEventValue,
         context:
-          context as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          context as SafeEventValue,
         fallback:
-          fallback as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          fallback as SafeEventValue,
         reason:
-          'action_not_found' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'action_not_found' as SafeEventValue,
       })
     }
     return fallback

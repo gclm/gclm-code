@@ -10,9 +10,9 @@ import {
   getSessionId,
   setLastClassifierRequests,
 } from '../../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import { logEvent } from '../../services/analytics/index.js'
-import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/metadata.js'
+import type { SafeLogValue } from '../../services/toolLogging/metadata.js'
 import { getCacheControl } from '../../services/api/claude.js'
 import { parsePromptTooLongTokenCounts } from '../../services/api/errors.js'
 import { getDefaultMaxRetries } from '../../services/api/withRetry.js'
@@ -404,7 +404,7 @@ function toCompactBlock(
       )
       logEvent('tengu_auto_mode_malformed_tool_input', {
         toolName:
-          block.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          block.name as SafeLogValue,
       })
       encoded = input
     }
@@ -1439,16 +1439,16 @@ function logAutoModeOutcome(
   const { classifierType, failureKind, ...rest } = extra ?? {}
   logEvent('tengu_auto_mode_outcome', {
     outcome:
-      outcome as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      outcome as SafeLogValue,
     classifierModel:
-      model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      model as SafeLogValue,
     ...(classifierType !== undefined && {
       classifierType:
-        classifierType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        classifierType as SafeLogValue,
     }),
     ...(failureKind !== undefined && {
       failureKind:
-        failureKind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        failureKind as SafeLogValue,
     }),
     ...rest,
   })

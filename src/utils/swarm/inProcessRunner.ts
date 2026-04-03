@@ -20,7 +20,7 @@ import {
   unregisterPermissionCallback,
 } from '../../hooks/useSwarmPermissionPoller.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import { getAutoCompactThreshold } from '../../services/compact/autoCompact.js'
@@ -950,13 +950,13 @@ export async function runInProcessTeammate(
           ...(process.env.USER_TYPE === 'ant'
             ? {
                 agent_type:
-                  agentDefinition.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  agentDefinition.agentType as SafeEventValue,
               }
             : {}),
           scope:
-            agentDefinition.memory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            agentDefinition.memory as SafeEventValue,
           source:
-            'in-process-teammate' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'in-process-teammate' as SafeEventValue,
         })
       }
     }

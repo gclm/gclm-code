@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
+import { type SafeEventValue, logEvent } from 'src/services/analytics/index.js';
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint.js';
 import { Spinner } from '../../components/Spinner.js';
 import TextInput from '../../components/TextInput.js';
@@ -149,7 +149,7 @@ export function OAuthFlowStep({
       });
       logError(err_0);
       logEvent('tengu_oauth_error', {
-        error: errorMessage as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        error: errorMessage as SafeEventValue
       });
     }
   }, [oauthService, onSuccess]);

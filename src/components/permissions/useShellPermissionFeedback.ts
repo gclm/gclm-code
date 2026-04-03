@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
-import { sanitizeToolNameForAnalytics } from '../../services/analytics/metadata.js'
+import { sanitizeToolNameForLogging } from '../../services/toolLogging/metadata.js'
 import { useSetAppState } from '../../state/AppState.js'
 import type { ToolUseConfirm } from './PermissionRequest.js'
 import { logUnaryPermissionEvent } from './utils.js'
@@ -52,9 +52,9 @@ export function useShellPermissionFeedback({
     // Notify that user is interacting with the dialog
     toolUseConfirm.onUserInteraction()
     const analyticsProps = {
-      toolName: sanitizeToolNameForAnalytics(
+      toolName: sanitizeToolNameForLogging(
         toolUseConfirm.tool.name,
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
       isMcp: toolUseConfirm.tool.isMcp ?? false,
     }
 

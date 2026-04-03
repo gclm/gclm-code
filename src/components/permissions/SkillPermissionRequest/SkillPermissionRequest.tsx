@@ -3,7 +3,7 @@ import React, { useCallback, useMemo } from 'react';
 import { logError } from 'src/utils/log.js';
 import { getOriginalCwd } from '../../../bootstrap/state.js';
 import { Box, Text } from '../../../ink.js';
-import { sanitizeToolNameForAnalytics } from '../../../services/analytics/metadata.js';
+import { sanitizeToolNameForLogging } from '../../../services/toolLogging/metadata.js';
 import { SKILL_TOOL_NAME } from '../../../tools/SkillTool/constants.js';
 import { SkillTool } from '../../../tools/SkillTool/SkillTool.js';
 import { env } from '../../../utils/env.js';
@@ -163,7 +163,7 @@ export function SkillPermissionRequest(props) {
   const options = t6;
   let t7;
   if ($[19] !== toolUseConfirm.tool.name) {
-    t7 = sanitizeToolNameForAnalytics(toolUseConfirm.tool.name);
+    t7 = sanitizeToolNameForLogging(toolUseConfirm.tool.name);
     $[19] = toolUseConfirm.tool.name;
     $[20] = t7;
   } else {

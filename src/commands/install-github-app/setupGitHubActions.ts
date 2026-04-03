@@ -1,5 +1,5 @@
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import { saveGlobalConfig } from 'src/utils/config.js'
@@ -81,7 +81,7 @@ async function createWorkflowFile(
     ) {
       logEvent('tengu_setup_github_actions_failed', {
         reason:
-          'failed_to_create_workflow_file' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'failed_to_create_workflow_file' as SafeEventValue,
         exit_code: createFileResult.code,
         ...context,
       })
@@ -92,7 +92,7 @@ async function createWorkflowFile(
 
     logEvent('tengu_setup_github_actions_failed', {
       reason:
-        'failed_to_create_workflow_file' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'failed_to_create_workflow_file' as SafeEventValue,
       exit_code: createFileResult.code,
       ...context,
     })
@@ -144,7 +144,7 @@ export async function setupGitHubActions(
     if (repoCheckResult.code !== 0) {
       logEvent('tengu_setup_github_actions_failed', {
         reason:
-          'repo_not_found' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'repo_not_found' as SafeEventValue,
         exit_code: repoCheckResult.code,
         ...context,
       })
@@ -163,7 +163,7 @@ export async function setupGitHubActions(
     if (defaultBranchResult.code !== 0) {
       logEvent('tengu_setup_github_actions_failed', {
         reason:
-          'failed_to_get_default_branch' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'failed_to_get_default_branch' as SafeEventValue,
         exit_code: defaultBranchResult.code,
         ...context,
       })
@@ -183,7 +183,7 @@ export async function setupGitHubActions(
     if (shaResult.code !== 0) {
       logEvent('tengu_setup_github_actions_failed', {
         reason:
-          'failed_to_get_branch_sha' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'failed_to_get_branch_sha' as SafeEventValue,
         exit_code: shaResult.code,
         ...context,
       })
@@ -210,7 +210,7 @@ export async function setupGitHubActions(
       if (createBranchResult.code !== 0) {
         logEvent('tengu_setup_github_actions_failed', {
           reason:
-            'failed_to_create_branch' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'failed_to_create_branch' as SafeEventValue,
           exit_code: createBranchResult.code,
           ...context,
         })
@@ -265,7 +265,7 @@ export async function setupGitHubActions(
       if (setSecretResult.code !== 0) {
         logEvent('tengu_setup_github_actions_failed', {
           reason:
-            'failed_to_set_api_key_secret' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'failed_to_set_api_key_secret' as SafeEventValue,
           exit_code: setSecretResult.code,
           ...context,
         })
@@ -294,7 +294,7 @@ export async function setupGitHubActions(
       skip_workflow: skipWorkflow,
       has_api_key: !!apiKeyOrOAuthToken,
       auth_type:
-        authType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        authType as SafeEventValue,
       using_default_secret_name: secretName === 'ANTHROPIC_API_KEY',
       selected_claude_workflow: selectedWorkflows.includes('claude'),
       selected_claude_review_workflow:
@@ -313,7 +313,7 @@ export async function setupGitHubActions(
     ) {
       logEvent('tengu_setup_github_actions_failed', {
         reason:
-          'unexpected_error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'unexpected_error' as SafeEventValue,
         ...context,
       })
     }

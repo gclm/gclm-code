@@ -1,6 +1,6 @@
 import { feature } from 'bun:bundle'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import type { ToolUseContext } from '../Tool.js'
@@ -87,12 +87,12 @@ export function buildEffectiveSystemPrompt({
     logEvent('tengu_agent_memory_loaded', {
       ...(process.env.USER_TYPE === 'ant' && {
         agent_type:
-          mainThreadAgentDefinition.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mainThreadAgentDefinition.agentType as SafeEventValue,
       }),
       scope:
-        mainThreadAgentDefinition.memory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mainThreadAgentDefinition.memory as SafeEventValue,
       source:
-        'main-thread' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'main-thread' as SafeEventValue,
     })
   }
 

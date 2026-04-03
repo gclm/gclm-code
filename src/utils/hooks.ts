@@ -54,7 +54,7 @@ import {
 import {
   logEvent,
   logOTelEvent,
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
 } from 'src/services/analytics/index.js'
 import { ALLOWED_OFFICIAL_MARKETPLACE_NAMES } from './plugins/schemas.js'
 import {
@@ -2022,15 +2022,15 @@ async function* executeHooks({
     const hookTypeCounts = getHookTypeCounts(userHooks)
     logEvent(`tengu_run_hook`, {
       hookName:
-        hookName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        hookName as SafeEventValue,
       numCommands: userHooks.length,
       hookTypeCounts: jsonStringify(
         hookTypeCounts,
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
       ...(pluginHookCounts && {
         pluginHookCounts: jsonStringify(
           pluginHookCounts,
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeEventValue,
       }),
     })
   } else {
@@ -2055,7 +2055,7 @@ async function* executeHooks({
     addToTurnHookDuration(totalDurationMs)
     logEvent(`tengu_repl_hook_finished`, {
       hookName:
-        hookName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        hookName as SafeEventValue,
       numCommands: matchingHooks.length,
       numSuccess: matchingHooks.length,
       numBlocking: 0,
@@ -2934,7 +2934,7 @@ async function* executeHooks({
 
   logEvent(`tengu_repl_hook_finished`, {
     hookName:
-      hookName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      hookName as SafeEventValue,
     numCommands: matchingHooks.length,
     numSuccess: outcomes.success,
     numBlocking: outcomes.blocking,
@@ -3058,15 +3058,15 @@ async function executeHooksOutsideREPL({
     const hookTypeCounts = getHookTypeCounts(userHooks)
     logEvent(`tengu_run_hook`, {
       hookName:
-        hookName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        hookName as SafeEventValue,
       numCommands: userHooks.length,
       hookTypeCounts: jsonStringify(
         hookTypeCounts,
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
       ...(pluginHookCounts && {
         pluginHookCounts: jsonStringify(
           pluginHookCounts,
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeEventValue,
       }),
     })
   }

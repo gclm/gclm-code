@@ -1,5 +1,5 @@
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { logForDebugging } from '../utils/debug.js'
@@ -135,7 +135,7 @@ export function logBridgeSkip(
   }
   logEvent('tengu_bridge_repl_skipped', {
     reason:
-      reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      reason as SafeEventValue,
     ...(v2 !== undefined && { v2 }),
   })
 }

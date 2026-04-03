@@ -38,7 +38,7 @@ import {
 import omit from 'lodash-es/omit.js'
 import reject from 'lodash-es/reject.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import {
@@ -481,11 +481,11 @@ export function useManageMCPConnections(
             // plugin-kind entry (same tier as tengu_plugin_installed, which
             // logs arbitrary plugin_id+marketplace_name ungated). server-kind
             // names are MCP-server-name tier; those are opt-in-only elsewhere
-            // (see isAnalyticsToolDetailsLoggingEnabled in metadata.ts) and
+            // (see isToolDetailsCaptureEnabled in metadata.ts) and
             // stay unlogged here. is_dev/entry_kind segment the rest.
             const pluginId =
               entry?.kind === 'plugin'
-                ? (`${entry.name}@${entry.marketplace}` as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+                ? (`${entry.name}@${entry.marketplace}` as SafeEventValue)
                 : undefined
             // Skip capability-miss — every non-channel MCP server trips it.
             if (gate.action === 'register' || gate.kind !== 'capability') {
@@ -493,10 +493,10 @@ export function useManageMCPConnections(
                 registered: gate.action === 'register',
                 skip_kind:
                   gate.action === 'skip'
-                    ? (gate.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+                    ? (gate.kind as SafeEventValue)
                     : undefined,
                 entry_kind:
-                  entry?.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  entry?.kind as SafeEventValue,
                 is_dev: entry?.dev ?? false,
                 plugin: pluginId,
               })
@@ -516,7 +516,7 @@ export function useManageMCPConnections(
                       content_length: content.length,
                       meta_key_count: Object.keys(meta ?? {}).length,
                       entry_kind:
-                        entry?.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        entry?.kind as SafeEventValue,
                       is_dev: entry?.dev ?? false,
                       plugin: pluginId,
                     })
@@ -635,21 +635,21 @@ export function useManageMCPConnections(
                     previousToolsPromise.then(
                       (previousTools: Tool[]) => {
                         logEvent('tengu_mcp_list_changed', {
-                          type: 'tools' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                          type: 'tools' as SafeEventValue,
                           previousCount: previousTools.length,
                           newCount,
                         })
                       },
                       () => {
                         logEvent('tengu_mcp_list_changed', {
-                          type: 'tools' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                          type: 'tools' as SafeEventValue,
                           newCount,
                         })
                       },
                     )
                   } else {
                     logEvent('tengu_mcp_list_changed', {
-                      type: 'tools' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                      type: 'tools' as SafeEventValue,
                       newCount,
                     })
                   }
@@ -673,7 +673,7 @@ export function useManageMCPConnections(
                   `Received prompts/list_changed notification, refreshing prompts`,
                 )
                 logEvent('tengu_mcp_list_changed', {
-                  type: 'prompts' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  type: 'prompts' as SafeEventValue,
                 })
                 try {
                   // Skills come from resources, not prompts — don't invalidate their
@@ -711,7 +711,7 @@ export function useManageMCPConnections(
                   `Received resources/list_changed notification, refreshing resources`,
                 )
                 logEvent('tengu_mcp_list_changed', {
-                  type: 'resources' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  type: 'resources' as SafeEventValue,
                 })
                 try {
                   fetchResourcesForClient.cache.delete(client.name)
@@ -1002,7 +1002,7 @@ export function useManageMCPConnections(
                 .sort()
                 .join(
                   ',',
-                ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                ) as SafeEventValue,
             }
           : {}),
       })

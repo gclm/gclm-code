@@ -10,10 +10,10 @@
  * marketplace filtering is hardcoded for v1.
  */
 
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+  type SafeEventValue,
+  type PiiEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import {
@@ -110,12 +110,12 @@ export async function resolvePluginHint(
 
   logEvent('tengu_plugin_hint_detected', {
     _PROTO_plugin_name: (name ??
-      '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+      '') as PiiEventValue,
     _PROTO_marketplace_name: (marketplace ??
-      '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+      '') as PiiEventValue,
     result: (pluginData
       ? 'passed'
-      : 'not_in_cache') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      : 'not_in_cache') as SafeEventValue,
   })
 
   if (!pluginData) {

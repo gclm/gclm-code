@@ -16,9 +16,9 @@
 import { promises as fs } from 'fs'
 import * as os from 'os'
 import * as path from 'path'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import { logForDebugging } from '../debug.js'
@@ -335,7 +335,7 @@ export async function ensureDeepLinkProtocolRegistered(): Promise<void> {
     logEvent('tengu_deep_link_registered', {
       success: false,
       error_code:
-        code as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        code as SafeEventValue,
     })
     logForDebugging(
       `Failed to auto-register deep link protocol handler: ${error instanceof Error ? error.message : String(error)}`,

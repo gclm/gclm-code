@@ -1,6 +1,6 @@
 import { c as _c } from "react/compiler-runtime";
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
+import { type SafeEventValue, logEvent } from 'src/services/analytics/index.js';
 import { installOAuthTokens } from '../cli/handlers/auth.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { setClipboard } from '../ink/termio/osc.js';
@@ -258,7 +258,7 @@ export function ConsoleOAuthFlow({
         }
       });
       logEvent('tengu_oauth_error', {
-        error: errorMessage as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        error: errorMessage as SafeEventValue,
         ssl_error: sslHint !== null
       });
     }
@@ -280,7 +280,7 @@ export function ConsoleOAuthFlow({
     } catch (err) {
       const msg = (err as Error).message;
       logEvent('tengu_oauth_codex_error', {
-        error: msg as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        error: msg as SafeEventValue,
       });
       setOAuthStatus({ state: 'error', message: msg, toRetry: { state: 'idle' } });
     }

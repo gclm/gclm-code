@@ -11,10 +11,10 @@
 
 import { stat, unlink } from 'fs/promises'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import { type FilesApiConfig, uploadFile } from '../../services/api/filesApi.js'
 import { getCwd } from '../cwd.js'
 import { logForDebugging } from '../debug.js'
@@ -179,7 +179,7 @@ export async function createAndUploadGitBundle(
   if (refCheck.code === 0 && refCheck.stdout.trim() === '') {
     logEvent('tengu_ccr_bundle_upload', {
       outcome:
-        'empty_repo' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'empty_repo' as SafeEventValue,
     })
     return {
       success: false,
@@ -234,7 +234,7 @@ export async function createAndUploadGitBundle(
       logForDebugging(`[gitBundle] ${bundle.error}`)
       logEvent('tengu_ccr_bundle_upload', {
         outcome:
-          bundle.failReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          bundle.failReason as SafeEventValue,
         max_bytes: maxBytes,
       })
       return {
@@ -252,7 +252,7 @@ export async function createAndUploadGitBundle(
     if (!upload.success) {
       logEvent('tengu_ccr_bundle_upload', {
         outcome:
-          'failed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'failed' as SafeEventValue,
       })
       return { success: false, error: upload.error }
     }
@@ -262,10 +262,10 @@ export async function createAndUploadGitBundle(
     )
     logEvent('tengu_ccr_bundle_upload', {
       outcome:
-        'success' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'success' as SafeEventValue,
       size_bytes: upload.size,
       scope:
-        bundle.scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        bundle.scope as SafeEventValue,
       has_wip: hasWip,
     })
     return {

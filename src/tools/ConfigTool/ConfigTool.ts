@@ -1,7 +1,7 @@
 import { feature } from 'bun:bundle'
 import { z } from 'zod/v4'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
@@ -382,10 +382,10 @@ export const ConfigTool = buildTool({
 
       logEvent('tengu_config_tool_changed', {
         setting:
-          setting as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          setting as SafeEventValue,
         value: String(
           finalValue,
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeEventValue,
       })
 
       return {

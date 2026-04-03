@@ -12,7 +12,7 @@ import { getClaudeTempDir } from 'src/utils/permissions/filesystem.js'
 import { jsonStringify } from 'src/utils/slowOperations.js'
 import type { QuerySource } from '../../constants/querySource.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../analytics/index.js'
 
@@ -609,29 +609,29 @@ export async function checkResponseForCacheBreak(
         .map(sanitizeToolName)
         .join(
           ',',
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeEventValue,
       removedTools: (changes?.removedTools ?? [])
         .map(sanitizeToolName)
         .join(
           ',',
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeEventValue,
       changedToolSchemas: (changes?.changedToolSchemas ?? [])
         .map(sanitizeToolName)
         .join(
           ',',
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeEventValue,
       // Beta header names and cache strategy are fixed enum-like values,
       // not code or filepaths. requestId is an opaque server-generated ID.
       addedBetas: (changes?.addedBetas ?? []).join(
         ',',
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
       removedBetas: (changes?.removedBetas ?? []).join(
         ',',
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
       prevGlobalCacheStrategy: (changes?.prevGlobalCacheStrategy ??
-        '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        '') as SafeEventValue,
       newGlobalCacheStrategy: (changes?.newGlobalCacheStrategy ??
-        '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        '') as SafeEventValue,
       callNumber: state.callCount,
       prevCacheReadTokens: prevCacheRead,
       cacheReadTokens,
@@ -640,7 +640,7 @@ export async function checkResponseForCacheBreak(
       lastAssistantMsgOver5minAgo,
       lastAssistantMsgOver1hAgo,
       requestId: (requestId ??
-        '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        '') as SafeEventValue,
     })
 
     // Write diff file for ant debugging via --debug. The path is included in

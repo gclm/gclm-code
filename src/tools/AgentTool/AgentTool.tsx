@@ -8,8 +8,8 @@ import { clearInvokedSkillsForAgent, getSdkAgentProgressSummariesEnabled } from 
 import { enhanceSystemPromptWithEnvDetails, getSystemPrompt } from '../../constants/prompts.js';
 import { isCoordinatorMode } from '../../coordinator/coordinatorMode.js';
 import { startAgentSummarization } from '../../services/AgentSummary/agentSummary.js';
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js';
+import { type SafeEventValue, logEvent } from '../../services/analytics/index.js';
 import { clearDumpState } from '../../services/api/dumpPrompts.js';
 import { completeAgentTask as completeAsyncAgent, createActivityDescriptionResolver, createProgressTracker, enqueueAgentNotification, failAgentTask as failAsyncAgent, getProgressUpdate, getTokenCountFromTracker, isLocalAgentTask, killAsyncAgent, registerAgentForeground, registerAsyncAgent, unregisterAgentForeground, updateAgentProgress as updateAsyncAgentProgress, updateProgressFromMessage } from '../../tasks/LocalAgentTask/LocalAgentTask.js';
 import { checkRemoteAgentEligibility, formatPreconditionError, getRemoteTaskSessionUrl, registerRemoteAgentTask } from '../../tasks/RemoteAgentTask/RemoteAgentTask.js';
@@ -417,10 +417,10 @@ export const AgentTool = buildTool({
     // Resolve agent params for logging (these are already resolved in runAgent)
     const resolvedAgentModel = getAgentModel(selectedAgent.model, toolUseContext.options.mainLoopModel, isForkPath ? undefined : model, permissionMode);
     logEvent('tengu_agent_tool_selected', {
-      agent_type: selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      model: resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      source: selectedAgent.source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      color: selectedAgent.color as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      agent_type: selectedAgent.agentType as SafeEventValue,
+      model: resolvedAgentModel as SafeEventValue,
+      source: selectedAgent.source as SafeEventValue,
+      color: selectedAgent.color as SafeEventValue,
       is_built_in_agent: isBuiltInAgent(selectedAgent),
       is_resume: false,
       is_async: (run_in_background === true || selectedAgent.background === true) && !isBackgroundTasksDisabled,
@@ -464,7 +464,7 @@ export const AgentTool = buildTool({
         toolUseId: toolUseContext.toolUseId
       });
       logEvent('tengu_agent_tool_remote_launched', {
-        agent_type: selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        agent_type: selectedAgent.agentType as SafeEventValue
       });
       const remoteResult: RemoteLaunchedOutput = {
         status: 'remote_launched',
@@ -523,10 +523,10 @@ export const AgentTool = buildTool({
         if (selectedAgent.memory) {
           logEvent('tengu_agent_memory_loaded', {
             ...("external" === 'ant' && {
-              agent_type: selectedAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+              agent_type: selectedAgent.agentType as SafeEventValue
             }),
-            scope: selectedAgent.memory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-            source: 'subagent' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+            scope: selectedAgent.memory as SafeEventValue,
+            source: 'subagent' as SafeEventValue
           });
         }
 
@@ -995,12 +995,12 @@ export const AgentTool = buildTool({
                       // TaskOutput unblocks even if git hangs (gh-20236).
                       killAsyncAgent(backgroundedTaskId, rootSetAppState);
                       logEvent('tengu_agent_tool_terminated', {
-                        agent_type: metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-                        model: metadata.resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        agent_type: metadata.agentType as SafeEventValue,
+                        model: metadata.resolvedAgentModel as SafeEventValue,
                         duration_ms: Date.now() - metadata.startTime,
                         is_async: true,
                         is_built_in_agent: metadata.isBuiltInAgent,
-                        reason: 'user_cancel_background' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+                        reason: 'user_cancel_background' as SafeEventValue
                       });
                       const worktreeResult = await cleanupWorktreeIfNeeded();
                       const partialResult = extractPartialResult(agentMessages);
@@ -1130,12 +1130,12 @@ export const AgentTool = buildTool({
           if (error instanceof AbortError) {
             wasAborted = true;
             logEvent('tengu_agent_tool_terminated', {
-              agent_type: metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-              model: metadata.resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              agent_type: metadata.agentType as SafeEventValue,
+              model: metadata.resolvedAgentModel as SafeEventValue,
               duration_ms: Date.now() - metadata.startTime,
               is_async: false,
               is_built_in_agent: metadata.isBuiltInAgent,
-              reason: 'user_cancel_sync' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+              reason: 'user_cancel_sync' as SafeEventValue
             });
             throw error;
           }
@@ -1207,12 +1207,12 @@ export const AgentTool = buildTool({
         const lastMessage = agentMessages.findLast(_ => _.type !== 'system' && _.type !== 'progress');
         if (lastMessage && isSyntheticMessage(lastMessage)) {
           logEvent('tengu_agent_tool_terminated', {
-            agent_type: metadata.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-            model: metadata.resolvedAgentModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            agent_type: metadata.agentType as SafeEventValue,
+            model: metadata.resolvedAgentModel as SafeEventValue,
             duration_ms: Date.now() - metadata.startTime,
             is_async: false,
             is_built_in_agent: metadata.isBuiltInAgent,
-            reason: 'user_cancel_sync' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+            reason: 'user_cancel_sync' as SafeEventValue
           });
           throw new AbortError();
         }

@@ -5,7 +5,7 @@ import {
   performLogout,
 } from '../../commands/logout/logout.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import { getSSLErrorHint } from '../../services/api/errorUtils.js'
@@ -93,7 +93,7 @@ export async function installOAuthTokens(tokens: OAuthTokens): Promise<void> {
   if (storageResult.warning) {
     logEvent('tengu_oauth_storage_warning', {
       warning:
-        storageResult.warning as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        storageResult.warning as SafeEventValue,
     })
   }
 

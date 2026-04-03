@@ -11,7 +11,7 @@ import { isAwsCredentialsProviderError } from 'src/utils/aws.js'
 import { logForDebugging } from 'src/utils/debug.js'
 import { logError } from 'src/utils/log.js'
 import { createSystemAPIErrorMessage } from 'src/utils/messages.js'
-import { getAPIProviderForStatsig } from 'src/utils/model/providers.js'
+import { getProviderForDiagnostics } from 'src/utils/model/providers.js'
 import {
   clearApiKeyHelperCache,
   clearAwsCredentialsCache,
@@ -35,9 +35,9 @@ import { isNonCustomOpusModel } from '../../utils/model/model.js'
 import { disableKeepAlive } from '../../utils/proxy.js'
 import { sleep } from '../../utils/sleep.js'
 import type { ThinkingConfig } from '../../utils/thinking.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../analytics/index.js'
 import {
@@ -318,7 +318,7 @@ export async function* withRetry<T>(
       if (is529Error(error) && !shouldRetry529(options.querySource)) {
         logEvent('tengu_api_529_background_dropped', {
           query_source:
-            options.querySource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            options.querySource as SafeEventValue,
         })
         throw new CannotRetryError(error, retryContext)
       }
@@ -337,10 +337,10 @@ export async function* withRetry<T>(
           if (options.fallbackModel) {
             logEvent('tengu_api_opus_fallback_triggered', {
               original_model:
-                options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                options.model as SafeEventValue,
               fallback_model:
-                options.fallbackModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-              provider: getAPIProviderForStatsig(),
+                options.fallbackModel as SafeEventValue,
+              provider: getProviderForDiagnostics(),
             })
 
             // Throw special error to indicate fallback was triggered
@@ -469,9 +469,9 @@ export async function* withRetry<T>(
         attempt: reportedAttempt,
         delayMs: delayMs,
         error: (error as APIError)
-          .message as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          .message as SafeEventValue,
         status: (error as APIError).status,
-        provider: getAPIProviderForStatsig(),
+        provider: getProviderForDiagnostics(),
       })
 
       if (persistent) {
@@ -480,7 +480,7 @@ export async function* withRetry<T>(
             status: (error as APIError).status,
             delayMs,
             attempt: reportedAttempt,
-            provider: getAPIProviderForStatsig(),
+            provider: getProviderForDiagnostics(),
           })
         }
         // Chunk long sleeps so the host sees periodic stdout activity and

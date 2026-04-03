@@ -2,7 +2,7 @@ import { c as _c } from "react/compiler-runtime";
 import figures from 'figures';
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
+import { type SafeEventValue, logEvent } from 'src/services/analytics/index.js';
 import { ConfigurableShortcutHint } from '../../components/ConfigurableShortcutHint.js';
 import { Byline } from '../../components/design-system/Byline.js';
 import { KeyboardShortcutHint } from '../../components/design-system/KeyboardShortcutHint.js';
@@ -215,7 +215,7 @@ export function ManageMarketplaces({
           await removeMarketplaceSource(state.name);
           removedCount++;
           logEvent('tengu_marketplace_removed', {
-            marketplace_name: state.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            marketplace_name: state.name as SafeEventValue,
             plugins_uninstalled: state.installedPlugins?.length || 0
           });
           continue;
@@ -230,7 +230,7 @@ export function ManageMarketplaces({
           updatedCount++;
           refreshedMarketplaces.add(state.name.toLowerCase());
           logEvent('tengu_marketplace_updated', {
-            marketplace_name: state.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+            marketplace_name: state.name as SafeEventValue
           });
         }
       }

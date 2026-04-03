@@ -6,7 +6,7 @@
 import { type Command, Option } from '@commander-js/extra-typings'
 import { cliError, cliOk } from '../../cli/exit.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import {
@@ -133,13 +133,13 @@ export function registerMcpAddCommand(mcp: Command): void {
           actualCommand.endsWith('/mcp')
 
         logEvent('tengu_mcp_add', {
-          type: transport as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          type: transport as SafeEventValue,
           scope:
-            scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            scope as SafeEventValue,
           source:
-            'command' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'command' as SafeEventValue,
           transport:
-            transport as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            transport as SafeEventValue,
           transportExplicit: transportExplicit,
           looksLikeUrl: looksLikeUrl,
         })

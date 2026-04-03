@@ -8,7 +8,7 @@ import {
 import { COMMAND_NAME_TAG } from '../../constants/xml.js'
 import { stringWidth } from '../../ink/stringWidth.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import { count } from '../../utils/array.js'
@@ -128,7 +128,7 @@ export function formatCommandsWithinBudget(
         budget,
         full_total: fullTotal,
         truncation_mode:
-          'names_only' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'names_only' as SafeEventValue,
         max_desc_length: maxDescLen,
         bundled_count: bundledIndices.size,
         bundled_chars: bundledChars,
@@ -152,7 +152,7 @@ export function formatCommandsWithinBudget(
       budget,
       full_total: fullTotal,
       truncation_mode:
-        'description_trimmed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'description_trimmed' as SafeEventValue,
       max_desc_length: maxDescLen,
       truncated_count: truncatedCount,
       // Count of bundled skills included in this prompt (excludes skills with disableModelInvocation)

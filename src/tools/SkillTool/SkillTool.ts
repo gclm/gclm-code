@@ -41,8 +41,8 @@ import {
 import { COMMAND_MESSAGE_TAG } from '../../constants/xml.js'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+  type SafeEventValue,
+  type PiiEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import { getAgentContext } from '../../utils/agentContext.js'
@@ -150,35 +150,35 @@ async function executeForkedSkill(
   const parentAgentId = getAgentContext()?.agentId
   logEvent('tengu_skill_tool_invocation', {
     command_name:
-      forkedSanitizedName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      forkedSanitizedName as SafeEventValue,
     // _PROTO_skill_name routes to the privileged skill_name BQ column
     // (unredacted, all users); command_name stays in additional_metadata as
     // the redacted variant for general-access dashboards.
     _PROTO_skill_name:
-      commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+      commandName as PiiEventValue,
     execution_context:
-      'fork' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      'fork' as SafeEventValue,
     invocation_trigger: (queryDepth > 0
       ? 'nested-skill'
-      : 'claude-proactive') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      : 'claude-proactive') as SafeEventValue,
     query_depth: queryDepth,
     ...(parentAgentId && {
       parent_agent_id:
-        parentAgentId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        parentAgentId as SafeEventValue,
     }),
     ...wasDiscoveredField,
     ...(process.env.USER_TYPE === 'ant' && {
       skill_name:
-        commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        commandName as SafeEventValue,
       skill_source:
-        command.source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        command.source as SafeEventValue,
       ...(command.loadedFrom && {
         skill_loaded_from:
-          command.loadedFrom as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          command.loadedFrom as SafeEventValue,
       }),
       ...(command.kind && {
         skill_kind:
-          command.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          command.kind as SafeEventValue,
       }),
     }),
     ...(command.pluginInfo && {
@@ -186,17 +186,17 @@ async function executeForkedSkill(
       // (unredacted, all users); plugin_name/plugin_repository stay in
       // additional_metadata as redacted variants.
       _PROTO_plugin_name: command.pluginInfo.pluginManifest
-        .name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+        .name as PiiEventValue,
       ...(pluginMarketplace && {
         _PROTO_marketplace_name:
-          pluginMarketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+          pluginMarketplace as PiiEventValue,
       }),
       plugin_name: (isOfficialSkill
         ? command.pluginInfo.pluginManifest.name
-        : 'third-party') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        : 'third-party') as SafeEventValue,
       plugin_repository: (isOfficialSkill
         ? command.pluginInfo.repository
-        : 'third-party') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        : 'third-party') as SafeEventValue,
     }),
   })
 
@@ -672,53 +672,53 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
     const parentAgentId = getAgentContext()?.agentId
     logEvent('tengu_skill_tool_invocation', {
       command_name:
-        sanitizedCommandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        sanitizedCommandName as SafeEventValue,
       // _PROTO_skill_name routes to the privileged skill_name BQ column
       // (unredacted, all users); command_name stays in additional_metadata as
       // the redacted variant for general-access dashboards.
       _PROTO_skill_name:
-        commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+        commandName as PiiEventValue,
       execution_context:
-        'inline' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'inline' as SafeEventValue,
       invocation_trigger: (queryDepth > 0
         ? 'nested-skill'
-        : 'claude-proactive') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        : 'claude-proactive') as SafeEventValue,
       query_depth: queryDepth,
       ...(parentAgentId && {
         parent_agent_id:
-          parentAgentId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          parentAgentId as SafeEventValue,
       }),
       ...wasDiscoveredField,
       ...(process.env.USER_TYPE === 'ant' && {
         skill_name:
-          commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          commandName as SafeEventValue,
         ...(command?.type === 'prompt' && {
           skill_source:
-            command.source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            command.source as SafeEventValue,
         }),
         ...(command?.loadedFrom && {
           skill_loaded_from:
-            command.loadedFrom as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            command.loadedFrom as SafeEventValue,
         }),
         ...(command?.kind && {
           skill_kind:
-            command.kind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            command.kind as SafeEventValue,
         }),
       }),
       ...(command?.type === 'prompt' &&
         command.pluginInfo && {
           _PROTO_plugin_name: command.pluginInfo.pluginManifest
-            .name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+            .name as PiiEventValue,
           ...(pluginMarketplace && {
             _PROTO_marketplace_name:
-              pluginMarketplace as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+              pluginMarketplace as PiiEventValue,
           }),
           plugin_name: (isOfficialSkill
             ? command.pluginInfo.pluginManifest.name
-            : 'third-party') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            : 'third-party') as SafeEventValue,
           plugin_repository: (isOfficialSkill
             ? command.pluginInfo.repository
-            : 'third-party') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            : 'third-party') as SafeEventValue,
         }),
     })
 
@@ -1025,21 +1025,21 @@ async function executeRemoteSkill(
   const parentAgentId = getAgentContext()?.agentId
   logEvent('tengu_skill_tool_invocation', {
     command_name:
-      'remote_skill' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      'remote_skill' as SafeEventValue,
     // _PROTO_skill_name routes to the privileged skill_name BQ column
     // (unredacted, all users); command_name stays in additional_metadata as
     // the redacted variant.
     _PROTO_skill_name:
-      commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+      commandName as PiiEventValue,
     execution_context:
-      'remote' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      'remote' as SafeEventValue,
     invocation_trigger: (queryDepth > 0
       ? 'nested-skill'
-      : 'claude-proactive') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      : 'claude-proactive') as SafeEventValue,
     query_depth: queryDepth,
     ...(parentAgentId && {
       parent_agent_id:
-        parentAgentId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        parentAgentId as SafeEventValue,
     }),
     was_discovered: true,
     is_remote: true,
@@ -1047,9 +1047,9 @@ async function executeRemoteSkill(
     remote_load_latency_ms: latencyMs,
     ...(process.env.USER_TYPE === 'ant' && {
       skill_name:
-        commandName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        commandName as SafeEventValue,
       remote_slug:
-        slug as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        slug as SafeEventValue,
     }),
   })
 

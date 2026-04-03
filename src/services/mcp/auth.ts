@@ -44,7 +44,7 @@ import type { SecureStorageData } from '../../utils/secureStorage/types.js'
 import { sleep } from '../../utils/sleep.js'
 import { jsonParse, jsonStringify } from '../../utils/slowOperations.js'
 import { logEvent } from '../analytics/index.js'
-import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../analytics/metadata.js'
+import type { SafeLogValue } from '../toolLogging/metadata.js'
 import { buildRedirectUri, findAvailablePort } from './oauthPort.js'
 import type { McpHTTPServerConfig, McpSSEServerConfig } from './types.js'
 import { getLoggingSafeMcpBaseUrl } from './utils.js'
@@ -825,7 +825,7 @@ async function performMCPXaaAuth(
     logMCPDebug(serverName, 'XAA: tokens saved')
     logEvent('tengu_mcp_oauth_flow_success', {
       authMethod:
-        'xaa' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'xaa' as SafeLogValue,
       idTokenCacheHit,
     })
   } catch (e) {
@@ -835,9 +835,9 @@ async function performMCPXaaAuth(
     }
     logEvent('tengu_mcp_oauth_flow_failure', {
       authMethod:
-        'xaa' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'xaa' as SafeLogValue,
       xaaFailureStage:
-        failureStage as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        failureStage as SafeLogValue,
       idTokenCacheHit,
     })
     throw e
@@ -877,14 +877,14 @@ export async function performMCPOAuthFlow(
     logEvent('tengu_mcp_oauth_flow_start', {
       isOAuthFlow: true,
       authMethod:
-        'xaa' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'xaa' as SafeLogValue,
       transportType:
-        serverConfig.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        serverConfig.type as SafeLogValue,
       ...(getLoggingSafeMcpBaseUrl(serverConfig)
         ? {
             mcpServerBaseUrl: getLoggingSafeMcpBaseUrl(
               serverConfig,
-            ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            ) as SafeLogValue,
           }
         : {}),
     })
@@ -938,15 +938,15 @@ export async function performMCPOAuthFlow(
 
   logEvent('tengu_mcp_oauth_flow_start', {
     flowAttemptId:
-      flowAttemptId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      flowAttemptId as SafeLogValue,
     isOAuthFlow: true,
     transportType:
-      serverConfig.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      serverConfig.type as SafeLogValue,
     ...(getLoggingSafeMcpBaseUrl(serverConfig)
       ? {
           mcpServerBaseUrl: getLoggingSafeMcpBaseUrl(
             serverConfig,
-          ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          ) as SafeLogValue,
         }
       : {}),
   })
@@ -1242,14 +1242,14 @@ export async function performMCPOAuthFlow(
 
       logEvent('tengu_mcp_oauth_flow_success', {
         flowAttemptId:
-          flowAttemptId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          flowAttemptId as SafeLogValue,
         transportType:
-          serverConfig.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          serverConfig.type as SafeLogValue,
         ...(getLoggingSafeMcpBaseUrl(serverConfig)
           ? {
               mcpServerBaseUrl: getLoggingSafeMcpBaseUrl(
                 serverConfig,
-              ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              ) as SafeLogValue,
             }
           : {}),
       })
@@ -1320,20 +1320,20 @@ export async function performMCPOAuthFlow(
 
     logEvent('tengu_mcp_oauth_flow_error', {
       flowAttemptId:
-        flowAttemptId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        flowAttemptId as SafeLogValue,
       reason:
-        reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        reason as SafeLogValue,
       error_code:
-        oauthErrorCode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        oauthErrorCode as SafeLogValue,
       http_status:
-        httpStatus?.toString() as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        httpStatus?.toString() as SafeLogValue,
       transportType:
-        serverConfig.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        serverConfig.type as SafeLogValue,
       ...(getLoggingSafeMcpBaseUrl(serverConfig)
         ? {
             mcpServerBaseUrl: getLoggingSafeMcpBaseUrl(
               serverConfig,
-            ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            ) as SafeLogValue,
           }
         : {}),
     })
@@ -2190,17 +2190,17 @@ export class ClaudeAuthProvider implements OAuthClientProvider {
           : 'tengu_mcp_oauth_refresh_failure',
         {
           transportType: this.serverConfig
-            .type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            .type as SafeLogValue,
           ...(mcpServerBaseUrl
             ? {
                 mcpServerBaseUrl:
-                  mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  mcpServerBaseUrl as SafeLogValue,
               }
             : {}),
           ...(reason
             ? {
                 reason:
-                  reason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  reason as SafeLogValue,
               }
             : {}),
         },

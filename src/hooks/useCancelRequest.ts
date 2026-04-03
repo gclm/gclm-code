@@ -6,7 +6,7 @@
  */
 import { useCallback, useRef } from 'react'
 import { logEvent } from 'src/services/analytics/index.js'
-import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/metadata.js'
+import type { SafeLogValue } from 'src/services/toolLogging/metadata.js'
 import {
   useAppState,
   useAppStateStore,
@@ -87,9 +87,9 @@ export function CancelRequestHandler(props: CancelRequestHandlerProps): null {
   const handleCancel = useCallback(() => {
     const cancelProps = {
       source:
-        'escape' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'escape' as SafeLogValue,
       streamMode:
-        streamMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        streamMode as SafeLogValue,
     }
 
     // Priority 1: If there's an active task running, cancel it first
@@ -244,7 +244,7 @@ export function CancelRequestHandler(props: CancelRequestHandlerProps): null {
       removeNotification('kill-agents-confirm')
       logEvent('tengu_cancel', {
         source:
-          'kill_agents' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'kill_agents' as SafeLogValue,
       })
       clearCommandQueue()
       killAllAgentsAndNotify()

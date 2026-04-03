@@ -3,9 +3,9 @@ import { randomUUID } from 'crypto'
 import { hostname, tmpdir } from 'os'
 import { basename, join, resolve } from 'path'
 import { getRemoteSessionUrl } from '../constants/product.js'
-import { checkGate_CACHED_OR_BLOCKING } from '../services/analytics/growthbook.js'
+import { checkGate_CACHED_OR_BLOCKING } from '../services/runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
   logEventAsync,
 } from '../services/analytics/index.js'
@@ -219,10 +219,10 @@ export async function runBridgeLoop(
         if (err instanceof BridgeFatalError) {
           logEvent('tengu_bridge_heartbeat_error', {
             status:
-              err.status as unknown as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              err.status as unknown as SafeEventValue,
             error_type: (err.status === 401 || err.status === 403
               ? 'auth_failed'
-              : 'fatal') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              : 'fatal') as SafeEventValue,
           })
           if (err.status === 401 || err.status === 403) {
             authFailedSessions.push(sessionId)
@@ -477,7 +477,7 @@ export async function runBridgeLoop(
       )
       logEvent('tengu_bridge_session_done', {
         status:
-          status as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          status as SafeEventValue,
         duration_ms: durationMs,
       })
       logForDiagnosticsNoPII('info', 'bridge_session_done', {
@@ -697,7 +697,7 @@ export async function runBridgeLoop(
                       : 'config_disabled'
             logEvent('tengu_bridge_heartbeat_mode_exited', {
               reason:
-                exitReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                exitReason as SafeEventValue,
               heartbeat_cycles: hbCycles,
               active_sessions: activeSessions.size,
             })
@@ -1096,7 +1096,7 @@ export async function runBridgeLoop(
           logEvent('tengu_bridge_session_started', {
             active_sessions: activeSessions.size,
             spawn_mode:
-              spawnModeAtDecision as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              spawnModeAtDecision as SafeEventValue,
             in_worktree: sessionWorktrees.has(sessionId),
             spawn_duration_ms: spawnDurationMs,
             worktree_create_ms: worktreeCreateMs,
@@ -1253,7 +1253,7 @@ export async function runBridgeLoop(
         logEvent('tengu_bridge_fatal_error', {
           status: err.status,
           error_type:
-            err.errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            err.errorType as SafeEventValue,
         })
         logForDiagnosticsNoPII(
           isExpiredErrorType(err.errorType) ? 'info' : 'error',
@@ -1298,7 +1298,7 @@ export async function runBridgeLoop(
           )
           logEvent('tengu_bridge_poll_give_up', {
             error_type:
-              'connection' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              'connection' as SafeEventValue,
             elapsed_ms: elapsed,
           })
           logForDiagnosticsNoPII('error', 'bridge_poll_give_up', {
@@ -1364,7 +1364,7 @@ export async function runBridgeLoop(
           )
           logEvent('tengu_bridge_poll_give_up', {
             error_type:
-              'general' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              'general' as SafeEventValue,
             elapsed_ms: elapsed,
           })
           logForDiagnosticsNoPII('error', 'bridge_poll_give_up', {
@@ -2265,7 +2265,7 @@ export async function bridgeMain(args: string[]): Promise<void> {
     savedSpawnMode = chosen
     logEvent('tengu_bridge_spawn_mode_chosen', {
       spawn_mode:
-        chosen as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        chosen as SafeEventValue,
     })
     saveCurrentProjectConfig(current => {
       if (current.remoteControlSpawnMode === chosen) return current
@@ -2554,9 +2554,9 @@ export async function bridgeMain(args: string[]): Promise<void> {
     heartbeat_interval_ms:
       startupPollConfig.non_exclusive_heartbeat_interval_ms,
     spawn_mode:
-      config.spawnMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      config.spawnMode as SafeEventValue,
     spawn_mode_source:
-      spawnModeSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      spawnModeSource as SafeEventValue,
     multi_session_gate: multiSessionEnabled,
     pre_create_session: preCreateSession,
     worktree_available: worktreeAvailable,
@@ -2623,7 +2623,7 @@ export async function bridgeMain(args: string[]): Promise<void> {
       config.spawnMode = newMode
       logEvent('tengu_bridge_spawn_mode_toggled', {
         spawn_mode:
-          newMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          newMode as SafeEventValue,
       })
       logger.logStatus(
         newMode === 'worktree'

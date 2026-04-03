@@ -1,8 +1,8 @@
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
-import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata.js'
+import { sanitizeToolNameForLogging } from 'src/services/toolLogging/metadata.js'
 import type z from 'zod/v4'
 import type { CanUseToolFn } from '../../hooks/useCanUseTool.js'
 import type { AnyObject, Tool, ToolUseContext } from '../../Tool.js'
@@ -70,10 +70,10 @@ export async function* runPostToolUseHooks<Input extends AnyObject, Output>(
           result.message.attachment.type === 'hook_cancelled'
         ) {
           logEvent('tengu_post_tool_hooks_cancelled', {
-            toolName: sanitizeToolNameForAnalytics(tool.name),
+            toolName: sanitizeToolNameForLogging(tool.name),
 
             queryChainId: toolUseContext.queryTracking
-              ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              ?.chainId as SafeEventValue,
             queryDepth: toolUseContext.queryTracking?.depth,
           })
           yield {
@@ -153,24 +153,24 @@ export async function* runPostToolUseHooks<Input extends AnyObject, Output>(
         const postToolDurationMs = Date.now() - postToolStartTime
         logEvent('tengu_post_tool_hook_error', {
           messageID:
-            messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          toolName: sanitizeToolNameForAnalytics(tool.name),
+            messageId as SafeEventValue,
+          toolName: sanitizeToolNameForLogging(tool.name),
           isMcp: tool.isMcp ?? false,
           duration: postToolDurationMs,
 
           queryChainId: toolUseContext.queryTracking
-            ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            ?.chainId as SafeEventValue,
           queryDepth: toolUseContext.queryTracking?.depth,
           ...(mcpServerType
             ? {
                 mcpServerType:
-                  mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  mcpServerType as SafeEventValue,
               }
             : {}),
           ...(requestId
             ? {
                 requestId:
-                  requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  requestId as SafeEventValue,
               }
             : {}),
         })
@@ -226,9 +226,9 @@ export async function* runPostToolUseFailureHooks<Input extends AnyObject>(
           result.message.attachment.type === 'hook_cancelled'
         ) {
           logEvent('tengu_post_tool_failure_hooks_cancelled', {
-            toolName: sanitizeToolNameForAnalytics(tool.name),
+            toolName: sanitizeToolNameForLogging(tool.name),
             queryChainId: toolUseContext.queryTracking
-              ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              ?.chainId as SafeEventValue,
             queryDepth: toolUseContext.queryTracking?.depth,
           })
           yield {
@@ -282,23 +282,23 @@ export async function* runPostToolUseFailureHooks<Input extends AnyObject>(
         const postToolDurationMs = Date.now() - postToolStartTime
         logEvent('tengu_post_tool_failure_hook_error', {
           messageID:
-            messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          toolName: sanitizeToolNameForAnalytics(tool.name),
+            messageId as SafeEventValue,
+          toolName: sanitizeToolNameForLogging(tool.name),
           isMcp: tool.isMcp ?? false,
           duration: postToolDurationMs,
           queryChainId: toolUseContext.queryTracking
-            ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            ?.chainId as SafeEventValue,
           queryDepth: toolUseContext.queryTracking?.depth,
           ...(mcpServerType
             ? {
                 mcpServerType:
-                  mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  mcpServerType as SafeEventValue,
               }
             : {}),
           ...(requestId
             ? {
                 requestId:
-                  requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  requestId as SafeEventValue,
               }
             : {}),
         })
@@ -581,10 +581,10 @@ export async function* runPreToolUseHooks(
         // Check if we were aborted during hook execution
         if (toolUseContext.abortController.signal.aborted) {
           logEvent('tengu_pre_tool_hooks_cancelled', {
-            toolName: sanitizeToolNameForAnalytics(tool.name),
+            toolName: sanitizeToolNameForLogging(tool.name),
 
             queryChainId: toolUseContext.queryTracking
-              ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              ?.chainId as SafeEventValue,
             queryDepth: toolUseContext.queryTracking?.depth,
           })
           yield {
@@ -606,24 +606,24 @@ export async function* runPreToolUseHooks(
         const durationMs = Date.now() - hookStartTime
         logEvent('tengu_pre_tool_hook_error', {
           messageID:
-            messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          toolName: sanitizeToolNameForAnalytics(tool.name),
+            messageId as SafeEventValue,
+          toolName: sanitizeToolNameForLogging(tool.name),
           isMcp: tool.isMcp ?? false,
           duration: durationMs,
 
           queryChainId: toolUseContext.queryTracking
-            ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            ?.chainId as SafeEventValue,
           queryDepth: toolUseContext.queryTracking?.depth,
           ...(mcpServerType
             ? {
                 mcpServerType:
-                  mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  mcpServerType as SafeEventValue,
               }
             : {}),
           ...(requestId
             ? {
                 requestId:
-                  requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  requestId as SafeEventValue,
               }
             : {}),
         })

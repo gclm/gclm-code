@@ -33,7 +33,7 @@ import { init, initializeTelemetryAfterTrust } from './entrypoints/init.js';
 import { addToHistory } from './history.js';
 import type { Root } from './ink.js';
 import { launchRepl } from './replLauncher.js';
-import { hasGrowthBookEnvOverride, initializeGrowthBook, refreshGrowthBookAfterAuthChange } from './services/analytics/growthbook.js';
+import { hasGrowthBookEnvOverride, initializeGrowthBook, refreshGrowthBookAfterAuthChange } from './services/runtimeConfig/growthbook.js';
 import { fetchBootstrapData } from './services/api/bootstrap.js';
 import { type DownloadResult, downloadSessionFiles, type FilesApiConfig, parseFileSpecs } from './services/api/filesApi.js';
 import { prefetchPassesEligibility } from './services/api/referral.js';
@@ -80,9 +80,9 @@ const coordinatorModeModule = feature('COORDINATOR_MODE') ? require('./coordinat
 const assistantModule = feature('KAIROS') ? require('./assistant/index.js') as typeof import('./assistant/index.js') : null;
 const kairosGate = feature('KAIROS') ? require('./assistant/gate.js') as typeof import('./assistant/gate.js') : null;
 import { relative, resolve } from 'path';
-import { isAnalyticsDisabled } from 'src/services/analytics/config.js';
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/analytics/growthbook.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
+import { isNonEssentialTrafficDisabled } from 'src/services/runtimeConfig/nonEssentialTraffic.js';
+import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/runtimeConfig/growthbook.js';
+import { type SafeEventValue, logEvent } from 'src/services/analytics/index.js';
 import { initializeAnalyticsGates } from 'src/services/analytics/sink.js';
 import { getOriginalCwd, setAdditionalDirectoriesForClaudeMd, setIsRemoteMode, setMainLoopModelOverride, setMainThreadAgentType, setTeleportedSessionInfo } from './bootstrap/state.js';
 import { filterCommandsForRemoteMode, getCommands } from './commands.js';
@@ -215,7 +215,7 @@ function logManagedSettings(): void {
       const allKeys = getManagedSettingsKeysForLogging(policySettings);
       logEvent('tengu_managed_settings_loaded', {
         keyCount: allKeys.length,
-        keys: allKeys.join(',') as unknown as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        keys: allKeys.join(',') as unknown as SafeEventValue
       });
     }
   } catch {
@@ -291,12 +291,12 @@ function getCertEnvVarTelemetry(): Record<string, boolean> {
   return result;
 }
 async function logStartupTelemetry(): Promise<void> {
-  if (isAnalyticsDisabled()) return;
+  if (isNonEssentialTrafficDisabled()) return;
   const [isGit, worktreeCount, ghAuthStatus] = await Promise.all([getIsGit(), getWorktreeCount(), getGhAuthStatus()]);
   logEvent('tengu_startup_telemetry', {
     is_git: isGit,
     worktree_count: worktreeCount,
-    gh_auth_status: ghAuthStatus as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    gh_auth_status: ghAuthStatus as SafeEventValue,
     sandbox_enabled: SandboxManager.isSandboxingEnabled(),
     are_unsandboxed_commands_allowed: SandboxManager.areUnsandboxedCommandsAllowed(),
     is_auto_bash_allowed_if_sandbox_enabled: SandboxManager.isAutoAllowBashIfSandboxedEnabled(),
@@ -1520,7 +1520,7 @@ async function run(): Promise<CommanderCommand> {
       const platform = getPlatform();
       try {
         logEvent('tengu_claude_in_chrome_setup', {
-          platform: platform as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          platform: platform as SafeEventValue
         });
         const {
           mcpConfig: chromeMcpConfig,
@@ -1537,7 +1537,7 @@ async function run(): Promise<CommanderCommand> {
         }
       } catch (error) {
         logEvent('tengu_claude_in_chrome_setup_failed', {
-          platform: platform as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          platform: platform as SafeEventValue
         });
         logForDebugging(`[Claude in Chrome] Error: ${error}`);
         logError(error);
@@ -1694,7 +1694,7 @@ async function run(): Promise<CommanderCommand> {
       if (channelEntries.length > 0 || (devChannels?.length ?? 0) > 0) {
         const joinPluginIds = (entries: ChannelEntry[]) => {
           const ids = entries.flatMap(e => e.kind === 'plugin' ? [`${e.name}@${e.marketplace}`] : []);
-          return ids.length > 0 ? ids.sort().join(',') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS : undefined;
+          return ids.length > 0 ? ids.sort().join(',') as SafeEventValue : undefined;
         };
         logEvent('tengu_mcp_channel_flags', {
           channels_count: channelEntries.length,
@@ -1876,12 +1876,12 @@ async function run(): Promise<CommanderCommand> {
         // an implementation detail for structured output, not a user-controlled tool.
         tools = [...tools, syntheticOutputResult.tool];
         logEvent('tengu_structured_output_enabled', {
-          schema_property_count: Object.keys(jsonSchema.properties as Record<string, unknown> || {}).length as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          has_required_fields: Boolean(jsonSchema.required) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          schema_property_count: Object.keys(jsonSchema.properties as Record<string, unknown> || {}).length as SafeEventValue,
+          has_required_fields: Boolean(jsonSchema.required) as SafeEventValue
         });
       } else {
         logEvent('tengu_structured_output_failure', {
-          error: 'Invalid JSON schema' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          error: 'Invalid JSON schema' as SafeEventValue
         });
       }
     }
@@ -2053,9 +2053,9 @@ async function run(): Promise<CommanderCommand> {
     // Log agent flag usage — only log agent name for built-in agents to avoid leaking custom agent names
     if (mainThreadAgentDefinition) {
       logEvent('tengu_agent_flag', {
-        agentType: isBuiltInAgent(mainThreadAgentDefinition) ? mainThreadAgentDefinition.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS : 'custom' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        agentType: isBuiltInAgent(mainThreadAgentDefinition) ? mainThreadAgentDefinition.agentType as SafeEventValue : 'custom' as SafeEventValue,
         ...(agentCli && {
-          source: 'cli' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          source: 'cli' as SafeEventValue
         })
       });
     }
@@ -2143,10 +2143,10 @@ async function run(): Promise<CommanderCommand> {
         if (customAgent.memory) {
           logEvent('tengu_agent_memory_loaded', {
             ...("external" === 'ant' && {
-              agent_type: customAgent.agentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+              agent_type: customAgent.agentType as SafeEventValue
             }),
-            scope: customAgent.memory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-            source: 'teammate' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+            scope: customAgent.memory as SafeEventValue,
+            source: 'teammate' as SafeEventValue
           });
         }
         if (customPrompt) {
@@ -2219,7 +2219,7 @@ async function run(): Promise<CommanderCommand> {
       // the user sat on trust/OAuth/onboarding/resume-picker — p99 was ~70s
       // dominated by dialog-wait time, not code-path startup.
       logEvent('tengu_timer', {
-        event: 'startup' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        event: 'startup' as SafeEventValue,
         durationMs: Math.round(process.uptime() * 1000)
       });
       logForDebugging('[STARTUP] Running showSetupScreens()...');
@@ -2848,11 +2848,11 @@ async function run(): Promise<CommanderCommand> {
 
     // Log model config at startup
     logEvent('tengu_startup_manual_model_config', {
-      cli_flag: options.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      env_var: process.env.ANTHROPIC_MODEL as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      settings_file: (getInitialSettings() || {}).model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      subscriptionType: getSubscriptionType() as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      agent: agentSetting as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      cli_flag: options.model as SafeEventValue,
+      env_var: process.env.ANTHROPIC_MODEL as SafeEventValue,
+      settings_file: (getInitialSettings() || {}).model as SafeEventValue,
+      subscriptionType: getSubscriptionType() as SafeEventValue,
+      agent: agentSetting as SafeEventValue
     });
 
     // Get deprecation warning for the initial model (resolvedInitialModel computed earlier for hooks parallelization)
@@ -3402,7 +3402,7 @@ async function run(): Promise<CommanderCommand> {
           return await exitWithError(root, 'Error: --remote requires a description.\nUsage: gc --remote "your task description"', () => gracefulShutdown(1));
         }
         logEvent('tengu_remote_create_session', {
-          has_initial_prompt: String(hasInitialPrompt) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          has_initial_prompt: String(hasInitialPrompt) as SafeEventValue
         });
 
         // Pass current branch so CCR clones the repo at the right revision
@@ -3410,12 +3410,12 @@ async function run(): Promise<CommanderCommand> {
         const createdSession = await teleportToRemoteWithErrorHandling(root, hasInitialPrompt ? remote : null, new AbortController().signal, currentBranch || undefined);
         if (!createdSession) {
           logEvent('tengu_remote_create_session_error', {
-            error: 'unable_to_create_session' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+            error: 'unable_to_create_session' as SafeEventValue
           });
           return await exitWithError(root, 'Error: Unable to create remote session', () => gracefulShutdown(1));
         }
         logEvent('tengu_remote_create_session_success', {
-          session_id: createdSession.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          session_id: createdSession.id as SafeEventValue
         });
 
         // Check if new remote TUI mode is enabled via feature gate
@@ -3504,7 +3504,7 @@ async function run(): Promise<CommanderCommand> {
           messages = processMessagesForTeleportResume(teleportResult.log, branchError);
         } else if (typeof teleport === 'string') {
           logEvent('tengu_teleport_resume_session', {
-            mode: 'direct' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+            mode: 'direct' as SafeEventValue
           });
           try {
             // First, fetch session and validate repository before checking git state
@@ -3586,19 +3586,19 @@ async function run(): Promise<CommanderCommand> {
                   mainThreadAgentDefinition = processedResume.restoredAgentDef;
                 }
                 logEvent('tengu_session_resumed', {
-                  entrypoint: 'ccshare' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  entrypoint: 'ccshare' as SafeEventValue,
                   success: true,
                   resume_duration_ms: Math.round(performance.now() - resumeStart)
                 });
               } else {
                 logEvent('tengu_session_resumed', {
-                  entrypoint: 'ccshare' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                  entrypoint: 'ccshare' as SafeEventValue,
                   success: false
                 });
               }
             } catch (error) {
               logEvent('tengu_session_resumed', {
-                entrypoint: 'ccshare' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                entrypoint: 'ccshare' as SafeEventValue,
                 success: false
               });
               logError(error);
@@ -3627,20 +3627,20 @@ async function run(): Promise<CommanderCommand> {
                     mainThreadAgentDefinition = processedResume.restoredAgentDef;
                   }
                   logEvent('tengu_session_resumed', {
-                    entrypoint: 'file' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                    entrypoint: 'file' as SafeEventValue,
                     success: true,
                     resume_duration_ms: Math.round(performance.now() - resumeStart)
                   });
                 } else {
                   logEvent('tengu_session_resumed', {
-                    entrypoint: 'file' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                    entrypoint: 'file' as SafeEventValue,
                     success: false
                   });
                 }
               }
             } catch (error) {
               logEvent('tengu_session_resumed', {
-                entrypoint: 'file' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                entrypoint: 'file' as SafeEventValue,
                 success: false
               });
               logError(error);
@@ -3661,7 +3661,7 @@ async function run(): Promise<CommanderCommand> {
           const result = await loadConversationForResume(matchedLog ?? sessionId, undefined);
           if (!result) {
             logEvent('tengu_session_resumed', {
-              entrypoint: 'cli_flag' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              entrypoint: 'cli_flag' as SafeEventValue,
               success: false
             });
             return await exitWithError(root, `No conversation found with session ID: ${sessionId}`);
@@ -3676,13 +3676,13 @@ async function run(): Promise<CommanderCommand> {
             mainThreadAgentDefinition = processedResume.restoredAgentDef;
           }
           logEvent('tengu_session_resumed', {
-            entrypoint: 'cli_flag' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            entrypoint: 'cli_flag' as SafeEventValue,
             success: true,
             resume_duration_ms: Math.round(performance.now() - resumeStart)
           });
         } catch (error) {
           logEvent('tengu_session_resumed', {
-            entrypoint: 'cli_flag' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            entrypoint: 'cli_flag' as SafeEventValue,
             success: false
           });
           logError(error);
@@ -4546,47 +4546,47 @@ async function logTenguInit({
 }): Promise<void> {
   try {
     logEvent('tengu_init', {
-      entrypoint: 'claude' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      entrypoint: 'claude' as SafeEventValue,
       hasInitialPrompt,
       hasStdin,
       verbose,
       debug,
       debugToStderr,
       print,
-      outputFormat: outputFormat as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      inputFormat: inputFormat as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      outputFormat: outputFormat as SafeEventValue,
+      inputFormat: inputFormat as SafeEventValue,
       numAllowedTools,
       numDisallowedTools,
       mcpClientCount,
       worktree: worktreeEnabled,
       skipWebFetchPreflight,
       ...(githubActionInputs && {
-        githubActionInputs: githubActionInputs as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        githubActionInputs: githubActionInputs as SafeEventValue
       }),
       dangerouslySkipPermissionsPassed,
-      permissionMode: permissionMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      permissionMode: permissionMode as SafeEventValue,
       modeIsBypass,
       inProtectedNamespace: isInProtectedNamespace(),
       allowDangerouslySkipPermissionsPassed,
-      thinkingType: thinkingConfig.type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      thinkingType: thinkingConfig.type as SafeEventValue,
       ...(systemPromptFlag && {
-        systemPromptFlag: systemPromptFlag as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        systemPromptFlag: systemPromptFlag as SafeEventValue
       }),
       ...(appendSystemPromptFlag && {
-        appendSystemPromptFlag: appendSystemPromptFlag as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        appendSystemPromptFlag: appendSystemPromptFlag as SafeEventValue
       }),
       is_simple: isBareMode() || undefined,
       is_coordinator: feature('COORDINATOR_MODE') && coordinatorModeModule?.isCoordinatorMode() ? true : undefined,
       ...(assistantActivationPath && {
-        assistantActivationPath: assistantActivationPath as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        assistantActivationPath: assistantActivationPath as SafeEventValue
       }),
-      autoUpdatesChannel: (getInitialSettings().autoUpdatesChannel ?? 'latest') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      autoUpdatesChannel: (getInitialSettings().autoUpdatesChannel ?? 'latest') as SafeEventValue,
       ...("external" === 'ant' ? (() => {
         const cwd = getCwd();
         const gitRoot = findGitRoot(cwd);
         const rp = gitRoot ? relative(gitRoot, cwd) || '.' : undefined;
         return rp ? {
-          relativeProjectPath: rp as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          relativeProjectPath: rp as SafeEventValue
         } : {};
       })() : {})
     });
@@ -4633,7 +4633,7 @@ function maybeActivateBrief(options: unknown): void {
   logEvent('tengu_brief_mode_enabled', {
     enabled: entitled,
     gated: !entitled,
-    source: (briefEnv ? 'env' : 'flag') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    source: (briefEnv ? 'env' : 'flag') as SafeEventValue
   });
 }
 function resetCursor() {

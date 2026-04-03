@@ -44,7 +44,7 @@ import { extractReadFilesFromMessages } from '../../utils/queryHelpers.js'
 import { getTranscriptPath } from '../../utils/sessionStorage.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../analytics/index.js'
 import {
@@ -132,21 +132,21 @@ function logSpeculation(
 ): void {
   logEvent('tengu_speculation', {
     speculation_id:
-      id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      id as SafeEventValue,
     outcome:
-      outcome as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      outcome as SafeEventValue,
     duration_ms: Date.now() - startTime,
     suggestion_length: suggestionLength,
     tools_executed: countToolsInMessages(messages),
     completed: boundary !== null,
     boundary_type: boundary?.type as
-      | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      | SafeEventValue
       | undefined,
     boundary_tool: getBoundaryTool(boundary) as
-      | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      | SafeEventValue
       | undefined,
     boundary_detail: getBoundaryDetail(boundary) as
-      | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      | SafeEventValue
       | undefined,
     ...extras,
   })
@@ -703,9 +703,9 @@ export async function startSpeculation(
         error_message: errorMessage(error).slice(
           0,
           200,
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeEventValue,
         error_phase:
-          'start' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'start' as SafeEventValue,
         is_pipelined: isPipelined,
       },
     )
@@ -977,9 +977,9 @@ export async function handleSpeculationAccept(
         error_message: errorMessage(error).slice(
           0,
           200,
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeEventValue,
         error_phase:
-          'accept' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'accept' as SafeEventValue,
         is_pipelined: speculationState.isPipelined,
       },
     )

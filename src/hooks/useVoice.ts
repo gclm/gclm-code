@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSetVoiceState } from '../context/voice.js'
 import { useTerminalFocus } from '../ink/hooks/use-terminal-focus.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { getVoiceKeyterms } from '../services/voiceKeyterms.js'
@@ -749,13 +749,13 @@ export function useVoice({
     logEvent('tengu_voice_recording_started', {
       focusTriggered: focusTriggeredRef.current,
       sttLanguage:
-        stt.code as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        stt.code as SafeEventValue,
       sttLanguageIsDefault: !rawLanguage?.trim(),
       sttLanguageFellBack: stt.fellBackFrom !== undefined,
       // ISO 639 subtag from Intl (bounded set, never user text). undefined if
       // Intl failed — omitted from the payload, no retry cost (cached).
       systemLocaleLanguage:
-        getSystemLocaleLanguage() as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        getSystemLocaleLanguage() as SafeEventValue,
     })
 
     // Retry once if the connection errors before delivering any transcript.

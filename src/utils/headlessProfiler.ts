@@ -14,7 +14,7 @@
 
 import { getIsNonInteractiveSession } from '../bootstrap/state.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { logForDebugging } from './debug.js'
@@ -165,7 +165,7 @@ export function logHeadlessProfilerTurn(): void {
   if (STATSIG_LOGGING_SAMPLED) {
     logEvent(
       'tengu_headless_latency',
-      metadata as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      metadata as SafeEventValue,
     )
   }
 

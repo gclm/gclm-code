@@ -1,6 +1,6 @@
 import figures from 'figures';
 import React, { useEffect, useRef, useState } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
+import { type SafeEventValue, logEvent } from 'src/services/analytics/index.js';
 import type { CommandResultDisplay } from '../../commands.js';
 import { getOauthConfig } from '../../constants/oauth.js';
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js';
@@ -242,7 +242,7 @@ export function MCPRemoteServerMenu({
       await toggleMcpServer(server.name);
       if (server.config.type === 'claudeai-proxy') {
         logEvent('tengu_claudeai_mcp_toggle', {
-          new_state: (wasEnabled ? 'disabled' : 'enabled') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          new_state: (wasEnabled ? 'disabled' : 'enabled') as SafeEventValue
         });
       }
 

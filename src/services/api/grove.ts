@@ -1,7 +1,7 @@
 import axios from 'axios'
 import memoize from 'lodash-es/memoize.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import { getOauthAccountInfo, isConsumerSubscriber } from 'src/utils/auth.js'
@@ -338,7 +338,7 @@ export async function checkGroveForNonInteractive(): Promise<void> {
     const config = configResult.success ? configResult.data : null
     logEvent('tengu_grove_print_viewed', {
       dismissable:
-        config?.notice_is_grace_period as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        config?.notice_is_grace_period as SafeEventValue,
     })
     if (config === null || config.notice_is_grace_period) {
       // Grace period is still active - show informational message and continue

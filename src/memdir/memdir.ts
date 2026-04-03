@@ -9,10 +9,10 @@ const teamMemPaths = feature('TEAMMEM')
   : null
 
 import { getKairosActive, getOriginalCwd } from '../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 /* eslint-enable @typescript-eslint/no-require-imports */
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { GREP_TOOL_NAME } from '../tools/GrepTool/prompt.js'
@@ -156,7 +156,7 @@ function logMemoryDirCounts(
     string,
     | number
     | boolean
-    | AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    | SafeEventValue
   >,
 ): void {
   const fs = getFsImplementation()
@@ -301,7 +301,7 @@ export function buildMemoryPrompt(params: {
       was_truncated: t.wasLineTruncated,
       was_byte_truncated: t.wasByteTruncated,
       memory_type:
-        memoryType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        memoryType as SafeEventValue,
     })
     lines.push(`## ${ENTRYPOINT_NAME}`, '', t.content)
   } else {
@@ -432,7 +432,7 @@ export async function loadMemoryPrompt(): Promise<string | null> {
   if (feature('KAIROS') && autoEnabled && getKairosActive()) {
     logMemoryDirCounts(getAutoMemPath(), {
       memory_type:
-        'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'auto' as SafeEventValue,
     })
     return buildAssistantDailyLogPrompt(skipIndex)
   }
@@ -459,11 +459,11 @@ export async function loadMemoryPrompt(): Promise<string | null> {
       await ensureMemoryDirExists(teamDir)
       logMemoryDirCounts(autoDir, {
         memory_type:
-          'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'auto' as SafeEventValue,
       })
       logMemoryDirCounts(teamDir, {
         memory_type:
-          'team' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'team' as SafeEventValue,
       })
       return teamMemPrompts!.buildCombinedMemoryPrompt(
         extraGuidelines,
@@ -479,7 +479,7 @@ export async function loadMemoryPrompt(): Promise<string | null> {
     await ensureMemoryDirExists(autoDir)
     logMemoryDirCounts(autoDir, {
       memory_type:
-        'auto' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'auto' as SafeEventValue,
     })
     return buildMemoryLines(
       'auto memory',

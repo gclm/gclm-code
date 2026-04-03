@@ -21,7 +21,7 @@ const contextCollapse = feature('CONTEXT_COLLAPSE')
 /* eslint-enable @typescript-eslint/no-require-imports */
 import {
   logEvent,
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
 } from 'src/services/analytics/index.js'
 import { ImageSizeError } from './utils/imageValidation.js'
 import { ImageResizeError } from './utils/imageResizer.js'
@@ -87,7 +87,7 @@ import {
   tokenCountWithEstimation,
 } from './utils/tokens.js'
 import { ESCALATED_MAX_TOKENS } from './utils/context.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from './services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from './services/runtimeConfig/growthbook.js'
 import { SLEEP_TOOL_NAME } from './tools/SleepTool/prompt.js'
 import { executePostSamplingHooks } from './utils/hooks/postSamplingHooks.js'
 import { executeStopFailureHooks } from './utils/hooks.js'
@@ -355,7 +355,7 @@ async function* queryLoop(
         }
 
     const queryChainIdForAnalytics =
-      queryTracking.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      queryTracking.chainId as SafeEventValue
 
     toolUseContext = {
       ...toolUseContext,
@@ -931,11 +931,11 @@ async function* queryLoop(
             // Log the fallback event
             logEvent('tengu_model_fallback_triggered', {
               original_model:
-                innerError.originalModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                innerError.originalModel as SafeEventValue,
               fallback_model:
-                fallbackModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                fallbackModel as SafeEventValue,
               entrypoint:
-                'cli' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                'cli' as SafeEventValue,
               queryChainId: queryChainIdForAnalytics,
               queryDepth: queryTracking.depth,
             })
@@ -1524,7 +1524,7 @@ async function* queryLoop(
       tracking.turnCounter++
       logEvent('tengu_post_autocompact_turn', {
         turnId:
-          tracking.turnId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          tracking.turnId as SafeEventValue,
         turnCounter: tracking.turnCounter,
 
         queryChainId: queryChainIdForAnalytics,

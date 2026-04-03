@@ -10,7 +10,7 @@
 
 import { getCommitCounter, getPrCounter } from '../../bootstrap/state.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 
@@ -199,12 +199,12 @@ export function trackGitOperations(
   if (GIT_COMMIT_RE.test(command)) {
     logEvent('tengu_git_operation', {
       operation:
-        'commit' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'commit' as SafeEventValue,
     })
     if (command.match(/--amend\b/)) {
       logEvent('tengu_git_operation', {
         operation:
-          'commit_amend' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'commit_amend' as SafeEventValue,
       })
     }
     getCommitCounter()?.add(1)
@@ -212,14 +212,14 @@ export function trackGitOperations(
   if (GIT_PUSH_RE.test(command)) {
     logEvent('tengu_git_operation', {
       operation:
-        'push' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'push' as SafeEventValue,
     })
   }
   const prHit = GH_PR_ACTIONS.find(a => a.re.test(command))
   if (prHit) {
     logEvent('tengu_git_operation', {
       operation:
-        prHit.op as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        prHit.op as SafeEventValue,
     })
   }
   if (prHit?.action === 'created') {
@@ -250,7 +250,7 @@ export function trackGitOperations(
   if (command.match(/\bglab\s+mr\s+create\b/)) {
     logEvent('tengu_git_operation', {
       operation:
-        'pr_create' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'pr_create' as SafeEventValue,
     })
     getPrCounter()?.add(1)
   }
@@ -270,7 +270,7 @@ export function trackGitOperations(
   if (isCurlPost && isPrEndpoint) {
     logEvent('tengu_git_operation', {
       operation:
-        'pr_create' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'pr_create' as SafeEventValue,
     })
     getPrCounter()?.add(1)
   }

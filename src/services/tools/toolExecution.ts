@@ -5,20 +5,20 @@ import type {
   ToolUseBlock,
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logOTelEvent,
   logEvent,
 } from 'src/services/analytics/index.js'
 import {
   extractMcpToolDetails,
   extractSkillName,
-  extractToolInputForTelemetry,
-  getFileExtensionForAnalytics,
-  getFileExtensionsFromBashCommand,
+  extractToolInputForLogging,
+  getFileExtensionForLogging,
+  getFileExtensionsFromBashCommandForLogging,
   isToolDetailsLoggingEnabled,
-  mcpToolDetailsForAnalytics,
-  sanitizeToolNameForAnalytics,
-} from 'src/services/analytics/metadata.js'
+  getMcpToolDetailsForLogging,
+  sanitizeToolNameForLogging,
+} from 'src/services/toolLogging/metadata.js'
 import {
   addToToolDuration,
   getCodeEditToolDecisionCounter,
@@ -367,31 +367,31 @@ export async function* runToolUse(
 
   // Check if the tool exists
   if (!tool) {
-    const sanitizedToolName = sanitizeToolNameForAnalytics(toolName)
+    const sanitizedToolName = sanitizeToolNameForLogging(toolName)
     logForDebugging(`Unknown tool ${toolName}: ${toolUse.id}`)
     logEvent('tengu_tool_use_error', {
       error:
-        `No such tool available: ${sanitizedToolName}` as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        `No such tool available: ${sanitizedToolName}` as SafeEventValue,
       toolName: sanitizedToolName,
       toolUseID:
-        toolUse.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        toolUse.id as SafeEventValue,
       isMcp: toolName.startsWith('mcp__'),
       queryChainId: toolUseContext.queryTracking
-        ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ?.chainId as SafeEventValue,
       queryDepth: toolUseContext.queryTracking?.depth,
       ...(mcpServerType && {
         mcpServerType:
-          mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerType as SafeEventValue,
       }),
       ...(mcpServerBaseUrl && {
         mcpServerBaseUrl:
-          mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerBaseUrl as SafeEventValue,
       }),
       ...(requestId && {
         requestId:
-          requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          requestId as SafeEventValue,
       }),
-      ...mcpToolDetailsForAnalytics(toolName, mcpServerType, mcpServerBaseUrl),
+      ...getMcpToolDetailsForLogging(toolName, mcpServerType, mcpServerBaseUrl),
     })
     yield {
       message: createUserMessage({
@@ -414,27 +414,27 @@ export async function* runToolUse(
   try {
     if (toolUseContext.abortController.signal.aborted) {
       logEvent('tengu_tool_use_cancelled', {
-        toolName: sanitizeToolNameForAnalytics(tool.name),
+        toolName: sanitizeToolNameForLogging(tool.name),
         toolUseID:
-          toolUse.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          toolUse.id as SafeEventValue,
         isMcp: tool.isMcp ?? false,
 
         queryChainId: toolUseContext.queryTracking
-          ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          ?.chainId as SafeEventValue,
         queryDepth: toolUseContext.queryTracking?.depth,
         ...(mcpServerType && {
           mcpServerType:
-            mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            mcpServerType as SafeEventValue,
         }),
         ...(mcpServerBaseUrl && {
           mcpServerBaseUrl:
-            mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            mcpServerBaseUrl as SafeEventValue,
         }),
         ...(requestId && {
           requestId:
-            requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            requestId as SafeEventValue,
         }),
-        ...mcpToolDetailsForAnalytics(
+        ...getMcpToolDetailsForLogging(
           tool.name,
           mcpServerType,
           mcpServerBaseUrl,
@@ -521,26 +521,26 @@ function streamedCheckPermissionsAndCallTool(
     progress => {
       logEvent('tengu_tool_use_progress', {
         messageID:
-          messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        toolName: sanitizeToolNameForAnalytics(tool.name),
+          messageId as SafeEventValue,
+        toolName: sanitizeToolNameForLogging(tool.name),
         isMcp: tool.isMcp ?? false,
 
         queryChainId: toolUseContext.queryTracking
-          ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          ?.chainId as SafeEventValue,
         queryDepth: toolUseContext.queryTracking?.depth,
         ...(mcpServerType && {
           mcpServerType:
-            mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            mcpServerType as SafeEventValue,
         }),
         ...(mcpServerBaseUrl && {
           mcpServerBaseUrl:
-            mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            mcpServerBaseUrl as SafeEventValue,
         }),
         ...(requestId && {
           requestId:
-            requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            requestId as SafeEventValue,
         }),
-        ...mcpToolDetailsForAnalytics(
+        ...getMcpToolDetailsForLogging(
           tool.name,
           mcpServerType,
           mcpServerBaseUrl,
@@ -623,7 +623,7 @@ async function checkPermissionsAndCallTool(
     )
     if (schemaHint) {
       logEvent('tengu_deferred_tool_schema_not_sent', {
-        toolName: sanitizeToolNameForAnalytics(tool.name),
+        toolName: sanitizeToolNameForLogging(tool.name),
         isMcp: tool.isMcp ?? false,
       })
       errorContent += schemaHint
@@ -634,32 +634,32 @@ async function checkPermissionsAndCallTool(
     )
     logEvent('tengu_tool_use_error', {
       error:
-        'InputValidationError' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'InputValidationError' as SafeEventValue,
       errorDetails: errorContent.slice(
         0,
         2000,
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
       messageID:
-        messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      toolName: sanitizeToolNameForAnalytics(tool.name),
+        messageId as SafeEventValue,
+      toolName: sanitizeToolNameForLogging(tool.name),
       isMcp: tool.isMcp ?? false,
 
       queryChainId: toolUseContext.queryTracking
-        ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ?.chainId as SafeEventValue,
       queryDepth: toolUseContext.queryTracking?.depth,
       ...(mcpServerType && {
         mcpServerType:
-          mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerType as SafeEventValue,
       }),
       ...(mcpServerBaseUrl && {
         mcpServerBaseUrl:
-          mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerBaseUrl as SafeEventValue,
       }),
       ...(requestId && {
         requestId:
-          requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          requestId as SafeEventValue,
       }),
-      ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
+      ...getMcpToolDetailsForLogging(tool.name, mcpServerType, mcpServerBaseUrl),
     })
     return [
       {
@@ -690,29 +690,29 @@ async function checkPermissionsAndCallTool(
     )
     logEvent('tengu_tool_use_error', {
       messageID:
-        messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      toolName: sanitizeToolNameForAnalytics(tool.name),
+        messageId as SafeEventValue,
+      toolName: sanitizeToolNameForLogging(tool.name),
       error:
-        isValidCall.message as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        isValidCall.message as SafeEventValue,
       errorCode: isValidCall.errorCode,
       isMcp: tool.isMcp ?? false,
 
       queryChainId: toolUseContext.queryTracking
-        ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ?.chainId as SafeEventValue,
       queryDepth: toolUseContext.queryTracking?.depth,
       ...(mcpServerType && {
         mcpServerType:
-          mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerType as SafeEventValue,
       }),
       ...(mcpServerBaseUrl && {
         mcpServerBaseUrl:
-          mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerBaseUrl as SafeEventValue,
       }),
       ...(requestId && {
         requestId:
-          requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          requestId as SafeEventValue,
       }),
-      ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
+      ...getMcpToolDetailsForLogging(tool.name, mcpServerType, mcpServerBaseUrl),
     })
     return [
       {
@@ -962,7 +962,7 @@ async function checkPermissionsAndCallTool(
     void logOTelEvent('tool_decision', {
       decision,
       source,
-      tool_name: sanitizeToolNameForAnalytics(tool.name),
+      tool_name: sanitizeToolNameForLogging(tool.name),
     })
 
     // Increment code-edit tool decision counter for headless mode
@@ -1000,25 +1000,25 @@ async function checkPermissionsAndCallTool(
 
     logEvent('tengu_tool_use_can_use_tool_rejected', {
       messageID:
-        messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      toolName: sanitizeToolNameForAnalytics(tool.name),
+        messageId as SafeEventValue,
+      toolName: sanitizeToolNameForLogging(tool.name),
 
       queryChainId: toolUseContext.queryTracking
-        ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ?.chainId as SafeEventValue,
       queryDepth: toolUseContext.queryTracking?.depth,
       ...(mcpServerType && {
         mcpServerType:
-          mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerType as SafeEventValue,
       }),
       ...(mcpServerBaseUrl && {
         mcpServerBaseUrl:
-          mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerBaseUrl as SafeEventValue,
       }),
       ...(requestId && {
         requestId:
-          requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          requestId as SafeEventValue,
       }),
-      ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
+      ...getMcpToolDetailsForLogging(tool.name, mcpServerType, mcpServerBaseUrl),
     })
     let errorMessage = permissionDecision.message
     // Only use generic "Execution stopped" message if we don't have a detailed hook message
@@ -1104,25 +1104,25 @@ async function checkPermissionsAndCallTool(
   }
   logEvent('tengu_tool_use_can_use_tool_allowed', {
     messageID:
-      messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    toolName: sanitizeToolNameForAnalytics(tool.name),
+      messageId as SafeEventValue,
+    toolName: sanitizeToolNameForLogging(tool.name),
 
     queryChainId: toolUseContext.queryTracking
-      ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ?.chainId as SafeEventValue,
     queryDepth: toolUseContext.queryTracking?.depth,
     ...(mcpServerType && {
       mcpServerType:
-        mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerType as SafeEventValue,
     }),
     ...(mcpServerBaseUrl && {
       mcpServerBaseUrl:
-        mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mcpServerBaseUrl as SafeEventValue,
     }),
     ...(requestId && {
       requestId:
-        requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        requestId as SafeEventValue,
     }),
-    ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
+    ...getMcpToolDetailsForLogging(tool.name, mcpServerType, mcpServerBaseUrl),
   })
 
   // Use the updated input from permissions if provided
@@ -1134,7 +1134,7 @@ async function checkPermissionsAndCallTool(
   // Prepare tool parameters for logging in tool_result event.
   // Gated by OTEL_LOG_TOOL_DETAILS — tool parameters can contain sensitive
   // content (bash commands, MCP server names, etc.) so they're opt-in only.
-  const telemetryToolInput = extractToolInputForTelemetry(processedInput)
+  const telemetryToolInput = extractToolInputForLogging(processedInput)
   let toolParameters: Record<string, unknown> = {}
   if (isToolDetailsLoggingEnabled()) {
     if (tool.name === BASH_TOOL_NAME && 'command' in processedInput) {
@@ -1301,7 +1301,7 @@ async function checkPermissionsAndCallTool(
         : jsonStringify(mappedContent).length
 
     // Extract file extension for file-related tools
-    let fileExtension: ReturnType<typeof getFileExtensionForAnalytics>
+    let fileExtension: ReturnType<typeof getFileExtensionForLogging>
     if (processedInput && typeof processedInput === 'object') {
       if (
         (tool.name === FILE_READ_TOOL_NAME ||
@@ -1309,19 +1309,19 @@ async function checkPermissionsAndCallTool(
           tool.name === FILE_WRITE_TOOL_NAME) &&
         'file_path' in processedInput
       ) {
-        fileExtension = getFileExtensionForAnalytics(
+        fileExtension = getFileExtensionForLogging(
           String(processedInput.file_path),
         )
       } else if (
         tool.name === NOTEBOOK_EDIT_TOOL_NAME &&
         'notebook_path' in processedInput
       ) {
-        fileExtension = getFileExtensionForAnalytics(
+        fileExtension = getFileExtensionForLogging(
           String(processedInput.notebook_path),
         )
       } else if (tool.name === BASH_TOOL_NAME && 'command' in processedInput) {
         const bashInput = processedInput as BashToolInput
-        fileExtension = getFileExtensionsFromBashCommand(
+        fileExtension = getFileExtensionsFromBashCommandForLogging(
           bashInput.command,
           bashInput._simulatedSedEdit?.filePath,
         )
@@ -1330,8 +1330,8 @@ async function checkPermissionsAndCallTool(
 
     logEvent('tengu_tool_use_success', {
       messageID:
-        messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-      toolName: sanitizeToolNameForAnalytics(tool.name),
+        messageId as SafeEventValue,
+      toolName: sanitizeToolNameForLogging(tool.name),
       isMcp: tool.isMcp ?? false,
       durationMs,
       preToolHookDurationMs,
@@ -1339,21 +1339,21 @@ async function checkPermissionsAndCallTool(
       ...(fileExtension !== undefined && { fileExtension }),
 
       queryChainId: toolUseContext.queryTracking
-        ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ?.chainId as SafeEventValue,
       queryDepth: toolUseContext.queryTracking?.depth,
       ...(mcpServerType && {
         mcpServerType:
-          mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerType as SafeEventValue,
       }),
       ...(mcpServerBaseUrl && {
         mcpServerBaseUrl:
-          mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          mcpServerBaseUrl as SafeEventValue,
       }),
       ...(requestId && {
         requestId:
-          requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          requestId as SafeEventValue,
       }),
-      ...mcpToolDetailsForAnalytics(tool.name, mcpServerType, mcpServerBaseUrl),
+      ...getMcpToolDetailsForLogging(tool.name, mcpServerType, mcpServerBaseUrl),
     })
 
     // Enrich tool parameters with git commit ID from successful git commit output
@@ -1379,7 +1379,7 @@ async function checkPermissionsAndCallTool(
       : null
 
     void logOTelEvent('tool_result', {
-      tool_name: sanitizeToolNameForAnalytics(tool.name),
+      tool_name: sanitizeToolNameForLogging(tool.name),
       success: 'true',
       duration_ms: String(durationMs),
       ...(Object.keys(toolParameters).length > 0 && {
@@ -1638,29 +1638,29 @@ async function checkPermissionsAndCallTool(
       }
       logEvent('tengu_tool_use_error', {
         messageID:
-          messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        toolName: sanitizeToolNameForAnalytics(tool.name),
+          messageId as SafeEventValue,
+        toolName: sanitizeToolNameForLogging(tool.name),
         error: classifyToolError(
           error,
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeEventValue,
         isMcp: tool.isMcp ?? false,
 
         queryChainId: toolUseContext.queryTracking
-          ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          ?.chainId as SafeEventValue,
         queryDepth: toolUseContext.queryTracking?.depth,
         ...(mcpServerType && {
           mcpServerType:
-            mcpServerType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            mcpServerType as SafeEventValue,
         }),
         ...(mcpServerBaseUrl && {
           mcpServerBaseUrl:
-            mcpServerBaseUrl as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            mcpServerBaseUrl as SafeEventValue,
         }),
         ...(requestId && {
           requestId:
-            requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            requestId as SafeEventValue,
         }),
-        ...mcpToolDetailsForAnalytics(
+        ...getMcpToolDetailsForLogging(
           tool.name,
           mcpServerType,
           mcpServerBaseUrl,
@@ -1672,7 +1672,7 @@ async function checkPermissionsAndCallTool(
         : null
 
       void logOTelEvent('tool_result', {
-        tool_name: sanitizeToolNameForAnalytics(tool.name),
+        tool_name: sanitizeToolNameForLogging(tool.name),
         use_id: toolUseID,
         success: 'false',
         duration_ms: String(durationMs),

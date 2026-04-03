@@ -9,8 +9,8 @@ import { randomBytes } from 'crypto'
 import { rename, rm } from 'fs/promises'
 import { dirname, join, resolve, sep } from 'path'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+  type SafeEventValue,
+  type PiiEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import { getCwd } from '../cwd.js'
@@ -559,20 +559,20 @@ export async function installPluginFromMarketplace({
     // plugin lifecycle events drop the blob key — no downstream consumers.
     logEvent('tengu_plugin_installed', {
       _PROTO_plugin_name:
-        entry.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+        entry.name as PiiEventValue,
       _PROTO_marketplace_name:
-        marketplaceName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+        marketplaceName as PiiEventValue,
       plugin_id: (isOfficialMarketplaceName(marketplaceName)
         ? pluginId
-        : 'third-party') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        : 'third-party') as SafeEventValue,
       trigger:
-        trigger as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        trigger as SafeEventValue,
       install_source: (trigger === 'hint'
         ? 'ui-suggestion'
-        : 'ui-discover') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        : 'ui-discover') as SafeEventValue,
       ...(entry.version && {
         version:
-          entry.version as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          entry.version as SafeEventValue,
       }),
     })
 

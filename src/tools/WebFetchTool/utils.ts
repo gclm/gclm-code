@@ -1,7 +1,7 @@
 import axios, { type AxiosResponse } from 'axios'
 import { LRUCache } from 'lru-cache'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import { queryHaiku } from '../../services/api/claude.js'
@@ -400,7 +400,7 @@ export async function getURLMarkdownContent(
     if (process.env.USER_TYPE === 'ant') {
       logEvent('tengu_web_fetch_host', {
         hostname:
-          hostname as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          hostname as SafeEventValue,
       })
     }
   } catch (e) {

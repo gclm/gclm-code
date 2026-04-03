@@ -10,7 +10,7 @@ import type { BridgeConfig, BridgeApiClient } from './types.js'
 import { logForDebugging } from '../utils/debug.js'
 import { logForDiagnosticsNoPII } from '../utils/diagLogs.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { registerCleanup } from '../utils/cleanupRegistry.js'
@@ -2029,10 +2029,10 @@ async function startWorkPollLoop({
                   cap.cleanup()
                   logEvent('tengu_bridge_heartbeat_error', {
                     status:
-                      err.status as unknown as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                      err.status as unknown as SafeEventValue,
                     error_type: (err.status === 401 || err.status === 403
                       ? 'auth_failed'
-                      : 'fatal') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                      : 'fatal') as SafeEventValue,
                   })
                   // JWT expired (401/403) or work item gone (404/410).
                   // Either way the current transport is dead — SSE
@@ -2073,7 +2073,7 @@ async function startWorkPollLoop({
                     : 'config_disabled'
             logEvent('tengu_bridge_heartbeat_mode_exited', {
               reason:
-                exitReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                exitReason as SafeEventValue,
               heartbeat_cycles: hbCycles,
             })
 
@@ -2222,7 +2222,7 @@ async function startWorkPollLoop({
         )
         logEvent('tengu_bridge_repl_env_lost', {
           attempt: environmentRecreations,
-        } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+        } as SafeEventValue)
 
         if (environmentRecreations > MAX_ENVIRONMENT_RECREATIONS) {
           logForDebugging(
@@ -2279,7 +2279,7 @@ async function startWorkPollLoop({
         logEvent('tengu_bridge_repl_fatal_error', {
           status: err.status,
           error_type:
-            err.errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            err.errorType as SafeEventValue,
         })
         logForDiagnosticsNoPII(
           isExpiry ? 'info' : 'error',
@@ -2340,7 +2340,7 @@ async function startWorkPollLoop({
         status: httpStatus,
         consecutiveErrors,
         elapsedMs: elapsed,
-      } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+      } as SafeEventValue)
 
       // Only transition to 'reconnecting' on the first error — stay
       // there until a successful poll (avoid flickering the UI state).
@@ -2358,7 +2358,7 @@ async function startWorkPollLoop({
           consecutiveErrors,
           elapsedMs: elapsed,
           lastStatus: httpStatus,
-        } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+        } as SafeEventValue)
         onStateChange?.('failed', 'connection to server lost')
         break
       }

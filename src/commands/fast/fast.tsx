@@ -6,7 +6,7 @@ import { Dialog } from '../../components/design-system/Dialog.js';
 import { FastIcon, getFastIconString } from '../../components/FastIcon.js';
 import { Box, Link, Text } from '../../ink.js';
 import { useKeybindings } from '../../keybindings/useKeybinding.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
+import { type SafeEventValue, logEvent } from '../../services/analytics/index.js';
 import { type AppState, useAppState, useSetAppState } from '../../state/AppState.js';
 import type { LocalJSXCommandOnDone } from '../../types/command.js';
 import { clearFastModeCooldown, FAST_MODE_MODEL_DISPLAY, getFastModeModel, getFastModeRuntimeState, getFastModeUnavailableReason, isFastModeEnabled, isFastModeSupportedByModel, prefetchFastModeStatus } from '../../utils/fastMode.js';
@@ -75,7 +75,7 @@ export function FastModePicker(t0) {
       applyFastMode(enableFastMode, setAppState);
       logEvent("tengu_fast_mode_toggled", {
         enabled: enableFastMode,
-        source: "picker" as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        source: "picker" as SafeEventValue
       });
       if (enableFastMode) {
         const fastIcon = getFastIconString(enableFastMode);
@@ -234,7 +234,7 @@ async function handleFastModeShortcut(enable: boolean, getAppState: () => AppSta
   applyFastMode(enable, setAppState);
   logEvent('tengu_fast_mode_toggled', {
     enabled: enable,
-    source: 'shortcut' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    source: 'shortcut' as SafeEventValue
   });
   if (enable) {
     const fastIcon = getFastIconString(true);
@@ -262,7 +262,7 @@ export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXComma
   }
   const unavailableReason = getFastModeUnavailableReason();
   logEvent('tengu_fast_mode_picker_shown', {
-    unavailable_reason: (unavailableReason ?? '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    unavailable_reason: (unavailableReason ?? '') as SafeEventValue
   });
   return <FastModePicker onDone={onDone} unavailableReason={unavailableReason} />;
 }

@@ -1,6 +1,6 @@
 import { getSettings_DEPRECATED } from '../../utils/settings/settings.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../analytics/index.js'
 import { getSessionsSinceLastShown, recordTipShown } from './tipHistory.js'
@@ -52,7 +52,7 @@ export function recordShownTip(tip: Tip): void {
   // Log event for analytics
   logEvent('tengu_tip_shown', {
     tipIdLength:
-      tip.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      tip.id as SafeEventValue,
     cooldownSessions: tip.cooldownSessions,
   })
 }

@@ -40,7 +40,7 @@ import { formatFileSize } from '../../utils/format.js'
 import { ImageResizeError } from '../../utils/imageResizer.js'
 import { ImageSizeError } from '../../utils/imageValidation.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../analytics/index.js'
 import {
@@ -364,13 +364,13 @@ function logToolUseToolResultMismatch(
     // Log to Statsig
     logEvent('tengu_tool_use_tool_result_mismatch_error', {
       toolUseId:
-        toolUseId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        toolUseId as SafeEventValue,
       normalizedSequence: normalizedSeq.join(
         ', ',
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
       preNormalizedSequence: preNormalizedSeq.join(
         ', ',
-      ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      ) as SafeEventValue,
       normalizedMessageCount: messagesForAPI.length,
       originalMessageCount: messages.length,
       normalizedToolUseIndex: normalizedIndex,

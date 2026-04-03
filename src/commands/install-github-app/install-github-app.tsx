@@ -1,6 +1,6 @@
 import { execa } from 'execa';
 import React, { useCallback, useState } from 'react';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from 'src/services/analytics/index.js';
+import { type SafeEventValue, logEvent } from 'src/services/analytics/index.js';
 import { WorkflowMultiselectDialog } from '../../components/WorkflowMultiselectDialog.js';
 import { GITHUB_ACTION_SETUP_DOCS_URL } from '../../constants/github-app.js';
 import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithKeybindings.js';
@@ -112,7 +112,7 @@ function InstallGitHubApp(props: {
     // Check if in a git repo and get remote URL
     const currentRepo = (await getGithubRepo()) ?? '';
     logEvent('tengu_install_github_app_step_completed', {
-      step: 'check-gh' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      step: 'check-gh' as SafeEventValue
     });
     setState(prev_0 => ({
       ...prev_0,
@@ -147,7 +147,7 @@ function InstallGitHubApp(props: {
         secretExists: state.secretExists
       });
       logEvent('tengu_install_github_app_step_completed', {
-        step: 'creating' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        step: 'creating' as SafeEventValue
       });
       setState(prev_5 => ({
         ...prev_5,
@@ -157,7 +157,7 @@ function InstallGitHubApp(props: {
       const errorMessage = error instanceof Error ? error.message : 'Failed to set up GitHub Actions';
       if (errorMessage.includes('workflow file already exists')) {
         logEvent('tengu_install_github_app_error', {
-          reason: 'workflow_file_exists' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          reason: 'workflow_file_exists' as SafeEventValue
         });
         setState(prev_2 => ({
           ...prev_2,
@@ -168,7 +168,7 @@ function InstallGitHubApp(props: {
         }));
       } else {
         logEvent('tengu_install_github_app_error', {
-          reason: 'setup_github_actions_failed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          reason: 'setup_github_actions_failed' as SafeEventValue
         });
         setState(prev_3 => ({
           ...prev_3,
@@ -268,7 +268,7 @@ function InstallGitHubApp(props: {
   const handleSubmit = async () => {
     if (state.step === 'warnings') {
       logEvent('tengu_install_github_app_step_completed', {
-        step: 'warnings' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        step: 'warnings' as SafeEventValue
       });
       setState(prev_11 => ({
         ...prev_11,
@@ -326,7 +326,7 @@ function InstallGitHubApp(props: {
         }));
       } else {
         logEvent('tengu_install_github_app_step_completed', {
-          step: 'choose-repo' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          step: 'choose-repo' as SafeEventValue
         });
         setState(prev_13 => ({
           ...prev_13,
@@ -338,7 +338,7 @@ function InstallGitHubApp(props: {
       }
     } else if (state.step === 'install-app') {
       logEvent('tengu_install_github_app_step_completed', {
-        step: 'install-app' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        step: 'install-app' as SafeEventValue
       });
       if (state.workflowExists) {
         setState(prev_14 => ({
@@ -358,7 +358,7 @@ function InstallGitHubApp(props: {
       return;
     } else if (state.step === 'check-existing-secret') {
       logEvent('tengu_install_github_app_step_completed', {
-        step: 'check-existing-secret' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        step: 'check-existing-secret' as SafeEventValue
       });
       if (state.useExistingSecret) {
         await runSetupGitHubActions(null, state.secretName);
@@ -378,7 +378,7 @@ function InstallGitHubApp(props: {
       const apiKeyToUse = state.selectedApiKeyOption === 'existing' ? existingApiKey : state.apiKeyOrOAuthToken;
       if (!apiKeyToUse) {
         logEvent('tengu_install_github_app_error', {
-          reason: 'api_key_missing' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          reason: 'api_key_missing' as SafeEventValue
         });
         setState(prev_16 => ({
           ...prev_16,
@@ -404,7 +404,7 @@ function InstallGitHubApp(props: {
         });
         if (hasAnthropicKey_0) {
           logEvent('tengu_install_github_app_step_completed', {
-            step: 'api-key' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+            step: 'api-key' as SafeEventValue
           });
           setState(prev_18 => ({
             ...prev_18,
@@ -413,14 +413,14 @@ function InstallGitHubApp(props: {
           }));
         } else {
           logEvent('tengu_install_github_app_step_completed', {
-            step: 'api-key' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+            step: 'api-key' as SafeEventValue
           });
           // No existing secret, proceed to creating
           await runSetupGitHubActions(apiKeyToUse, state.secretName);
         }
       } else {
         logEvent('tengu_install_github_app_step_completed', {
-          step: 'api-key' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          step: 'api-key' as SafeEventValue
         });
         // Error checking secrets, proceed anyway
         await runSetupGitHubActions(apiKeyToUse, state.secretName);
@@ -447,7 +447,7 @@ function InstallGitHubApp(props: {
   };
   const handleCreateOAuthToken = useCallback(() => {
     logEvent('tengu_install_github_app_step_completed', {
-      step: 'api-key' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      step: 'api-key' as SafeEventValue
     });
     setState(prev_22 => ({
       ...prev_22,
@@ -456,7 +456,7 @@ function InstallGitHubApp(props: {
   }, []);
   const handleOAuthSuccess = useCallback((token: string) => {
     logEvent('tengu_install_github_app_step_completed', {
-      step: 'oauth-flow' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      step: 'oauth-flow' as SafeEventValue
     });
     setState(prev_23 => ({
       ...prev_23,
@@ -506,7 +506,7 @@ function InstallGitHubApp(props: {
       return;
     }
     logEvent('tengu_install_github_app_step_completed', {
-      step: 'check-existing-workflow' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      step: 'check-existing-workflow' as SafeEventValue
     });
     setState(prev_29 => ({
       ...prev_29,
@@ -560,7 +560,7 @@ function InstallGitHubApp(props: {
     case 'select-workflows':
       return <WorkflowMultiselectDialog defaultSelections={state.selectedWorkflows} onSubmit={selectedWorkflows => {
         logEvent('tengu_install_github_app_step_completed', {
-          step: 'select-workflows' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+          step: 'select-workflows' as SafeEventValue
         });
         setState(prev_31 => ({
           ...prev_31,

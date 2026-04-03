@@ -11,7 +11,7 @@ import { c as _c } from "react/compiler-runtime";
 
 import * as React from 'react';
 import { useNotifications } from '../context/notifications.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED, logEvent } from '../services/analytics/index.js';
+import { type SafeEventValue, type PiiEventValue, logEvent } from '../services/analytics/index.js';
 import { clearPendingHint, getPendingHintSnapshot, markShownThisSession, subscribeToPendingHint } from '../utils/claudeCodeHints.js';
 import { logForDebugging } from '../utils/debug.js';
 import { disableHintRecommendations, markHintPluginShown, type PluginHintRecommendation, resolvePluginHint } from '../utils/plugins/hintRecommendation.js';
@@ -69,9 +69,9 @@ export function useClaudeCodeHintRecommendation() {
       }
       markHintPluginShown(recommendation.pluginId);
       logEvent("tengu_plugin_hint_response", {
-        _PROTO_plugin_name: recommendation.pluginName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
-        _PROTO_marketplace_name: recommendation.marketplaceName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
-        response: response as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+        _PROTO_plugin_name: recommendation.pluginName as PiiEventValue,
+        _PROTO_marketplace_name: recommendation.marketplaceName as PiiEventValue,
+        response: response as SafeEventValue
       });
       bb15: switch (response) {
         case "yes":

@@ -14,7 +14,7 @@ import {
 import { logMCPDebug, logMCPError } from '../../utils/log.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../analytics/index.js'
 
@@ -83,7 +83,7 @@ export function registerElicitationHandler(
       const mode = getElicitationMode(request.params)
 
       logEvent('tengu_mcp_elicitation_shown', {
-        mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        mode: mode as SafeEventValue,
       })
 
       try {
@@ -99,9 +99,9 @@ export function registerElicitationHandler(
             `Elicitation resolved by hook: ${jsonStringify(hookResponse)}`,
           )
           logEvent('tengu_mcp_elicitation_response', {
-            mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            mode: mode as SafeEventValue,
             action:
-              hookResponse.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+              hookResponse.action as SafeEventValue,
           })
           return hookResponse
         }
@@ -138,9 +138,9 @@ export function registerElicitationHandler(
                   respond: (result: ElicitResult) => {
                     extra.signal.removeEventListener('abort', onAbort)
                     logEvent('tengu_mcp_elicitation_response', {
-                      mode: mode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                      mode: mode as SafeEventValue,
                       action:
-                        result.action as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                        result.action as SafeEventValue,
                     })
                     resolve(result)
                   },

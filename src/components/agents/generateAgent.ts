@@ -11,7 +11,7 @@ import {
 import type { ModelName } from 'src/utils/model/model.js'
 import { isAutoMemoryEnabled } from '../../memdir/paths.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import { jsonParse } from '../../utils/slowOperations.js'
@@ -186,7 +186,7 @@ export async function generateAgent(
 
   logEvent('tengu_agent_definition_generated', {
     agent_identifier:
-      parsed.identifier as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      parsed.identifier as SafeEventValue,
   })
 
   return {

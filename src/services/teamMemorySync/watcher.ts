@@ -20,7 +20,7 @@ import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage } from '../../utils/errors.js'
 import { getGithubRepo } from '../../utils/git.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../analytics/index.js'
 import {
@@ -111,7 +111,7 @@ async function executePush(): Promise<void> {
         )
         logEvent('tengu_team_mem_push_suppressed', {
           reason:
-            pushSuppressedReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            pushSuppressedReason as SafeEventValue,
           ...(result.httpStatus && { status: result.httpStatus }),
         })
       }

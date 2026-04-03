@@ -1,6 +1,6 @@
 import { posix, win32 } from 'path'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import { logForDebugging } from './debug.js'
@@ -98,10 +98,10 @@ export function initializeWarningHandler(): void {
         is_internal: isInternal ? 1 : 0,
         occurrence_count: count + 1,
         classname:
-          warning.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          warning.name as SafeEventValue,
         ...(process.env.USER_TYPE === 'ant' && {
           message:
-            warning.message as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            warning.message as SafeEventValue,
         }),
       })
 

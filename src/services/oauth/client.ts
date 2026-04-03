@@ -1,7 +1,7 @@
 // OAuth client for handling authentication flows with Claude services
 import axios from 'axios'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import {
@@ -291,10 +291,10 @@ export async function refreshOAuthToken(
         : undefined
     logEvent('tengu_oauth_token_refresh_failure', {
       error: (error as Error)
-        .message as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        .message as SafeEventValue,
       ...(responseBody && {
         responseBody:
-          responseBody as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          responseBody as SafeEventValue,
       }),
     })
     throw error
@@ -332,7 +332,7 @@ export async function fetchAndStoreUserRoles(
 
   logEvent('tengu_oauth_roles_stored', {
     org_role:
-      data.organization_role as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      data.organization_role as SafeEventValue,
   })
 }
 
@@ -349,7 +349,7 @@ export async function createAndStoreApiKey(
       await saveApiKey(apiKey)
       logEvent('tengu_oauth_api_key', {
         status:
-          'success' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'success' as SafeEventValue,
         statusCode: response.status,
       })
       return apiKey
@@ -358,12 +358,12 @@ export async function createAndStoreApiKey(
   } catch (error) {
     logEvent('tengu_oauth_api_key', {
       status:
-        'failure' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'failure' as SafeEventValue,
       error: (error instanceof Error
         ? error.message
         : String(
             error,
-          )) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          )) as SafeEventValue,
     })
     throw error
   }

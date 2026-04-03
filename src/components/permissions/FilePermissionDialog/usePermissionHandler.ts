@@ -1,8 +1,8 @@
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../../services/analytics/index.js'
-import { sanitizeToolNameForAnalytics } from '../../../services/analytics/metadata.js'
+import { sanitizeToolNameForLogging } from '../../../services/toolLogging/metadata.js'
 import type { ToolPermissionContext } from '../../../Tool.js'
 import {
   CLAUDE_FOLDER_PERMISSION_PATTERN,
@@ -71,9 +71,9 @@ function handleAcceptOnce(
 
   // Log accept submission with feedback context
   logEvent('tengu_accept_submitted', {
-    toolName: sanitizeToolNameForAnalytics(
+    toolName: sanitizeToolNameForLogging(
       toolUseConfirm.tool.name,
-    ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    ) as SafeEventValue,
     isMcp: toolUseConfirm.tool.isMcp ?? false,
     has_instructions: !!options?.feedback,
     instructions_length: options?.feedback?.length ?? 0,
@@ -161,9 +161,9 @@ function handleReject(
 
   // Log reject submission with feedback context
   logEvent('tengu_reject_submitted', {
-    toolName: sanitizeToolNameForAnalytics(
+    toolName: sanitizeToolNameForLogging(
       toolUseConfirm.tool.name,
-    ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    ) as SafeEventValue,
     isMcp: toolUseConfirm.tool.isMcp ?? false,
     has_instructions: !!options?.feedback,
     instructions_length: options?.feedback?.length ?? 0,

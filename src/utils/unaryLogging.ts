@@ -1,5 +1,5 @@
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 
@@ -23,15 +23,15 @@ type LogEvent = {
 export async function logUnaryEvent(event: LogEvent): Promise<void> {
   logEvent('tengu_unary_event', {
     event:
-      event.event as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      event.event as SafeEventValue,
     completion_type:
-      event.completion_type as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      event.completion_type as SafeEventValue,
     language_name: (await event.metadata
-      .language_name) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      .language_name) as SafeEventValue,
     message_id: event.metadata
-      .message_id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      .message_id as SafeEventValue,
     platform: event.metadata
-      .platform as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      .platform as SafeEventValue,
     ...(event.metadata.hasFeedback !== undefined && {
       hasFeedback: event.metadata.hasFeedback,
     }),

@@ -10,7 +10,7 @@
 import { feature } from 'bun:bundle'
 import { join, relative } from 'path'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import {
@@ -87,7 +87,7 @@ export async function runFilePersistence(
 
   const startTime = Date.now()
   logEvent('tengu_file_persistence_started', {
-    mode: environmentKind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    mode: environmentKind as SafeEventValue,
   })
 
   try {
@@ -113,7 +113,7 @@ export async function runFilePersistence(
       success_count: result.files.length,
       failure_count: result.failed.length,
       duration_ms: durationMs,
-      mode: environmentKind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      mode: environmentKind as SafeEventValue,
     })
 
     return result
@@ -126,9 +126,9 @@ export async function runFilePersistence(
       success_count: 0,
       failure_count: 0,
       duration_ms: durationMs,
-      mode: environmentKind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      mode: environmentKind as SafeEventValue,
       error:
-        'exception' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'exception' as SafeEventValue,
     })
 
     return {

@@ -6,13 +6,13 @@ import type {
 import { createHash } from 'crypto'
 import { SYSTEM_PROMPT_DYNAMIC_BOUNDARY } from 'src/constants/prompts.js'
 import { getSystemContext, getUserContext } from 'src/context.js'
-import { isAnalyticsDisabled } from 'src/services/analytics/config.js'
+import { isNonEssentialTrafficDisabled } from 'src/services/runtimeConfig/nonEssentialTraffic.js'
 import {
   checkStatsigFeatureGate_CACHED_MAY_BE_STALE,
   getFeatureValue_CACHED_MAY_BE_STALE,
-} from 'src/services/analytics/growthbook.js'
+} from 'src/services/runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import { prefetchAllMcpResources } from 'src/services/mcp/client.js'
@@ -285,11 +285,11 @@ export function logAPIPrefix(systemPrompt: SystemPrompt): void {
     snippet: firstSystemPrompt?.slice(
       0,
       20,
-    ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    ) as SafeEventValue,
     length: firstSystemPrompt?.length ?? 0,
     hash: (firstSystemPrompt
       ? createHash('sha256').update(firstSystemPrompt).digest('hex')
-      : '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      : '') as SafeEventValue,
   })
 }
 
@@ -481,7 +481,7 @@ export async function logContextMetrics(
   toolPermissionContext: ToolPermissionContext,
 ): Promise<void> {
   // Early return if logging is disabled
-  if (isAnalyticsDisabled()) {
+  if (isNonEssentialTrafficDisabled()) {
     return
   }
   const [{ tools: mcpTools }, tools, userContext, systemContext] =

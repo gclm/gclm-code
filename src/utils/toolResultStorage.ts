@@ -12,9 +12,9 @@ import {
   MAX_TOOL_RESULT_BYTES,
   MAX_TOOL_RESULTS_PER_MESSAGE_CHARS,
 } from '../constants/toolLimits.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import { logEvent } from '../services/analytics/index.js'
-import { sanitizeToolNameForAnalytics } from '../services/analytics/metadata.js'
+import { sanitizeToolNameForLogging } from '../services/toolLogging/metadata.js'
 import type { Message } from '../types/message.js'
 import { logForDebugging } from './debug.js'
 import { getErrnoCode, toError } from './errors.js'
@@ -286,7 +286,7 @@ async function maybePersistLargeToolResult(
   // Inject a short marker so the model always has something to react to.
   if (isToolResultContentEmpty(content)) {
     logEvent('tengu_tool_empty_result', {
-      toolName: sanitizeToolNameForAnalytics(toolName),
+      toolName: sanitizeToolNameForLogging(toolName),
     })
     return {
       ...toolResultBlock,
@@ -322,7 +322,7 @@ async function maybePersistLargeToolResult(
 
   // Log analytics
   logEvent('tengu_tool_result_persisted', {
-    toolName: sanitizeToolNameForAnalytics(toolName),
+    toolName: sanitizeToolNameForLogging(toolName),
     originalSizeBytes: result.originalSize,
     persistedSizeBytes: message.length,
     estimatedOriginalTokens: Math.ceil(result.originalSize / BYTES_PER_TOKEN),

@@ -53,9 +53,9 @@ import {
   createMemorySavedMessage,
   createUserMessage,
 } from '../../utils/messages.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../runtimeConfig/growthbook.js'
 import { logEvent } from '../analytics/index.js'
-import { sanitizeToolNameForAnalytics } from '../analytics/metadata.js'
+import { sanitizeToolNameForLogging } from '../toolLogging/metadata.js'
 import {
   buildExtractAutoOnlyPrompt,
   buildExtractCombinedPrompt,
@@ -154,7 +154,7 @@ function hasMemoryWritesSince(
 function denyAutoMemTool(tool: Tool, reason: string) {
   logForDebugging(`[autoMem] denied ${tool.name}: ${reason}`)
   logEvent('tengu_auto_mem_tool_denied', {
-    tool_name: sanitizeToolNameForAnalytics(tool.name),
+    tool_name: sanitizeToolNameForLogging(tool.name),
   })
   return {
     behavior: 'deny' as const,

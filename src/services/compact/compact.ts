@@ -91,9 +91,9 @@ import {
   extractDiscoveredToolNames,
   isToolSearchEnabled,
 } from '../../utils/toolSearch.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../analytics/index.js'
 import {
@@ -469,7 +469,7 @@ export async function compactConversation(
       if (!truncated) {
         logEvent('tengu_compact_failed', {
           reason:
-            'prompt_too_long' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'prompt_too_long' as SafeEventValue,
           preCompactTokenCount,
           promptCacheSharingEnabled,
           ptlAttempts,
@@ -497,7 +497,7 @@ export async function compactConversation(
       )
       logEvent('tengu_compact_failed', {
         reason:
-          'no_summary' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'no_summary' as SafeEventValue,
         preCompactTokenCount,
         promptCacheSharingEnabled,
       })
@@ -507,7 +507,7 @@ export async function compactConversation(
     } else if (startsWithApiErrorPrefix(summary)) {
       logEvent('tengu_compact_failed', {
         reason:
-          'api_error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'api_error' as SafeEventValue,
         preCompactTokenCount,
         promptCacheSharingEnabled,
       })
@@ -658,15 +658,15 @@ export async function compactConversation(
         truePostCompactTokenCount >= recompactionInfo.autoCompactThreshold,
       isAutoCompact,
       querySource:
-        querySourceForEvent as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        querySourceForEvent as SafeEventValue,
       queryChainId: (context.queryTracking?.chainId ??
-        '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        '') as SafeEventValue,
       queryDepth: context.queryTracking?.depth ?? -1,
       isRecompactionInChain: recompactionInfo?.isRecompactionInChain ?? false,
       turnsSincePreviousCompact:
         recompactionInfo?.turnsSincePreviousCompact ?? -1,
       previousCompactTurnId: (recompactionInfo?.previousCompactTurnId ??
-        '') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        '') as SafeEventValue,
       compactionInputTokens: compactionUsage?.input_tokens,
       compactionOutputTokens: compactionUsage?.output_tokens,
       compactionCacheReadTokens: compactionUsage?.cache_read_input_tokens ?? 0,
@@ -845,7 +845,7 @@ export async function partialCompactConversation(
     const failureMetadata = {
       preCompactTokenCount,
       direction:
-        direction as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        direction as SafeEventValue,
       messagesSummarized: messagesToSummarize.length,
     }
 
@@ -879,7 +879,7 @@ export async function partialCompactConversation(
       if (!truncated) {
         logEvent('tengu_partial_compact_failed', {
           reason:
-            'prompt_too_long' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'prompt_too_long' as SafeEventValue,
           ...failureMetadata,
           ptlAttempts,
         })
@@ -889,7 +889,7 @@ export async function partialCompactConversation(
         attempt: ptlAttempts,
         droppedMessages: apiMessages.length - truncated.length,
         remainingMessages: truncated.length,
-        path: 'partial' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        path: 'partial' as SafeEventValue,
       })
       apiMessages = truncated
       retryCacheSafeParams = {
@@ -900,7 +900,7 @@ export async function partialCompactConversation(
     if (!summary) {
       logEvent('tengu_partial_compact_failed', {
         reason:
-          'no_summary' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'no_summary' as SafeEventValue,
         ...failureMetadata,
       })
       throw new Error(
@@ -909,7 +909,7 @@ export async function partialCompactConversation(
     } else if (startsWithApiErrorPrefix(summary)) {
       logEvent('tengu_partial_compact_failed', {
         reason:
-          'api_error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'api_error' as SafeEventValue,
         ...failureMetadata,
       })
       throw new Error(summary)
@@ -993,10 +993,10 @@ export async function partialCompactConversation(
       messagesKept: messagesToKeep.length,
       messagesSummarized: messagesToSummarize.length,
       direction:
-        direction as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        direction as SafeEventValue,
       hasUserFeedback: !!userFeedback,
       trigger:
-        'message_selector' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        'message_selector' as SafeEventValue,
       compactionInputTokens: compactionUsage?.input_tokens,
       compactionOutputTokens: compactionUsage?.output_tokens,
       compactionCacheReadTokens: compactionUsage?.cache_read_input_tokens ?? 0,
@@ -1234,14 +1234,14 @@ async function streamCompactSummary({
         )
         logEvent('tengu_compact_cache_sharing_fallback', {
           reason:
-            'no_text_response' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'no_text_response' as SafeEventValue,
           preCompactTokenCount,
         })
       } catch (error) {
         logError(error)
         logEvent('tengu_compact_cache_sharing_fallback', {
           reason:
-            'error' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'error' as SafeEventValue,
           preCompactTokenCount,
         })
       }
@@ -1378,7 +1378,7 @@ async function streamCompactSummary({
       )
       logEvent('tengu_compact_failed', {
         reason:
-          'no_streaming_response' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'no_streaming_response' as SafeEventValue,
         preCompactTokenCount,
         hasStartedStreaming,
         retryEnabled,

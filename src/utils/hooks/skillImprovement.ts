@@ -1,9 +1,9 @@
 import { feature } from 'bun:bundle'
 import { getInvokedSkillsForAgent } from '../../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+  type SafeEventValue,
+  type PiiEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
 import { queryModelWithoutStreaming } from '../../services/api/claude.js'
@@ -150,11 +150,11 @@ Output <updates>[]</updates> if no updates are needed.`,
 
         logEvent('tengu_skill_improvement_detected', {
           updateCount: result.result
-            .length as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          uuid: result.uuid as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            .length as SafeEventValue,
+          uuid: result.uuid as SafeEventValue,
           // _PROTO_skill_name routes to the privileged skill_name BQ column.
           _PROTO_skill_name:
-            skillName as AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED,
+            skillName as PiiEventValue,
         })
 
         context.toolUseContext.setAppState(prev => ({

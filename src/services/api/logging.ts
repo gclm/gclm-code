@@ -19,7 +19,7 @@ import type { AssistantMessage } from 'src/types/message.js'
 import { logForDebugging } from 'src/utils/debug.js'
 import type { EffortLevel } from 'src/utils/effort.js'
 import { logError } from 'src/utils/log.js'
-import { getAPIProviderForStatsig } from 'src/utils/model/providers.js'
+import { getProviderForDiagnostics } from 'src/utils/model/providers.js'
 import type { PermissionMode } from 'src/utils/permissions/PermissionMode.js'
 import { jsonStringify } from 'src/utils/slowOperations.js'
 import {
@@ -30,11 +30,11 @@ import {
 import type { NonNullableUsage } from '../../entrypoints/sdk/sdkUtilityTypes.js'
 import { consumeInvokingRequestId } from '../../utils/agentContext.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logOTelEvent,
   logEvent,
 } from '../analytics/index.js'
-import { sanitizeToolNameForAnalytics } from '../analytics/metadata.js'
+import { sanitizeToolNameForLogging } from '../toolLogging/metadata.js'
 import { EMPTY_USAGE } from './emptyUsage.js'
 import { classifyAPIError } from './errors.js'
 import { extractConnectionErrorDetails } from './errorUtils.js'
@@ -143,19 +143,19 @@ function getAnthropicEnvMetadata() {
     ...(process.env.ANTHROPIC_BASE_URL
       ? {
           baseUrl: process.env
-            .ANTHROPIC_BASE_URL as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            .ANTHROPIC_BASE_URL as SafeEventValue,
         }
       : {}),
     ...(process.env.ANTHROPIC_MODEL
       ? {
           envModel: process.env
-            .ANTHROPIC_MODEL as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            .ANTHROPIC_MODEL as SafeEventValue,
         }
       : {}),
     ...(process.env.ANTHROPIC_SMALL_FAST_MODEL
       ? {
           envSmallFastModel: process.env
-            .ANTHROPIC_SMALL_FAST_MODEL as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            .ANTHROPIC_SMALL_FAST_MODEL as SafeEventValue,
         }
       : {}),
   }
@@ -194,38 +194,38 @@ export function logAPIQuery({
   previousRequestId?: string | null
 }): void {
   logEvent('tengu_api_query', {
-    model: model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    model: model as SafeEventValue,
     messagesLength,
     temperature: temperature,
-    provider: getAPIProviderForStatsig(),
+    provider: getProviderForDiagnostics(),
     buildAgeMins: getBuildAgeMinutes(),
     ...(betas?.length
       ? {
           betas: betas.join(
             ',',
-          ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          ) as SafeEventValue,
         }
       : {}),
     permissionMode:
-      permissionMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      permissionMode as SafeEventValue,
     querySource:
-      querySource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      querySource as SafeEventValue,
     ...(queryTracking
       ? {
           queryChainId:
-            queryTracking.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            queryTracking.chainId as SafeEventValue,
           queryDepth: queryTracking.depth,
         }
       : {}),
     thinkingType:
-      thinkingType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      thinkingType as SafeEventValue,
     effortValue:
-      effortValue as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      effortValue as SafeEventValue,
     fastMode,
     ...(previousRequestId
       ? {
           previousRequestId:
-            previousRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            previousRequestId as SafeEventValue,
         }
       : {}),
     ...getAnthropicEnvMetadata(),
@@ -302,63 +302,63 @@ export function logAPIError({
 
   logError(error as Error)
   logEvent('tengu_api_error', {
-    model: model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    error: errStr as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    model: model as SafeEventValue,
+    error: errStr as SafeEventValue,
     status:
-      status as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      status as SafeEventValue,
     errorType:
-      errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      errorType as SafeEventValue,
     messageCount,
     messageTokens,
     durationMs,
     durationMsIncludingRetries,
     attempt,
-    provider: getAPIProviderForStatsig(),
+    provider: getProviderForDiagnostics(),
     requestId:
-      (requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS) ||
+      (requestId as SafeEventValue) ||
       undefined,
     ...(invocation
       ? {
           invokingRequestId:
-            invocation.invokingRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            invocation.invokingRequestId as SafeEventValue,
           invocationKind:
-            invocation.invocationKind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            invocation.invocationKind as SafeEventValue,
         }
       : {}),
     clientRequestId:
-      (clientRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS) ||
+      (clientRequestId as SafeEventValue) ||
       undefined,
     didFallBackToNonStreaming,
     ...(promptCategory
       ? {
           promptCategory:
-            promptCategory as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            promptCategory as SafeEventValue,
         }
       : {}),
     ...(gateway
       ? {
           gateway:
-            gateway as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            gateway as SafeEventValue,
         }
       : {}),
     ...(queryTracking
       ? {
           queryChainId:
-            queryTracking.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            queryTracking.chainId as SafeEventValue,
           queryDepth: queryTracking.depth,
         }
       : {}),
     ...(querySource
       ? {
           querySource:
-            querySource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            querySource as SafeEventValue,
         }
       : {}),
     fastMode,
     ...(previousRequestId
       ? {
           previousRequestId:
-            previousRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            previousRequestId as SafeEventValue,
         }
       : {}),
     ...getAnthropicEnvMetadata(),
@@ -387,9 +387,9 @@ export function logAPIError({
   if (teleportInfo?.isTeleported && !teleportInfo.hasLoggedFirstMessage) {
     logEvent('tengu_teleport_first_message_error', {
       session_id:
-        teleportInfo.sessionId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        teleportInfo.sessionId as SafeEventValue,
       error_type:
-        errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        errorType as SafeEventValue,
     })
     markFirstTeleportMessageLogged()
   }
@@ -461,18 +461,18 @@ function logAPISuccess({
   const invocation = consumeInvokingRequestId()
 
   logEvent('tengu_api_success', {
-    model: model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    model: model as SafeEventValue,
     ...(preNormalizedModel !== model
       ? {
           preNormalizedModel:
-            preNormalizedModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            preNormalizedModel as SafeEventValue,
         }
       : {}),
     ...(betas?.length
       ? {
           betas: betas.join(
             ',',
-          ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          ) as SafeEventValue,
         }
       : {}),
     messageCount,
@@ -486,20 +486,20 @@ function logAPISuccess({
     attempt: attempt,
     ttftMs: ttftMs ?? undefined,
     buildAgeMins: getBuildAgeMinutes(),
-    provider: getAPIProviderForStatsig(),
+    provider: getProviderForDiagnostics(),
     requestId:
-      (requestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS) ??
+      (requestId as SafeEventValue) ??
       undefined,
     ...(invocation
       ? {
           invokingRequestId:
-            invocation.invokingRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            invocation.invokingRequestId as SafeEventValue,
           invocationKind:
-            invocation.invocationKind as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            invocation.invocationKind as SafeEventValue,
         }
       : {}),
     stop_reason:
-      (stopReason as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS) ??
+      (stopReason as SafeEventValue) ??
       undefined,
     costUSD,
     didFallBackToNonStreaming,
@@ -507,49 +507,49 @@ function logAPISuccess({
     print: hasPrintFlag,
     isTTY: process.stdout.isTTY ?? false,
     querySource:
-      querySource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      querySource as SafeEventValue,
     ...(gateway
       ? {
           gateway:
-            gateway as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            gateway as SafeEventValue,
         }
       : {}),
     ...(queryTracking
       ? {
           queryChainId:
-            queryTracking.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            queryTracking.chainId as SafeEventValue,
           queryDepth: queryTracking.depth,
         }
       : {}),
     permissionMode:
-      permissionMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      permissionMode as SafeEventValue,
     ...(globalCacheStrategy
       ? {
           globalCacheStrategy:
-            globalCacheStrategy as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            globalCacheStrategy as SafeEventValue,
         }
       : {}),
     ...(textContentLength !== undefined
       ? ({
           textContentLength,
-        } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+        } as SafeEventValue)
       : {}),
     ...(thinkingContentLength !== undefined
       ? ({
           thinkingContentLength,
-        } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+        } as SafeEventValue)
       : {}),
     ...(toolUseContentLengths !== undefined
       ? ({
           toolUseContentLengths: jsonStringify(
             toolUseContentLengths,
-          ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+          ) as SafeEventValue,
+        } as SafeEventValue)
       : {}),
     ...(connectorTextBlockCount !== undefined
       ? ({
           connectorTextBlockCount,
-        } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+        } as SafeEventValue)
       : {}),
     fastMode,
     // Log cache_deleted_input_tokens for cache editing analysis. Casts needed
@@ -567,7 +567,7 @@ function logAPISuccess({
     ...(previousRequestId
       ? {
           previousRequestId:
-            previousRequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            previousRequestId as SafeEventValue,
         }
       : {}),
     ...(isPostCompaction ? { isPostCompaction } : {}),
@@ -669,7 +669,7 @@ export function logAPISuccessAndDuration({
           block.type === 'mcp_tool_use'
         ) {
           const inputLen = jsonStringify(block.input).length
-          const sanitizedName = sanitizeToolNameForAnalytics(block.name)
+          const sanitizedName = sanitizeToolNameForLogging(block.name)
           toolLengths[sanitizedName] =
             (toolLengths[sanitizedName] ?? 0) + inputLen
           hasToolUse = true
@@ -781,7 +781,7 @@ export function logAPISuccessAndDuration({
   if (teleportInfo?.isTeleported && !teleportInfo.hasLoggedFirstMessage) {
     logEvent('tengu_teleport_first_message_success', {
       session_id:
-        teleportInfo.sessionId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        teleportInfo.sessionId as SafeEventValue,
     })
     markFirstTeleportMessageLogged()
   }

@@ -1,7 +1,7 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import {
   logEvent,
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
 } from 'src/services/analytics/index.js'
 import {
   toolMatchesName,
@@ -216,7 +216,7 @@ import {
   getEffectiveContextWindowSize,
   isAutoCompactEnabled,
 } from '../services/compact/autoCompact.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import {
   hasInstructionsLoadedHook,
   executeInstructionsLoadedHooks,
@@ -1020,7 +1020,7 @@ async function maybe<A>(label: string, f: () => Promise<A[]>): Promise<A[]> {
         duration_ms: duration,
         attachment_size_bytes: attachmentSizeBytes,
         attachment_count: result.length,
-      } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+      } as SafeEventValue)
     }
     return result
   } catch (e) {
@@ -1031,7 +1031,7 @@ async function maybe<A>(label: string, f: () => Promise<A[]>): Promise<A[]> {
         label,
         duration_ms: duration,
         error: true,
-      } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+      } as SafeEventValue)
     }
     logError(e)
     // For Ant users, log the full error to help with debugging
@@ -2134,7 +2134,7 @@ export async function getChangedFiles(
             logError(compressionError)
             logEvent('tengu_watched_file_compression_failed', {
               file: normalizedPath,
-            } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+            } as SafeEventValue)
             return null
           }
         }
@@ -2961,7 +2961,7 @@ export async function* getAttachmentMessages(
   logEvent('tengu_attachments', {
     attachment_types: attachments.map(
       _ => _.type,
-    ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    ) as SafeEventValue,
   })
 
   for (const attachment of attachments) {
@@ -3002,7 +3002,7 @@ export async function tryGetPDFReference(
         pageCount: effectivePageCount,
         fileSize: stats.size,
         hadPdfinfo: pageCount !== null,
-      } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+      } as SafeEventValue)
       return {
         type: 'pdf_reference',
         filename,
@@ -3057,7 +3057,7 @@ export async function generateFileAttachment(
         logEvent('tengu_attachment_file_too_large', {
           size_bytes: stats.size,
           mode,
-        } as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS)
+        } as SafeEventValue)
         return null
       } catch {
         // If we can't stat the file, proceed with normal reading (will fail later if file doesn't exist)

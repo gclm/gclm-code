@@ -18,7 +18,7 @@ import {
 import memoize from 'lodash-es/memoize.js'
 import { basename, dirname, join } from 'path'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import {
@@ -32,7 +32,7 @@ import {
 } from '../bootstrap/state.js'
 import { builtInCommandNames } from '../commands.js'
 import { COMMAND_NAME_TAG, TICK_TAG } from '../constants/xml.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import * as sessionIngress from '../services/api/sessionIngress.js'
 import { REPL_TOOL_NAME } from '../tools/REPLTool/constants.js'
 import {
@@ -2633,7 +2633,7 @@ export async function saveCustomTitle(
   }
   logEvent('tengu_session_renamed', {
     source:
-      source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      source as SafeEventValue,
   })
 }
 
@@ -2831,7 +2831,7 @@ export async function saveAgentName(
   }
   logEvent('tengu_agent_name_set', {
     source:
-      source as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      source as SafeEventValue,
   })
 }
 

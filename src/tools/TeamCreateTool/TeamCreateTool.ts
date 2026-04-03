@@ -1,7 +1,7 @@
 import { z } from 'zod/v4'
 import { getSessionId } from '../../bootstrap/state.js'
 import { logEvent } from '../../services/analytics/index.js'
-import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/metadata.js'
+import type { SafeLogValue } from '../../services/toolLogging/metadata.js'
 import type { Tool } from '../../Tool.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
 import { formatAgentId } from '../../utils/agentId.js'
@@ -213,12 +213,12 @@ export const TeamCreateTool: Tool<InputSchema, Output> = buildTool({
 
     logEvent('tengu_team_created', {
       team_name:
-        finalTeamName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        finalTeamName as SafeLogValue,
       teammate_count: 1,
       lead_agent_type:
-        leadAgentType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        leadAgentType as SafeLogValue,
       teammate_mode:
-        getResolvedTeammateMode() as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        getResolvedTeammateMode() as SafeLogValue,
     })
 
     // Note: We intentionally don't set CLAUDE_CODE_AGENT_ID for the team lead because:

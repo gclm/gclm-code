@@ -1,7 +1,7 @@
 import { writeFile } from 'fs/promises'
 import { join } from 'path'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import type { MCPResultType } from '../services/mcp/client.js'
@@ -165,9 +165,9 @@ export async function persistBinaryContent(
   // mime type and extension are safe fixed-vocabulary strings (not paths/code)
   logEvent('tengu_binary_content_persisted', {
     mimeType: (mimeType ??
-      'unknown') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      'unknown') as SafeEventValue,
     sizeBytes: bytes.length,
-    ext: ext as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+    ext: ext as SafeEventValue,
   })
 
   return { filepath, size: bytes.length, ext }

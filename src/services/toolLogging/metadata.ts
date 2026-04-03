@@ -4,17 +4,17 @@ import { isEnvTruthy } from '../../utils/envUtils.js'
 
 /**
  * Marker type used by call sites to document that a value is safe for logging.
- * In the open build analytics are inert, so this remains a compile-time label.
+ * In the open build product analytics are inert, so this remains a compile-time label.
  */
-export type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS = never
+export type SafeLogValue = never
 
-export function sanitizeToolNameForAnalytics(
+export function sanitizeToolNameForLogging(
   toolName: string,
-): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS {
+): SafeLogValue {
   if (toolName.startsWith('mcp__')) {
-    return 'mcp_tool' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    return 'mcp_tool' as SafeLogValue
   }
-  return toolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+  return toolName as SafeLogValue
 }
 
 /**
@@ -27,7 +27,7 @@ export function isToolDetailsLoggingEnabled(): boolean {
 /**
  * Open build defaults to sanitization; only local-agent mode keeps detail parity.
  */
-export function isAnalyticsToolDetailsLoggingEnabled(
+export function isToolDetailsCaptureEnabled(
   mcpServerType: string | undefined,
   _mcpServerBaseUrl: string | undefined,
 ): boolean {
@@ -42,8 +42,8 @@ export function isAnalyticsToolDetailsLoggingEnabled(
 
 export function extractMcpToolDetails(toolName: string):
   | {
-      serverName: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-      mcpToolName: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      serverName: SafeLogValue
+      mcpToolName: SafeLogValue
     }
   | undefined {
   if (!toolName.startsWith('mcp__')) {
@@ -63,25 +63,25 @@ export function extractMcpToolDetails(toolName: string):
 
   return {
     serverName:
-      serverName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      serverName as SafeLogValue,
     mcpToolName:
-      mcpToolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      mcpToolName as SafeLogValue,
   }
 }
 
-export function mcpToolDetailsForAnalytics(
+export function getMcpToolDetailsForLogging(
   toolName: string,
   mcpServerType: string | undefined,
   mcpServerBaseUrl: string | undefined,
 ): {
-  mcpServerName?: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
-  mcpToolName?: AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+  mcpServerName?: SafeLogValue
+  mcpToolName?: SafeLogValue
 } {
   const details = extractMcpToolDetails(toolName)
   if (!details) {
     return {}
   }
-  if (!isAnalyticsToolDetailsLoggingEnabled(mcpServerType, mcpServerBaseUrl)) {
+  if (!isToolDetailsCaptureEnabled(mcpServerType, mcpServerBaseUrl)) {
     return {}
   }
   return {
@@ -93,7 +93,7 @@ export function mcpToolDetailsForAnalytics(
 export function extractSkillName(
   toolName: string,
   input: unknown,
-): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | undefined {
+): SafeLogValue | undefined {
   if (toolName !== 'Skill') {
     return undefined
   }
@@ -105,7 +105,7 @@ export function extractSkillName(
     typeof (input as { skill: unknown }).skill === 'string'
   ) {
     return (input as { skill: string })
-      .skill as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+      .skill as SafeLogValue
   }
 
   return undefined
@@ -158,7 +158,7 @@ function truncateToolInputValue(value: unknown, depth = 0): unknown {
   return String(value)
 }
 
-export function extractToolInputForTelemetry(
+export function extractToolInputForLogging(
   input: unknown,
 ): string | undefined {
   if (!isToolDetailsLoggingEnabled()) {
@@ -174,9 +174,9 @@ export function extractToolInputForTelemetry(
 
 const MAX_FILE_EXTENSION_LENGTH = 10
 
-export function getFileExtensionForAnalytics(
+export function getFileExtensionForLogging(
   filePath: string,
-): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | undefined {
+): SafeLogValue | undefined {
   const ext = extname(filePath).toLowerCase()
   if (!ext || ext === '.') {
     return undefined
@@ -184,10 +184,10 @@ export function getFileExtensionForAnalytics(
 
   const extension = ext.slice(1)
   if (extension.length > MAX_FILE_EXTENSION_LENGTH) {
-    return 'other' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+    return 'other' as SafeLogValue
   }
 
-  return extension as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+  return extension as SafeLogValue
 }
 
 const FILE_COMMANDS = new Set([
@@ -213,17 +213,17 @@ const FILE_COMMANDS = new Set([
 const COMPOUND_OPERATOR_REGEX = /\s*(?:&&|\|\||[;|])\s*/
 const WHITESPACE_REGEX = /\s+/
 
-export function getFileExtensionsFromBashCommand(
+export function getFileExtensionsFromBashCommandForLogging(
   command: string,
   simulatedSedEditFilePath?: string,
-): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | undefined {
+): SafeLogValue | undefined {
   if (!command.includes('.') && !simulatedSedEditFilePath) return undefined
 
   let result: string | undefined
   const seen = new Set<string>()
 
   if (simulatedSedEditFilePath) {
-    const ext = getFileExtensionForAnalytics(simulatedSedEditFilePath)
+    const ext = getFileExtensionForLogging(simulatedSedEditFilePath)
     if (ext) {
       seen.add(ext)
       result = ext
@@ -243,7 +243,7 @@ export function getFileExtensionsFromBashCommand(
     for (let i = 1; i < tokens.length; i++) {
       const arg = tokens[i]!
       if (arg.charCodeAt(0) === 45) continue
-      const ext = getFileExtensionForAnalytics(arg)
+      const ext = getFileExtensionForLogging(arg)
       if (ext && !seen.has(ext)) {
         seen.add(ext)
         result = result ? result + ',' + ext : ext
@@ -252,12 +252,15 @@ export function getFileExtensionsFromBashCommand(
   }
 
   if (!result) return undefined
-  return result as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
+  return result as SafeLogValue
 }
 
-export function getBashFileExtensionForAnalytics(
+export function getBashFileExtensionForLogging(
   command: string,
   simulatedSedEditFilePath?: string,
-): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS | undefined {
-  return getFileExtensionsFromBashCommand(command, simulatedSedEditFilePath)
+): SafeLogValue | undefined {
+  return getFileExtensionsFromBashCommandForLogging(
+    command,
+    simulatedSedEditFilePath,
+  )
 }

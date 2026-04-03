@@ -3,7 +3,7 @@ import React, { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { Box, Text } from '../../ink.js';
 import type { KeybindingAction } from '../../keybindings/types.js';
 import { useKeybindings } from '../../keybindings/useKeybinding.js';
-import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
+import { type SafeEventValue, logEvent } from '../../services/analytics/index.js';
 import { useSetAppState } from '../../state/AppState.js';
 import { type OptionWithDescription, Select } from '../CustomSelect/select.js';
 export type FeedbackType = 'accept' | 'reject';
@@ -144,7 +144,7 @@ export function PermissionPrompt(t0) {
         type: type_0
       } = option.feedbackConfig;
       const analyticsProps = {
-        toolName: toolAnalyticsContext?.toolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        toolName: toolAnalyticsContext?.toolName as SafeEventValue,
         isMcp: toolAnalyticsContext?.isMcp ?? false
       };
       if (type_0 === "accept") {
@@ -194,7 +194,7 @@ export function PermissionPrompt(t0) {
           feedback = trimmedFeedback;
         }
         const analyticsProps_0 = {
-          toolName: toolAnalyticsContext?.toolName as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          toolName: toolAnalyticsContext?.toolName as SafeEventValue,
           isMcp: toolAnalyticsContext?.isMcp ?? false,
           has_instructions: !!trimmedFeedback,
           instructions_length: trimmedFeedback?.length ?? 0,

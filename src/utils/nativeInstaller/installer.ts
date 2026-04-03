@@ -31,7 +31,7 @@ import {
 import { homedir } from 'os'
 import { basename, delimiter, dirname, join, resolve } from 'path'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import { getMaxVersion, shouldSkipVersion } from '../autoUpdater.js'
@@ -522,9 +522,9 @@ async function updateLatest(
         logEvent('tengu_native_update_skipped_max_version', {
           latency_ms: Date.now() - startTime,
           max_version:
-            maxVersion as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            maxVersion as SafeEventValue,
           available_version:
-            version as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            version as SafeEventValue,
         })
         return { success: true, latestVersion: version }
       }
@@ -556,7 +556,7 @@ async function updateLatest(
     logEvent('tengu_native_update_skipped_minimum_version', {
       latency_ms: Date.now() - startTime,
       target_version:
-        version as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        version as SafeEventValue,
     })
     return { success: true, latestVersion: version }
   }

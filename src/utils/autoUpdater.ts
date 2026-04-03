@@ -3,9 +3,9 @@ import { constants as fsConstants } from 'fs'
 import { access, writeFile } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'
-import { getDynamicConfig_BLOCKS_ON_INIT } from 'src/services/analytics/growthbook.js'
+import { getDynamicConfig_BLOCKS_ON_INIT } from 'src/services/runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from 'src/services/analytics/index.js'
 import { type ReleaseChannel, saveGlobalConfig } from './config.js'
@@ -481,7 +481,7 @@ export async function installGlobalPackage(
     logEvent('tengu_auto_updater_lock_contention', {
       pid: process.pid,
       currentVersion:
-        MACRO.VERSION as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        MACRO.VERSION as SafeEventValue,
     })
     return 'in_progress'
   }
@@ -493,7 +493,7 @@ export async function installGlobalPackage(
       logError(new Error('Windows NPM detected in WSL environment'))
       logEvent('tengu_auto_updater_windows_npm_in_wsl', {
         currentVersion:
-          MACRO.VERSION as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          MACRO.VERSION as SafeEventValue,
       })
       // biome-ignore lint/suspicious/noConsole:: intentional console output
       const cliCommand = getCliCommand()

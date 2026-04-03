@@ -2,7 +2,7 @@ import { feature } from 'bun:bundle'
 import { getShortcutDisplay } from '../keybindings/shortcutFormat.js'
 import { isExtractModeActive } from '../memdir/paths.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import type { ToolUseContext } from '../Tool.js'
@@ -283,7 +283,7 @@ export async function* handleStopHooks(
       if (toolUseContext.abortController.signal.aborted) {
         logEvent('tengu_pre_stop_hooks_cancelled', {
           queryChainId: toolUseContext.queryTracking
-            ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            ?.chainId as SafeEventValue,
 
           queryDepth: toolUseContext.queryTracking?.depth,
         })
@@ -459,7 +459,7 @@ export async function* handleStopHooks(
       duration: durationMs,
 
       queryChainId: toolUseContext.queryTracking
-        ?.chainId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ?.chainId as SafeEventValue,
       queryDepth: toolUseContext.queryTracking?.depth,
     })
     // Yield a system message that is not visible to the model for the user

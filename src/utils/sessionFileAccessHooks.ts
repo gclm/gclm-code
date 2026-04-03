@@ -7,7 +7,7 @@ import { feature } from 'bun:bundle'
 import { registerHookCallbacks } from '../bootstrap/state.js'
 import type { HookInput, HookJSONOutput } from '../entrypoints/agentSdkTypes.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { FILE_EDIT_TOOL_NAME } from '../tools/FileEditTool/constants.js'
@@ -168,7 +168,7 @@ async function handleSessionFileAccess(
   const filePath = getFilePathFromInput(input.tool_name, input.tool_input)
   if (filePath && isAutoMemFile(filePath)) {
     logEvent('tengu_memdir_accessed', {
-      tool: input.tool_name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      tool: input.tool_name as SafeEventValue,
       ...subagentProps,
     })
 
@@ -188,7 +188,7 @@ async function handleSessionFileAccess(
   // Team memory access tracking
   if (feature('TEAMMEM') && filePath && teamMemPaths!.isTeamMemFile(filePath)) {
     logEvent('tengu_team_mem_accessed', {
-      tool: input.tool_name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      tool: input.tool_name as SafeEventValue,
       ...subagentProps,
     })
 

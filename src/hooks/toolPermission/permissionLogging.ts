@@ -3,11 +3,11 @@
 // which fans out to Statsig analytics, OTel telemetry, and code-edit metrics.
 import { feature } from 'bun:bundle'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logOTelEvent,
   logEvent,
 } from 'src/services/analytics/index.js'
-import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata.js'
+import { sanitizeToolNameForLogging } from 'src/services/toolLogging/metadata.js'
 import { getCodeEditToolDecisionCounter } from '../../bootstrap/state.js'
 import type { Tool as ToolType, ToolUseContext } from '../../Tool.js'
 import { getLanguageName } from '../../utils/cliHighlight.js'
@@ -95,8 +95,8 @@ function baseMetadata(
 ): { [key: string]: boolean | number | undefined } {
   return {
     messageID:
-      messageId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-    toolName: sanitizeToolNameForAnalytics(toolName),
+      messageId as SafeEventValue,
+    toolName: sanitizeToolNameForLogging(toolName),
     sandboxEnabled: SandboxManager.isSandboxingEnabled(),
     // Only include wait time when the user was actually prompted (not auto-approved)
     ...(waitMs !== undefined && { waiting_for_user_permission_ms: waitMs }),
@@ -230,7 +230,7 @@ function logPermissionDecision(
   void logOTelEvent('tool_decision', {
     decision,
     source: sourceString,
-    tool_name: sanitizeToolNameForAnalytics(tool.name),
+    tool_name: sanitizeToolNameForLogging(tool.name),
   })
 }
 

@@ -1,6 +1,6 @@
 import type { UUID } from 'crypto'
 import { logEvent } from 'src/services/analytics/index.js'
-import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/metadata.js'
+import type { SafeLogValue } from 'src/services/toolLogging/metadata.js'
 import { type Command, getCommandName, isCommandEnabled } from '../commands.js'
 import { selectableUserMessagesFilter } from '../components/MessageSelector.js'
 import type { SpinnerMode } from '../components/Spinner/types.js'
@@ -252,7 +252,7 @@ export async function handlePromptSubmit(
     ) {
       logEvent('tengu_immediate_command_executed', {
         commandName:
-          immediateCommand.name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          immediateCommand.name as SafeLogValue,
       })
 
       // Clear input
@@ -324,9 +324,9 @@ export async function handlePromptSubmit(
       )
       logEvent('tengu_cancel', {
         source:
-          'interrupt_on_submit' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          'interrupt_on_submit' as SafeLogValue,
         streamMode:
-          params.streamMode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          params.streamMode as SafeLogValue,
       })
       params.abortController?.abort('interrupt')
     }

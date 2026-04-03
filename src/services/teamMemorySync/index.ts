@@ -55,7 +55,7 @@ import { sleep } from '../../utils/sleep.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { getClaudeCodeUserAgent } from '../../utils/userAgent.js'
 import { logEvent } from '../analytics/index.js'
-import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../analytics/metadata.js'
+import type { SafeLogValue } from '../toolLogging/metadata.js'
 import { getRetryDelay } from '../api/withRetry.js'
 import { scanForSecrets } from './secretScanner.js'
 import {
@@ -940,7 +940,7 @@ export async function pushTeamMemory(
         .map(s => s.ruleId)
         .join(
           ',',
-        ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        ) as SafeLogValue,
     })
   }
 
@@ -1209,7 +1209,7 @@ function logPull(
     duration_ms: Date.now() - startTime,
     ...(outcome.errorType && {
       errorType:
-        outcome.errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        outcome.errorType as SafeLogValue,
     }),
     ...(outcome.status && { status: outcome.status }),
   })
@@ -1238,13 +1238,13 @@ function logPush(
     duration_ms: Date.now() - startTime,
     ...(outcome.errorType && {
       errorType:
-        outcome.errorType as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        outcome.errorType as SafeLogValue,
     }),
     ...(outcome.status && { status: outcome.status }),
     ...(outcome.putBatches && { put_batches: outcome.putBatches }),
     ...(outcome.errorCode && {
       error_code:
-        outcome.errorCode as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        outcome.errorCode as SafeLogValue,
     }),
     ...(outcome.serverMaxEntries !== undefined && {
       server_max_entries: outcome.serverMaxEntries,

@@ -14,7 +14,7 @@ import {
   setScheduledTasksEnabled,
 } from '../bootstrap/state.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../services/analytics/index.js'
 import { cronToHuman } from './cron.js'
@@ -208,7 +208,7 @@ export function createCronScheduler(
           .map(t => t.id)
           .join(
             ',',
-          ) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          ) as SafeEventValue,
       })
       if (onMissed) {
         onMissed(missed)
@@ -288,7 +288,7 @@ export function createCronScheduler(
       logEvent('tengu_scheduled_task_fire', {
         recurring: t.recurring ?? false,
         taskId:
-          t.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          t.id as SafeEventValue,
       })
       if (onFireTask) {
         onFireTask(t)
@@ -307,7 +307,7 @@ export function createCronScheduler(
         )
         logEvent('tengu_scheduled_task_expired', {
           taskId:
-            t.id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            t.id as SafeEventValue,
           ageHours,
         })
       }

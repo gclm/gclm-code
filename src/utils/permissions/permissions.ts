@@ -70,12 +70,12 @@ import {
   getTotalInputTokens,
   getTotalOutputTokens,
 } from '../../bootstrap/state.js'
-import { getFeatureValue_CACHED_WITH_REFRESH } from '../../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_WITH_REFRESH } from '../../services/runtimeConfig/growthbook.js'
 import {
-  type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  type SafeEventValue,
   logEvent,
 } from '../../services/analytics/index.js'
-import { sanitizeToolNameForAnalytics } from '../../services/analytics/metadata.js'
+import { sanitizeToolNameForLogging } from '../../services/toolLogging/metadata.js'
 import {
   clearClassifierChecking,
   setClassifierChecking,
@@ -625,18 +625,18 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
             )
             logEvent('tengu_auto_mode_decision', {
               decision:
-                'allowed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-              toolName: sanitizeToolNameForAnalytics(tool.name),
+                'allowed' as SafeEventValue,
+              toolName: sanitizeToolNameForLogging(tool.name),
               inProtectedNamespace: isInProtectedNamespace(),
               // msg_id of the agent completion that produced this tool_use —
               // the action at the bottom of the classifier transcript. Joins
               // the decision back to the main agent's API response.
               agentMsgId: assistantMessage.message
-                .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                .id as SafeEventValue,
               confidence:
-                'high' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                'high' as SafeEventValue,
               fastPath:
-                'acceptEdits' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+                'acceptEdits' as SafeEventValue,
             })
             return {
               behavior: 'allow',
@@ -665,15 +665,15 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         )
         logEvent('tengu_auto_mode_decision', {
           decision:
-            'allowed' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-          toolName: sanitizeToolNameForAnalytics(tool.name),
+            'allowed' as SafeEventValue,
+          toolName: sanitizeToolNameForLogging(tool.name),
           inProtectedNamespace: isInProtectedNamespace(),
           agentMsgId: assistantMessage.message
-            .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            .id as SafeEventValue,
           confidence:
-            'high' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'high' as SafeEventValue,
           fastPath:
-            'allowlist' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+            'allowlist' as SafeEventValue,
         })
         return {
           behavior: 'allow',
@@ -732,15 +732,15 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
           : undefined
       logEvent('tengu_auto_mode_decision', {
         decision:
-          yoloDecision as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
-        toolName: sanitizeToolNameForAnalytics(tool.name),
+          yoloDecision as SafeEventValue,
+        toolName: sanitizeToolNameForLogging(tool.name),
         inProtectedNamespace: isInProtectedNamespace(),
         // msg_id of the agent completion that produced this tool_use —
         // the action at the bottom of the classifier transcript.
         agentMsgId: assistantMessage.message
-          .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          .id as SafeEventValue,
         classifierModel:
-          classifierResult.model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          classifierResult.model as SafeEventValue,
         consecutiveDenials: classifierResult.shouldBlock
           ? denialState.consecutiveDenials + 1
           : 0,
@@ -770,7 +770,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         sessionCacheCreationInputTokens: getTotalCacheCreationInputTokens(),
         classifierCostUSD,
         classifierStage:
-          classifierResult.stage as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          classifierResult.stage as SafeEventValue,
         classifierStage1InputTokens: classifierResult.stage1Usage?.inputTokens,
         classifierStage1OutputTokens:
           classifierResult.stage1Usage?.outputTokens,
@@ -780,9 +780,9 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
           classifierResult.stage1Usage?.cacheCreationInputTokens,
         classifierStage1DurationMs: classifierResult.stage1DurationMs,
         classifierStage1RequestId:
-          classifierResult.stage1RequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          classifierResult.stage1RequestId as SafeEventValue,
         classifierStage1MsgId:
-          classifierResult.stage1MsgId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          classifierResult.stage1MsgId as SafeEventValue,
         classifierStage1CostUSD:
           classifierResult.stage1Usage && classifierResult.model
             ? calculateCostFromTokens(
@@ -799,9 +799,9 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
           classifierResult.stage2Usage?.cacheCreationInputTokens,
         classifierStage2DurationMs: classifierResult.stage2DurationMs,
         classifierStage2RequestId:
-          classifierResult.stage2RequestId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          classifierResult.stage2RequestId as SafeEventValue,
         classifierStage2MsgId:
-          classifierResult.stage2MsgId as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+          classifierResult.stage2MsgId as SafeEventValue,
         classifierStage2CostUSD:
           classifierResult.stage2Usage && classifierResult.model
             ? calculateCostFromTokens(
@@ -1009,15 +1009,15 @@ function handleDenialLimitExceeded(
   logEvent('tengu_auto_mode_denial_limit_exceeded', {
     limit: (hitTotalLimit
       ? 'total'
-      : 'consecutive') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      : 'consecutive') as SafeEventValue,
     mode: (isHeadless
       ? 'headless'
-      : 'cli') as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      : 'cli') as SafeEventValue,
     messageID: assistantMessage.message
-      .id as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+      .id as SafeEventValue,
     consecutiveDenials: consecutiveCount,
     totalDenials: totalCount,
-    toolName: sanitizeToolNameForAnalytics(tool.name),
+    toolName: sanitizeToolNameForLogging(tool.name),
   })
 
   if (isHeadless) {
