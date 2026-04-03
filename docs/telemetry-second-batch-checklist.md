@@ -259,6 +259,46 @@
 
 ## 4. 后置处理
 
+## 已完成进展（截至当前）
+
+第二批里以下清理已经实际完成并提交：
+
+1. 删除第一批后遗留的 feedback 配置与注释残留
+2. 删除 `IssueFlagBanner` 空壳链路
+3. 删除 plugin/skill 归因 telemetry 模块及调用
+4. 删除 inert analytics sink/exporter（`datadog`、`firstPartyEventLogger`、`firstPartyEventLoggingExporter`）
+
+当前阶段（本次）新增完成：
+
+1. `events.ts` 并入兼容边界并删除旧文件
+2. `metadata.ts` 收敛为最小兼容层，移除环境/1P event 格式化等大块旧埋点建模
+
+### 本次保留的 `metadata` 最小导出
+
+- `type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS`
+- `sanitizeToolNameForAnalytics`
+- `isToolDetailsLoggingEnabled`
+- `isAnalyticsToolDetailsLoggingEnabled`
+- `extractMcpToolDetails`
+- `mcpToolDetailsForAnalytics`
+- `extractSkillName`
+- `extractToolInputForTelemetry`
+- `getFileExtensionForAnalytics`
+- `getFileExtensionsFromBashCommand`
+- `getBashFileExtensionForAnalytics`
+
+### 本次删除的文件
+
+- [src/utils/telemetry/events.ts](/Users/gclm/workspace/lab/ai/gclm-code/src/utils/telemetry/events.ts)
+
+### 本次替换的导入位置
+
+`logOTelEvent` 统一改从 `services/analytics/index.ts` 导出使用：
+
+- [src/services/api/logging.ts](/Users/gclm/workspace/lab/ai/gclm-code/src/services/api/logging.ts)
+- [src/hooks/toolPermission/permissionLogging.ts](/Users/gclm/workspace/lab/ai/gclm-code/src/hooks/toolPermission/permissionLogging.ts)
+- [src/services/tools/toolExecution.ts](/Users/gclm/workspace/lab/ai/gclm-code/src/services/tools/toolExecution.ts)
+
 这部分不是不重要，而是不适合在第二批和 telemetry 清理绑在一起做。
 
 ### A. 深层品牌与远程会话常量

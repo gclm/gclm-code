@@ -6,6 +6,7 @@ import type {
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+  logOTelEvent,
   logEvent,
 } from 'src/services/analytics/index.js'
 import {
@@ -87,7 +88,6 @@ import {
 } from '../../utils/sessionActivity.js'
 import { jsonStringify } from '../../utils/slowOperations.js'
 import { Stream } from '../../utils/stream.js'
-import { logOTelEvent } from '../../utils/telemetry/events.js'
 import {
   addToolContentEvent,
   endToolBlockedOnUserSpan,

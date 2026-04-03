@@ -37,4 +37,13 @@ export async function logEventAsync(
   _metadata: LogEventMetadata,
 ): Promise<void> {}
 
+export function redactIfDisabled(_content: string): string {
+  return '<REDACTED>'
+}
+
+export async function logOTelEvent(
+  _eventName: string,
+  _metadata: { [key: string]: string | undefined } = {},
+): Promise<void> {}
+
 export function _resetForTesting(): void {}
