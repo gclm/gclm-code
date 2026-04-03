@@ -14,3 +14,6 @@
 - 完成 `src/services/analytics/index.ts` 类型边界中性化：统一改为 `SafeEventValue / PiiEventValue`，并通过 `bun run verify`。
 - 确认兼容层已按策略移除后提交检查点：`3745dc6`（runtimeConfig 迁移、旧路径删除、状态文件回写）。
 - 完成 `Phase 3 / step 1` 入口收敛：定位 `provider/auth` 下一刀应先收敛 first-party auth header 分叉实现，再进入更大范围 provider/auth 重构。
+- 根据新决策撤销 `Phase A` 相关提交：`8aad550`（Revert `241a3da`）。
+- 路线切换为务实版：`M1 /models 动态发现 -> M2 openai-compatible -> M3 anthropic-compatible 补强 -> M4 收尾`。
+- 明确 OAuth 策略：接入 OpenAI SDK 不做 OAuth 重设计，优先复用现有 Codex OAuth token 存储与刷新链路。

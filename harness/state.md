@@ -4,21 +4,18 @@
 
 ## 当前阶段
 
-- Active phase：`Phase 3 - 后续结构性收口准备`
+- Active phase：`M1 - /models 动态模型发现（进行中）`
 - 当前 focus：
-  - 已完成 `provider/auth` 改造入口收敛（步骤 1）
-  - 将下一刀锁定到 first-party auth header 能力收口
-  - 保持 `runtimeConfig / toolLogging / analytics` 当前边界稳定
+  - 落地务实版新方案：`M1 -> M2 -> M3 -> M4`
+  - 优先解决模型发现层缺口（`/models` 动态拉取）
+  - 保持当前 `anthropic-compatible` 可用路径稳定
 
 ## 当前判断
 
 - 这是一次 `scope-refresh`，不是全新规划。
 - 发布链路已基本落地，当前不以 release 作为主阻塞项。
 - telemetry 第二批“直接删除”已推进较多，剩余重点是语义迁移而不是继续粗删。
-- 暂不展开以下大工程：
-  - 全量 `OpenAI compatible / Anthropic compatible` API 改造
-  - 认证策略层重构
-  - 自有自动升级链路替换
+- 当前不做 OAuth 大重构，避免为接入 OpenAI SDK 额外引入改造成本
 
 ## 已完成
 
@@ -48,17 +45,15 @@
 
 ## 进行中
 
-- 当前没有必须立刻继续的同批 must-fix；当前已完成 Phase 3 的入口收敛，下一步进入最小重构实现
+- M1 执行中：基于现有配置与缓存能力，先打通第三方 `/models` 动态发现最小路径
 
 ## 已知未完成项
 
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否进一步去品牌化或去历史产品语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
-- first-party auth header 逻辑仍分散在多个模块，存在重复实现：
-  - `src/utils/http.ts:getAuthHeaders`
-  - `src/services/remoteManagedSettings/index.ts:getRemoteSettingsAuthHeaders`
-  - `src/services/policyLimits/index.ts:getAuthHeaders`
-  - `src/services/api/bootstrap.ts` 内联 auth header 组装
+- `openai-compatible` 通用请求路径尚未接入（当前 OpenAI 仍偏 Codex 专用适配）
+- `/models` 动态发现尚未接入第三方 provider 主链
+- 动态模型缓存策略尚未形成统一 TTL/降级规则
 
 ## 执行边界
 
@@ -67,7 +62,23 @@
 - follow-up：
   - provider 枚举进一步中性化（如 `firstParty`）
   - `runtimeConfig/growthbook.ts` 是否继续去品牌化
-  - 第三方兼容 API 与 auth 策略层重构
+  - 第三方兼容 API 与 auth 策略层优化
+
+## 新执行顺序（务实版）
+
+1. `M1`：`/models` 动态模型发现
+2. `M2`：`openai-compatible` 请求接入（可使用 OpenAI SDK）
+3. `M3`：`anthropic-compatible` 补强
+4. `M4`：收尾清理
+
+## OAuth 策略结论
+
+- 当前不建议为接入 OpenAI SDK 做 OAuth 重设计
+- 建议复用现有 Codex OAuth token 存储/刷新链路，仅在请求接入层适配
+- 触发 OAuth 重设计的条件：
+  - 同一会话需要并发多 provider token 编排
+  - 现有 token lifecycle 无法覆盖新 provider 的刷新/吊销语义
+  - 现有 auth status 无法表达 provider 维度状态
 
 ## Phase 3 - Step 1 结论
 

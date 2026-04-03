@@ -6,11 +6,17 @@
 
 当前仓库已经越过“初始可发布化”阶段，进入“内核语义收口”阶段。
 
-接下来的工作顺序应保持为：
+接下来的工作顺序改为务实版实施路径：
 
-1. 在已完成的语义迁移基础上，确认剩余历史命名边界是否还值得继续清理
-2. 优先评估 provider / auth / updater 这类更高价值的结构性改造入口
-3. 保持当前无兼容层策略，遇到断点直接修复，不再引入过渡 re-export
+1. `M1`：优先实现 `/models` 动态模型发现（含缓存/TTL/降级）
+2. `M2`：接入 `openai-compatible` 请求通路（可复用 OpenAI SDK）
+3. `M3`：`anthropic-compatible` 能力补强（保持现有可用路径，不做重构）
+4. `M4`：收尾清理（删除重复分支、回写文档、稳定验证）
+
+策略约束：
+
+- 不再继续扩展“Phase A 抽象先行”路径
+- 保留当前“无兼容层”策略，断点直接修复
 
 ## Phase 0：已完成的基础收口
 
@@ -62,17 +68,77 @@
 - API diagnostics 不再依赖 `ForStatsig` 命名
 - `bun run verify` 通过
 
-## Phase 3：后续结构性改造
+## M1：`/models` 动态模型发现
 
-状态：`当前下一阶段`
+状态：`当前进行中`
 
-包含但不限于：
+目标：让第三方 provider 模型列表从静态枚举切到动态优先。
 
-- OpenAI compatible / Anthropic compatible provider 抽象
-- 认证策略层重构
-- 自有自动升级链路替换
-- 继续清理剩余历史类型与命名边界（例如 `runtimeConfig/growthbook.ts` 是否继续去品牌化）
-- 评估 `analytics/index.ts` 这一 no-op 事件边界是否还需要进一步收缩对外 surface
+范围：
+
+- 以 `openai-compatible` 为第一落点
+- 复用现有 `additionalModelOptionsCache` 接口先打通最小路径
+- 增加缓存、TTL、失败降级
+
+验收：
+
+- 第三方模型列表可动态刷新
+- 网络失败不阻断模型选择流程
+- `bun run verify` 通过
+
+## M2：`openai-compatible` 请求接入
+
+状态：`待开始`
+
+目标：快速打通通用 OpenAI-compatible 请求链路。
+
+策略：
+
+- 允许接入 OpenAI SDK
+- 不重做 OAuth：复用现有 Codex OAuth token 存储与刷新机制
+- 通过 provider 配置完成 endpoint/key/token 注入
+
+验收：
+
+- 至少 1 个 openai-compatible endpoint 可完成请求（含流式）
+- 错误分类可区分 auth/model/rate-limit/schema
+- `bun run verify` 通过
+
+## M3：`anthropic-compatible` 补强
+
+状态：`待开始`
+
+目标：在当前可用能力基础上做一致性补强，不做大重构。
+
+范围：
+
+- 保持 `ANTHROPIC_BASE_URL` 现有路径
+- 补齐模型发现与诊断一致性
+- 与 M2 的错误分类策略对齐
+
+验收：
+
+- `~/.claude/settings.json + ANTHROPIC_BASE_URL` 路径持续可用
+- 模型发现与诊断输出一致
+- `bun run verify` 通过
+
+## M4：收尾清理
+
+状态：`待开始`
+
+目标：确保新路径可维护，避免长期双轨。
+
+范围：
+
+- 删除重复分支/无效 wiring
+- 清理与新路径冲突的过时文档
+- 回写 harness 与 roadmap 的最终状态
+
+验收：
+
+- 无新增兼容层
+- 文档与代码状态一致
+- `bun run verify` 通过
 
 ## 最近进展
 
@@ -81,8 +147,10 @@
 - 已完成对应使用点迁移，并通过 `bun run verify`
 - 已完成 `src/services/analytics/index.ts` 类型边界中性化，统一收口为 `SafeEventValue / PiiEventValue`
 - 已确认本仓库当前策略为“不保留兼容层，直接修复断点”
+- 已确认 `anthropic-compatible` 在当前系统中可通过 `ANTHROPIC_BASE_URL` 路径运行
+- 已确认当前主要缺口在模型发现层（`/models` 动态拉取）
 
 ## 当前推荐动作
 
 - 推荐下一步：`build`
-- 当前 build 目标：从 `Phase 3` 中挑选一个高价值入口继续推进，优先考虑 provider / auth / updater 结构改造，其次再做剩余命名收口
+- 当前 build 目标：执行 `M1`，先打通 `/models` 动态发现与缓存降级
