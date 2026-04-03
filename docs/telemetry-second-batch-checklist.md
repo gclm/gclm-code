@@ -273,6 +273,7 @@
 1. `events.ts` 并入兼容边界并删除旧文件
 2. `metadata.ts` 收敛为最小兼容层，移除环境/1P event 格式化等大块旧埋点建模
 3. `growthbook.ts` 改为本地 runtime-config 兼容层：保留导出 API，不再做远端拉取、鉴权头注入、实验曝光上报、定时刷新
+4. 删除未被业务引用的 `events_mono` generated telemetry schema 文件（`claude_code_internal_event`、`growthbook_experiment_event`、`common/v1/auth`）
 
 ### 本次 `growthbook` 清理说明
 
