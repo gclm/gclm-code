@@ -53,9 +53,9 @@ import {
 } from './settings/settings.js'
 import {
   logEvent,
+  logOTelEvent,
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 } from 'src/services/analytics/index.js'
-import { logOTelEvent } from './telemetry/events.js'
 import { ALLOWED_OFFICIAL_MARKETPLACE_NAMES } from './plugins/schemas.js'
 import {
   startHookSpan,
