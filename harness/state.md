@@ -6,8 +6,8 @@
 
 - Active phase：`Phase 3 - 后续结构性收口准备`
 - 当前 focus：
-  - 回写项目级 roadmap / harness 状态文件，确保与现状一致
-  - 识别下一轮值得继续推进的结构性清理项
+  - 已完成 `provider/auth` 改造入口收敛（步骤 1）
+  - 将下一刀锁定到 first-party auth header 能力收口
   - 保持 `runtimeConfig / toolLogging / analytics` 当前边界稳定
 
 ## 当前判断
@@ -48,12 +48,17 @@
 
 ## 进行中
 
-- 当前没有必须立刻继续的同批 must-fix；本轮主要是在已完成清理基础上做状态同步，并确认下一步优先级
+- 当前没有必须立刻继续的同批 must-fix；当前已完成 Phase 3 的入口收敛，下一步进入最小重构实现
 
 ## 已知未完成项
 
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否进一步去品牌化或去历史产品语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
+- first-party auth header 逻辑仍分散在多个模块，存在重复实现：
+  - `src/utils/http.ts:getAuthHeaders`
+  - `src/services/remoteManagedSettings/index.ts:getRemoteSettingsAuthHeaders`
+  - `src/services/policyLimits/index.ts:getAuthHeaders`
+  - `src/services/api/bootstrap.ts` 内联 auth header 组装
 
 ## 执行边界
 
@@ -63,6 +68,17 @@
   - provider 枚举进一步中性化（如 `firstParty`）
   - `runtimeConfig/growthbook.ts` 是否继续去品牌化
   - 第三方兼容 API 与 auth 策略层重构
+
+## Phase 3 - Step 1 结论
+
+- 已完成入口收敛，建议下一刀采用“最小可落地切口”：
+  - 新增一个不依赖 `getSettings()` 的 first-party auth header helper（用于避免循环依赖）
+  - 先在 `remoteManagedSettings` 与 `policyLimits` 两个重复度最高模块落地
+  - `bootstrap` 暂可保持内联，作为第二批再迁移，降低回归面
+- 该切口价值：
+  - 直接减少认证 header 分叉逻辑
+  - 不触碰 provider 选择主链（`getAPIProvider()`）
+  - 风险可控，便于单批验证
 
 ## 环境与验收
 

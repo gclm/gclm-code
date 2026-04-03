@@ -12,3 +12,5 @@
 - 将 `src/services/analytics/metadata.ts` 迁移为 `src/services/toolLogging/metadata.ts`，并把工具日志类型名收口为 `SafeLogValue`。
 - 删除无引用旧实现 `src/utils/telemetry/bigqueryExporter.ts`。
 - 完成 `src/services/analytics/index.ts` 类型边界中性化：统一改为 `SafeEventValue / PiiEventValue`，并通过 `bun run verify`。
+- 确认兼容层已按策略移除后提交检查点：`3745dc6`（runtimeConfig 迁移、旧路径删除、状态文件回写）。
+- 完成 `Phase 3 / step 1` 入口收敛：定位 `provider/auth` 下一刀应先收敛 first-party auth header 分叉实现，再进入更大范围 provider/auth 重构。
