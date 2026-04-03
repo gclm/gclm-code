@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# free-code installer
-# Usage: curl -fsSL https://raw.githubusercontent.com/paoloanzn/free-code/main/install.sh | bash
+# Gclm Code source installer (optional path)
+# Recommended install: npm i -g @gclm/gclm-code
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -12,8 +12,8 @@ BOLD='\033[1m'
 DIM='\033[2m'
 RESET='\033[0m'
 
-REPO="https://github.com/paoloanzn/free-code.git"
-INSTALL_DIR="$HOME/free-code"
+REPO="${GCLM_REPO_URL:-https://github.com/gclm/gclm-code.git}"
+INSTALL_DIR="${GCLM_INSTALL_DIR:-$HOME/gclm-code}"
 BUN_MIN_VERSION="1.3.11"
 
 info()  { printf "${CYAN}[*]${RESET} %s\n" "$*"; }
@@ -25,21 +25,18 @@ header() {
   echo ""
   printf "${BOLD}${CYAN}"
   cat << 'ART'
-   ___                            _
-  / _|_ __ ___  ___        ___ __| | ___
- | |_| '__/ _ \/ _ \_____ / __/ _` |/ _ \
- |  _| | |  __/  __/_____| (_| (_| |  __/
- |_| |_|  \___|\___|      \___\__,_|\___|
+   ____      _                ____          _
+  / ___| ___| |_ __ ___      / ___|___   __| | ___
+ | |  _ / __| | '_ ` _ \____| |   / _ \ / _` |/ _ \
+ | |_| | (__| | | | | | |____| |__| (_) | (_| |  __/
+  \____|\___|_|_| |_| |_|     \____\___/ \__,_|\___|
 
 ART
   printf "${RESET}"
-  printf "${DIM}  The free build of Claude Code${RESET}\n"
+  printf "${DIM}  Gclm Code source installer${RESET}\n"
+  printf "${DIM}  Recommended: npm i -g @gclm/gclm-code${RESET}\n"
   echo ""
 }
-
-# -------------------------------------------------------------------
-# System checks
-# -------------------------------------------------------------------
 
 check_os() {
   case "$(uname -s)" in
@@ -52,14 +49,11 @@ check_os() {
 
 check_git() {
   if ! command -v git &>/dev/null; then
-    fail "git is not installed. Install it first:
-    macOS:  xcode-select --install
-    Linux:  sudo apt install git  (or your distro's equivalent)"
+    fail "git is not installed. Install it first."
   fi
   ok "git: $(git --version | head -1)"
 }
 
-# Compare semver: returns 0 if $1 >= $2
 version_gte() {
   [ "$(printf '%s\n' "$1" "$2" | sort -V | head -1)" = "$2" ]
 }
@@ -81,29 +75,20 @@ check_bun() {
 
 install_bun() {
   curl -fsSL https://bun.sh/install | bash
-  # Source the updated profile so bun is on PATH for this session
   export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
   export PATH="$BUN_INSTALL/bin:$PATH"
   if ! command -v bun &>/dev/null; then
-    fail "bun installation succeeded but binary not found on PATH.
-    Add this to your shell profile and restart:
-      export PATH=\"\$HOME/.bun/bin:\$PATH\""
+    fail "bun installation succeeded but binary not found on PATH. Add ~/.bun/bin to PATH."
   fi
   ok "bun: v$(bun --version) (just installed)"
 }
-
-# -------------------------------------------------------------------
-# Clone & build
-# -------------------------------------------------------------------
 
 clone_repo() {
   if [ -d "$INSTALL_DIR" ]; then
     warn "$INSTALL_DIR already exists"
     if [ -d "$INSTALL_DIR/.git" ]; then
       info "Pulling latest changes..."
-      git -C "$INSTALL_DIR" pull --ff-only origin main 2>/dev/null || {
-        warn "Pull failed, continuing with existing copy"
-      }
+      git -C "$INSTALL_DIR" pull --ff-only origin main 2>/dev/null || warn "Pull failed, continuing with existing copy"
     fi
   else
     info "Cloning repository..."
@@ -120,40 +105,33 @@ install_deps() {
 }
 
 build_binary() {
-  info "Building free-code (all experimental features enabled)..."
+  info "Building Gclm Code..."
   cd "$INSTALL_DIR"
-  bun run build:dev:full
-  ok "Binary built: $INSTALL_DIR/cli-dev"
+  bun run build
+  ok "Binary built: $INSTALL_DIR/cli"
 }
 
 link_binary() {
   local link_dir="$HOME/.local/bin"
   mkdir -p "$link_dir"
 
-  ln -sf "$INSTALL_DIR/cli-dev" "$link_dir/free-code"
-  ok "Symlinked: $link_dir/free-code"
+  ln -sf "$INSTALL_DIR/cli" "$link_dir/gc"
+  ln -sf "$INSTALL_DIR/cli" "$link_dir/claude"
+  ok "Symlinked: $link_dir/gc and $link_dir/claude"
 
   if ! echo "$PATH" | tr ':' '\n' | grep -qx "$link_dir"; then
     warn "$link_dir is not on your PATH"
-    echo ""
-    printf "${YELLOW}  Add this to your shell profile (~/.bashrc, ~/.zshrc, etc.):${RESET}\n"
-    printf "${BOLD}    export PATH=\"\$HOME/.local/bin:\$PATH\"${RESET}\n"
-    echo ""
+    printf "${YELLOW}Add to shell profile:${RESET}\n"
+    printf "${BOLD}  export PATH=\"\$HOME/.local/bin:\$PATH\"${RESET}\n"
   fi
 }
 
-# -------------------------------------------------------------------
-# Main
-# -------------------------------------------------------------------
-
 header
-info "Starting installation..."
-echo ""
+info "Starting source installation..."
 
 check_os
 check_git
 check_bun
-echo ""
 
 clone_repo
 install_deps
@@ -161,19 +139,8 @@ build_binary
 link_binary
 
 echo ""
-printf "${GREEN}${BOLD}  Installation complete!${RESET}\n"
-echo ""
-printf "  ${BOLD}Run it:${RESET}\n"
-printf "    ${CYAN}free-code${RESET}                          # interactive REPL\n"
-printf "    ${CYAN}free-code -p \"your prompt\"${RESET}          # one-shot mode\n"
-echo ""
-printf "  ${BOLD}Set your API key:${RESET}\n"
-printf "    ${CYAN}export ANTHROPIC_API_KEY=\"sk-ant-...\"${RESET}\n"
-echo ""
-printf "  ${BOLD}Or log in with Claude.ai:${RESET}\n"
-printf "    ${CYAN}free-code /login${RESET}\n"
-echo ""
-printf "  ${DIM}Source: $INSTALL_DIR${RESET}\n"
-printf "  ${DIM}Binary: $INSTALL_DIR/cli-dev${RESET}\n"
-printf "  ${DIM}Link:   ~/.local/bin/free-code${RESET}\n"
-echo ""
+printf "${GREEN}${BOLD}Installation complete!${RESET}\n"
+printf "${BOLD}Run:${RESET} ${CYAN}gc${RESET} or ${CYAN}claude${RESET}\n"
+printf "${DIM}Source: $INSTALL_DIR${RESET}\n"
+printf "${DIM}Binary: $INSTALL_DIR/cli${RESET}\n"
+printf "${DIM}Links: ~/.local/bin/gc, ~/.local/bin/claude${RESET}\n"
