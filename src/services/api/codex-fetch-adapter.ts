@@ -754,6 +754,46 @@ function shouldUseOpenAICompatibleEndpoint(): boolean {
   return !!(process.env.OPENAI_BASE_URL || process.env.OPENAI_API_KEY)
 }
 
+function classifyOpenAICompatibleError(
+  status: number,
+  bodyText: string,
+): { type: string; message: string } {
+  const lower = bodyText.toLowerCase()
+
+  if (status === 401 || status === 403) {
+    return {
+      type: 'authentication_error',
+      message: `OpenAI-compatible auth error (${status}): ${bodyText}`,
+    }
+  }
+
+  if (status === 404 || lower.includes('model')) {
+    return {
+      type: 'not_found_error',
+      message: `OpenAI-compatible model error (${status}): ${bodyText}`,
+    }
+  }
+
+  if (status === 429 || lower.includes('rate') || lower.includes('quota')) {
+    return {
+      type: 'rate_limit_error',
+      message: `OpenAI-compatible rate limit (${status}): ${bodyText}`,
+    }
+  }
+
+  if (status === 400 || lower.includes('schema') || lower.includes('invalid')) {
+    return {
+      type: 'invalid_request_error',
+      message: `OpenAI-compatible schema/validation error (${status}): ${bodyText}`,
+    }
+  }
+
+  return {
+    type: 'api_error',
+    message: `OpenAI-compatible API error (${status}): ${bodyText}`,
+  }
+}
+
 /**
  * Creates a fetch function that intercepts Anthropic API calls and routes them to Codex.
  * @param accessToken - The Codex access token for authentication
@@ -829,11 +869,15 @@ export function createCodexFetch(
 
     if (!codexResponse.ok) {
       const errorText = await codexResponse.text()
+      const classified = classifyOpenAICompatibleError(
+        codexResponse.status,
+        errorText,
+      )
       const errorBody = {
         type: 'error',
         error: {
-          type: 'api_error',
-          message: `OpenAI-compatible API error (${codexResponse.status}): ${errorText}`,
+          type: classified.type,
+          message: classified.message,
         },
       }
       return new Response(JSON.stringify(errorBody), {

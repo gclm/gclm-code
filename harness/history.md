@@ -21,3 +21,4 @@
 - 新增缓存时间戳 `additionalModelOptionsCacheFetchedAt`，引入 TTL 与失败降级（刷新失败保留旧缓存）。
 - 保持 OAuth 策略不变：未做 OAuth 重设计，继续复用现有 Codex OAuth token 链路。
 - 完成 M2 第一版：`codex-fetch-adapter` 支持 openai-compatible 出口（`OPENAI_BASE_URL`/`OPENAI_API_KEY` 触发），默认仍保留 Codex backend。
+- M2 补强：为 openai-compatible 出口增加错误分类（auth/model/rate-limit/schema），提升诊断可用性。
