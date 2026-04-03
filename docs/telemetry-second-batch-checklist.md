@@ -272,6 +272,15 @@
 
 1. `events.ts` 并入兼容边界并删除旧文件
 2. `metadata.ts` 收敛为最小兼容层，移除环境/1P event 格式化等大块旧埋点建模
+3. `growthbook.ts` 改为本地 runtime-config 兼容层：保留导出 API，不再做远端拉取、鉴权头注入、实验曝光上报、定时刷新
+
+### 本次 `growthbook` 清理说明
+
+- 文件：[src/services/analytics/growthbook.ts](/Users/gclm/workspace/lab/ai/gclm-code/src/services/analytics/growthbook.ts)
+- 保留：现有导出函数签名（避免调用方大面积改动）
+- 调整：所有 feature/config 读取仅来自本地覆盖与本地缓存
+- 移除：remote eval、client init 网络请求、auth header 依赖、实验曝光日志、周期性远端刷新
+- 验收：`bun run verify` 通过（以构建成功作为当前阶段标准）
 
 ### 本次保留的 `metadata` 最小导出
 
