@@ -5,7 +5,7 @@ if (typeof MACRO === 'undefined') {
   (globalThis as any).MACRO = {
     VERSION: '2.1.87-dev',
     BUILD_TIME: new Date().toISOString(),
-    PACKAGE_URL: 'claude-code-source-snapshot',
+    PACKAGE_URL: '@gclm/gclm-code',
     FEEDBACK_CHANNEL: 'github',
   };
 }
@@ -47,7 +47,7 @@ async function main(): Promise<void> {
   if (args.length === 1 && (args[0] === '--version' || args[0] === '-v' || args[0] === '-V')) {
     // MACRO.VERSION is inlined at build time
     // biome-ignore lint/suspicious/noConsole:: intentional console output
-    console.log(`${MACRO.VERSION} (Claude Code)`);
+    console.log(`${MACRO.VERSION} (Gclm Code)`);
     return;
   }
 
