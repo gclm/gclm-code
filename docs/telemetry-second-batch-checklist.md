@@ -274,6 +274,7 @@
 2. `metadata.ts` 收敛为最小兼容层，移除环境/1P event 格式化等大块旧埋点建模
 3. `growthbook.ts` 改为本地 runtime-config 兼容层：保留导出 API，不再做远端拉取、鉴权头注入、实验曝光上报、定时刷新
 4. 删除未被业务引用的 `events_mono` generated telemetry schema 文件（`claude_code_internal_event`、`growthbook_experiment_event`、`common/v1/auth`）
+5. CLI 品牌文案第一轮收口：`Claude/Claude Code` 相关用户可见文本调整为 `Gclm/Gclm Code`，并增加 `gc` 命令别名（保留 `claude` 兼容入口）
 
 ### 本次 `growthbook` 清理说明
 
