@@ -1,0 +1,12 @@
+# IntelliJ project files
+.idea
+*.iml
+out
+gen
+
+# macOS / local temp
+.DS_Store
+.tmp/
+
+# project
+/references/
