@@ -45,15 +45,18 @@
 
 ## 进行中
 
-- M1 执行中：基于现有配置与缓存能力，先打通第三方 `/models` 动态发现最小路径
+- M1 执行中：
+  - 已落地 openai provider 的 `/models` 动态拉取主链（后台启动 + 定时刷新）
+  - 已接入缓存 TTL 与失败降级（失败保留旧缓存，不阻断模型选择）
+  - 下一步进入 M2（openai-compatible 请求通路）
 
 ## 已知未完成项
 
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否进一步去品牌化或去历史产品语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
 - `openai-compatible` 通用请求路径尚未接入（当前 OpenAI 仍偏 Codex 专用适配）
-- `/models` 动态发现尚未接入第三方 provider 主链
-- 动态模型缓存策略尚未形成统一 TTL/降级规则
+- `/models` 动态发现当前仅落地 openai provider；其他第三方 provider 尚未接入
+- 当前缓存 TTL/降级为 openai provider 的最小实现，尚未统一到全部 provider
 
 ## 执行边界
 
@@ -96,4 +99,4 @@
 - 运行环境：Bun 1.3.11 项目
 - 当前统一验收门槛：`bun run verify`
 - 当前策略已调整为“不保留兼容层，直接修复断点”
-- 最新验证结果：2026-04-04 已执行本轮 `bun run verify`，通过；包含 `analytics/index.ts` 类型边界重命名后的全量验证
+- 最新验证结果：2026-04-04 已执行本轮 `bun run verify`，通过；包含 openai `/models` 动态发现（M1 最小实现）后的全量验证
