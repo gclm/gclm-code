@@ -10,3 +10,12 @@ gen
 
 # project
 /references/
+/node_modules/
+
+# build artifacts
+/cli
+/cli-dev
+/dist/
+
+# local logs
+*.log
