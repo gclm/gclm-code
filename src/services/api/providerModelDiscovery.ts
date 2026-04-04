@@ -3,7 +3,6 @@ import isEqual from 'lodash-es/isEqual.js'
 import { getAuthHeaders } from '../../utils/http.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { logForDebugging } from '../../utils/debug.js'
-import { getAPIProvider } from '../../utils/model/providers.js'
 import { isEssentialTrafficOnly } from '../../utils/privacyLevel.js'
 import type { ModelOption } from '../../utils/model/modelOptions.js'
 
@@ -137,11 +136,9 @@ export async function refreshProviderModelOptions(
     return
   }
 
-  // Gateway-first: provider aggregation lives in the gateway behind ANTHROPIC_BASE_URL.
-  // We keep first-party untouched and avoid client-side provider protocol switching.
-  if (getAPIProvider() === 'firstParty') {
-    return
-  }
+  // Gateway-first: discovery is driven by ANTHROPIC_BASE_URL instead of provider flags.
+  // We intentionally do not gate this behind getAPIProvider() so the new platform
+  // setup path (which clears provider flags) can still refresh models immediately.
 
   const gatewayBaseUrl = getGatewayBaseUrl()
   if (!gatewayBaseUrl) {

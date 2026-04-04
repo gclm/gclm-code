@@ -117,4 +117,6 @@
 - 当前统一验收门槛：`bun run verify`
 - 当前策略已调整为“不保留兼容层，直接修复断点”
 - 最新验证结果：2026-04-04 已执行 `bun run build`，构建通过（含第二刀 codex 全量移除）
+- smoke 脚本已新增：`bun run smoke`、`bun run smoke:gui`
+- 已修复网关模型发现回归：清空 provider flag 后仍可基于 `ANTHROPIC_BASE_URL` 刷新 `/models`
 - 备注：全量 `bun run typecheck` 当前受仓库既有错误影响，不作为本轮唯一阻断
