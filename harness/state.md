@@ -4,7 +4,7 @@
 
 ## 当前阶段
 
-- Active phase：`M2 - openai-compatible 请求接入（进行中）`
+- Active phase：`M1 - /models 动态模型发现（进行中）`
 - 当前 focus：
   - 落地务实版新方案：`M1 -> M2 -> M3 -> M4`
   - 优先解决模型发现层缺口（`/models` 动态拉取）
@@ -48,13 +48,13 @@
 - M1 执行中：
   - 已落地 openai provider 的 `/models` 动态拉取主链（后台启动 + 定时刷新）
   - 已接入缓存 TTL 与失败降级（失败保留旧缓存，不阻断模型选择）
-  - M2 已启动：在现有 Codex 适配器上接入 openai-compatible endpoint 出口
+  - 下一步进入 M2（openai-compatible 请求通路）
 
 ## 已知未完成项
 
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否进一步去品牌化或去历史产品语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
-- `openai-compatible` 已完成第一版接入（基于 Codex 适配器双出口），仍需补齐错误分类与 provider 配置说明
+- `openai-compatible` 通用请求路径尚未接入（当前 OpenAI 仍偏 Codex 专用适配）
 - `/models` 动态发现当前仅落地 openai provider；其他第三方 provider 尚未接入
 - 当前缓存 TTL/降级为 openai provider 的最小实现，尚未统一到全部 provider
 
