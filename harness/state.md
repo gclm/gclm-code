@@ -141,3 +141,14 @@
   - `bun run smoke:packages` 通过
   - `SMOKE_GATEWAY_BASE_URL=http://localhost:8086 ... bun run smoke` 通过（models=9）
   - `bun run smoke:gui` 通过
+- smoke 包回归已升级为分层模式（core/gui/gateway/all）
+- 新增脚本：
+  - `bun run smoke:packages:core`
+  - `bun run smoke:packages:gui`
+  - `bun run smoke:packages:gateway`
+  - `bun run smoke:packages`（all）
+- 分层验收结果（2026-04-04）：
+  - core 通过
+  - gui 通过
+  - gateway 通过（`http://localhost:8086/v1/models`, models=9）
+  - all 通过

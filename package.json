@@ -26,7 +26,10 @@
     "dev": "bun run ./src/entrypoints/cli.tsx",
     "smoke": "bun run ./scripts/smoke-test.mjs",
     "smoke:gui": "bun run ./scripts/gui-smoke-test.mjs",
-    "smoke:packages": "bun run ./scripts/smoke-packages.mjs"
+    "smoke:packages": "bun run ./scripts/smoke-packages.mjs all",
+    "smoke:packages:core": "bun run ./scripts/smoke-packages.mjs core",
+    "smoke:packages:gui": "bun run ./scripts/smoke-packages.mjs gui",
+    "smoke:packages:gateway": "bun run ./scripts/smoke-packages.mjs gateway"
   },
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.3.0",
