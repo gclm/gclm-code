@@ -23,7 +23,7 @@
 - `docs/release/gateway-smoke-and-login.md`
   - 网关 smoke 与登录验收
 - `docs/release/release-gate.md`
-  - 手动发版前必过清单（release gate）
+  - 手动发版前必过清单（release gate，含 smoke:login-gateway:matrix）
 - `docs/release/FEATURES.en.md`
   - 功能开关审计（英文）
 - `docs/release/FEATURES.zh-CN.md`

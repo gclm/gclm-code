@@ -183,6 +183,10 @@
 - M3-1 已开始并落地首批改造（错误语义统一）：
 - M3-2 已完成（模型发现可观测性补强）：
 - M3-3 已完成（回归矩阵加固）：
+- M3-4 已完成（文档收口与 release gate 对齐）：
+  - `release-gate` 已升级为标准命令集（verify + smoke:packages + smoke:login-gateway:matrix）
+  - `roadmap` 已更新为 M3 完成、当前推荐动作切换到 M4
+  - `docs/README` 已标注 release gate 包含 matrix 回归入口
   - 新增 `bun run smoke:login-gateway:matrix`，统一执行登录网关成功路径 + 404 错误语义用例
   - 支持可选扩展 env：`SMOKE_GATEWAY_EXPECT_401_KEY`、`SMOKE_GATEWAY_EXPECT_429_BASE_URL`、`SMOKE_GATEWAY_EXPECT_5XX_BASE_URL`
   - 文档已补充 matrix 用法与可选场景，便于发版前固定回归
