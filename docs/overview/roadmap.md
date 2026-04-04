@@ -132,7 +132,7 @@
 
 ## M4：收尾清理
 
-状态：`待开始`
+状态：`已完成`
 
 目标：确保新路径可维护，避免长期双轨。
 
@@ -150,6 +150,11 @@
 
 ## 最近进展
 
+- M4 已完成：抽取 gateway models 共享 smoke helper，清理重复 endpoint/payload 解析逻辑
+- smoke 脚本职责已收敛：`smoke` 负责基础可执行链路，`smoke:packages` 负责分层包能力，`smoke:login-gateway:matrix` 负责登录路径语义回归
+- 文档与阶段状态已对齐当前实现
+
+
 - 已删除 codex 相关能力与 wiring，并完成二次净化
 - 登录流程已改为平台输入 `ANTHROPIC_BASE_URL/KEY` 并自动触发模型刷新
 - 已合并 8 个本地 package 至根目录 `packages/*`
@@ -160,5 +165,5 @@
 
 ## 当前推荐动作
 
-- 推荐下一步：`M4`
-- 当前 M4 目标：删除重复 wiring、收拢文档、固化发布前 gate 执行入口
+- 推荐下一步：进入持续维护周期（按 release gate 执行发版验证）
+- 重点关注：网关可用性监控、错误语义回归矩阵、文档与实现同步
