@@ -20,6 +20,7 @@
 
 ## 已完成
 
+- README 已重写为“参考 free-code 项目实践”表述，并同步网关优先策略、验收入口与发布门禁说明
 - npm 包基础发布配置已落地：`@gclm/gclm-code`
 - CI 验收工作流已落地：`bun run verify`
 - npm tag 发布工作流已落地

@@ -1,22 +1,24 @@
 # Gclm Code
 
-Gclm Code 是基于 `free-code-main` 定制的命令行 AI 编码助手发行版。
+Gclm Code 是面向团队交付的命令行 AI 编码助手。
+项目在能力盘点和工程策略上参考了 `free-code` 项目实践，但当前代码线独立维护，发布与验收流程以本仓库为准。
 
-当前版本重点：
-- 品牌统一为 `Gclm / Gclm Code`
-- 发布包名统一为 `@gclm/gclm-code`
-- 命令入口支持 `gc`（主命令）与 `claude`（兼容命令）
-- 验收标准统一为 `bun run verify`（即构建通过）
+## 项目定位
+
+- 品牌与发行：统一为 `Gclm / Gclm Code`，npm 包名为 `@gclm/gclm-code`
+- 接入策略：客户端走 `ANTHROPIC_BASE_URL / ANTHROPIC_API_KEY`，协议转换下沉网关
+- 模型发现：优先从网关 `/models` 动态获取，并支持缓存与错误语义提示
+- 验收门禁：以 `verify + smoke` 为发布前标准回归链路
 
 ## 安装
 
-### 1. npm 全局安装（推荐）
+### npm 安装（推荐）
 
 ```bash
 npm i -g @gclm/gclm-code
 ```
 
-安装后可直接运行：
+安装后可用命令：
 
 ```bash
 gc
@@ -28,7 +30,7 @@ gc
 claude
 ```
 
-### 2. 从源码运行（开发）
+### 源码运行（开发）
 
 ```bash
 bun install
@@ -36,7 +38,7 @@ bun run build
 ./cli
 ```
 
-## 常用命令
+## 快速使用
 
 ```bash
 # 交互模式
@@ -48,46 +50,54 @@ gc -p "帮我分析当前目录结构"
 # 指定模型
 gc --model claude-sonnet-4-6
 
-# 登录
+# 登录配置入口
 gc /login
 ```
 
-## 验收与构建
+## 网关配置约定
+
+在 `/login` 平台配置流程里输入：
+
+- `ANTHROPIC_BASE_URL`
+- `ANTHROPIC_API_KEY`
+
+模型发现端点映射规则：
+
+- `http://host` -> `http://host/v1/models`
+- `http://host/vN` -> `http://host/vN/models`
+
+## 验收与回归
 
 ```bash
-# 当前项目统一验收命令
+# 构建与品牌守卫
 bun run verify
 
-# 实际构建命令
-bun run build
+# 分层包回归（core/gui/gateway）
+bun run smoke:packages
+
+# 登录网关路径回归矩阵
+SMOKE_GATEWAY_BASE_URL="http://localhost:8086/v1" \
+SMOKE_GATEWAY_API_KEY="<your-key>" \
+bun run smoke:login-gateway:matrix
 ```
 
-说明：当前我们将 `verify` 统一绑定到 `build`，用于快速确认本轮改动是否可交付。
+## 发布说明
 
-## 自动升级（npm 发行）
+手动发版前请先执行 release gate：
 
-默认升级源已调整为：
-- `@gclm/gclm-code`
+- `docs/release/release-gate.md`
 
-可选覆盖环境变量（非必需）：
-- `GCLM_UPDATE_PACKAGE_URL`
-- `GCLM_UPDATE_DOWNLOAD_BASE_URL`
-
-不设置时将使用发行版默认值。
+本项目当前以手动发布为主，PR 不是发布前置条件。
 
 ## 文档索引
 
-- 功能开关（英文）: `docs/release/FEATURES.en.md`
-- 功能开关（中文）: `docs/release/FEATURES.zh-CN.md`
-- 手动发布流程: `docs/release/npm-manual-release-guide.md`
-- GitHub Actions 发布方案: `docs/release/github-actions-release-plan.md`
-- 文档总索引: `docs/README.md`
+- 总索引：`docs/README.md`
+- 阶段路线：`docs/overview/roadmap.md`
+- 网关验收：`docs/release/gateway-smoke-and-login.md`
+- 发版门禁：`docs/release/release-gate.md`
+- npm 手动发布：`docs/release/npm-manual-release-guide.md`
 
-## install.sh 是否还需要
+## 说明
 
-需要，定位为“源码安装脚本（可选）”：
-- 适合需要从仓库构建最新版本的场景
-- 不替代 npm 发布安装
-- 已统一为 Gclm Code 品牌信息
-
-如仅作为用户安装路径，优先使用 `npm i -g @gclm/gclm-code`。
+`install.sh` 仍保留为源码安装路径的辅助脚本。
+面向终端用户的默认安装方式仍建议使用 npm 全局安装。
