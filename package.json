@@ -25,7 +25,8 @@
     "compile": "bun run ./scripts/build.ts --compile",
     "dev": "bun run ./src/entrypoints/cli.tsx",
     "smoke": "bun run ./scripts/smoke-test.mjs",
-    "smoke:gui": "bun run ./scripts/gui-smoke-test.mjs"
+    "smoke:gui": "bun run ./scripts/gui-smoke-test.mjs",
+    "smoke:packages": "bun run ./scripts/smoke-packages.mjs"
   },
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.3.0",

@@ -127,3 +127,17 @@
   - `http://localhost:8086` 场景通过，命中 `/v1/models`
   - `http://localhost:8086/v1` 场景通过，命中 `/v1/models`（由 base `/v1` + `/models` 组成）
   - `http://localhost:8086/v2` 场景失败（网关该版本路径无模型列表，属环境能力差异）
+- 新增逐包接入回归脚本：`bun run smoke:packages`
+- `smoke:packages` 已覆盖并验证 8 个本地 package 的主流程可加载能力：
+  - `audio-capture-napi`
+  - `image-processor-napi`
+  - `modifiers-napi`
+  - `url-handler-napi`
+  - `@ant/claude-for-chrome-mcp`
+  - `@ant/computer-use-input`
+  - `@ant/computer-use-mcp`
+  - `@ant/computer-use-swift`
+- 端到端回归结果：
+  - `bun run smoke:packages` 通过
+  - `SMOKE_GATEWAY_BASE_URL=http://localhost:8086 ... bun run smoke` 通过（models=9）
+  - `bun run smoke:gui` 通过
