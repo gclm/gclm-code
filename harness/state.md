@@ -181,6 +181,10 @@
   - `bun run smoke:packages:gateway` 通过（无 env 时按预期 skip）
   - `SMOKE_GATEWAY_* bun run smoke:login-gateway` 通过（discovered=9）
 - M3-1 已开始并落地首批改造（错误语义统一）：
+- M3-2 已完成（模型发现可观测性补强）：
+  - 新增 `GlobalConfig.providerModelDiscoveryLastStatus` 持久化最近一次 discovery 诊断
+  - 成功记录：状态/端点/模型数；失败记录：错误类型/状态码/端点/压缩错误文案
+  - `/status` 的 API provider 区域新增 Model discovery 诊断展示（success/error + message）
   - `refreshProviderModelOptions` 新增 `interactive` 模式，供 `/login` 平台配置路径直出可操作错误
   - 网关模型发现新增结构化错误分类：`auth/not_found/rate_limit/gateway_unavailable/empty_models/invalid_payload/unknown`
   - 401/403、404、429、5xx、网络超时/连接失败均映射为明确提示文案

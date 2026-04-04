@@ -559,6 +559,24 @@ export type GlobalConfig = {
   additionalModelOptionsCache?: ModelOption[]
   additionalModelOptionsCacheFetchedAt?: number
 
+  // Last gateway-driven provider model discovery result for diagnostics and supportability.
+  providerModelDiscoveryLastStatus?: {
+    state: 'success' | 'error'
+    timestamp: number
+    endpoint?: string
+    errorType?:
+      | 'auth'
+      | 'not_found'
+      | 'rate_limit'
+      | 'gateway_unavailable'
+      | 'empty_models'
+      | 'invalid_payload'
+      | 'unknown'
+    statusCode?: number
+    message?: string
+    discoveredModelCount?: number
+  }
+
   // Disk cache for /api/claude_code/organizations/metrics_enabled.
   // Org-level settings change rarely; persisting across processes avoids a
   // cold API call on every `claude -p` invocation.

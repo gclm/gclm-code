@@ -168,6 +168,29 @@ function toModelOptions(modelIds: string[]): ModelOption[] {
   }))
 }
 
+function toCompactMessage(message: string): string {
+  const compact = message.trim()
+  return compact.length > 240 ? `${compact.slice(0, 237)}...` : compact
+}
+
+function recordProviderModelDiscoveryStatus(status: {
+  state: 'success' | 'error'
+  timestamp: number
+  endpoint?: string
+  errorType?: ProviderModelDiscoveryErrorType
+  statusCode?: number
+  message?: string
+  discoveredModelCount?: number
+}): void {
+  saveGlobalConfig(current => ({
+    ...current,
+    providerModelDiscoveryLastStatus: {
+      ...status,
+      message: status.message ? toCompactMessage(status.message) : undefined,
+    },
+  }))
+}
+
 function mapFailureToDiscoveryError(
   failure: FetchFailure,
 ): ProviderModelDiscoveryError {
@@ -217,7 +240,12 @@ function mapFailureToDiscoveryError(
     )
   }
 
-  if (failure.code && ['ECONNABORTED', 'ETIMEDOUT', 'ECONNREFUSED', 'ENOTFOUND'].includes(failure.code)) {
+  if (
+    failure.code &&
+    ['ECONNABORTED', 'ETIMEDOUT', 'ECONNREFUSED', 'ENOTFOUND'].includes(
+      failure.code,
+    )
+  ) {
     return new ProviderModelDiscoveryError(
       `Gateway request failed (${failure.code}). Check ANTHROPIC_BASE_URL reachability and network connectivity.`,
       {
@@ -297,7 +325,7 @@ async function fetchModelsFromGateway(
       }
 
       lastFailure = { endpoint, error }
-      logForDebugging(`[ProviderModels] endpoint failed: ${endpoint} (unknown)`) 
+      logForDebugging(`[ProviderModels] endpoint failed: ${endpoint} (unknown)`)
     }
   }
 
@@ -347,6 +375,14 @@ export async function refreshProviderModelOptions(
         type: 'gateway_unavailable',
       },
     )
+
+    recordProviderModelDiscoveryStatus({
+      state: 'error',
+      timestamp: Date.now(),
+      errorType: error.type,
+      message: error.message,
+    })
+
     if (interactive) {
       throw error
     }
@@ -370,6 +406,13 @@ export async function refreshProviderModelOptions(
       type: 'auth',
     })
 
+    recordProviderModelDiscoveryStatus({
+      state: 'error',
+      timestamp: now,
+      errorType: error.type,
+      message: error.message,
+    })
+
     if (interactive) {
       throw error
     }
@@ -391,6 +434,13 @@ export async function refreshProviderModelOptions(
         },
       )
 
+      recordProviderModelDiscoveryStatus({
+        state: 'error',
+        timestamp: now,
+        errorType: error.type,
+        message: error.message,
+      })
+
       if (interactive) {
         throw error
       }
@@ -409,6 +459,12 @@ export async function refreshProviderModelOptions(
         return {
           ...current,
           additionalModelOptionsCacheFetchedAt: now,
+          providerModelDiscoveryLastStatus: {
+            state: 'success',
+            timestamp: now,
+            endpoint: fetched.endpoint,
+            discoveredModelCount: additionalModelOptions.length,
+          },
         }
       }
 
@@ -416,6 +472,12 @@ export async function refreshProviderModelOptions(
         ...current,
         additionalModelOptionsCache: additionalModelOptions,
         additionalModelOptionsCacheFetchedAt: now,
+        providerModelDiscoveryLastStatus: {
+          state: 'success',
+          timestamp: now,
+          endpoint: fetched.endpoint,
+          discoveredModelCount: additionalModelOptions.length,
+        },
       }
     })
 
@@ -428,6 +490,15 @@ export async function refreshProviderModelOptions(
       mapped.statusCode !== undefined
         ? `${mapped.type}, status=${mapped.statusCode}`
         : mapped.type
+
+    recordProviderModelDiscoveryStatus({
+      state: 'error',
+      timestamp: now,
+      endpoint: mapped.endpoint,
+      errorType: mapped.type,
+      statusCode: mapped.statusCode,
+      message: mapped.message,
+    })
 
     logForDebugging(`[ProviderModels] model discovery failed: ${detail}`)
 

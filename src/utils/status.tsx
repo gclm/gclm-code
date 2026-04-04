@@ -5,6 +5,7 @@ import { color, Text } from '../ink.js';
 import type { MCPServerConnection } from '../services/mcp/types.js';
 import { getAccountInformation, isClaudeAISubscriber } from './auth.js';
 import { getLargeMemoryFiles, getMemoryFiles, MAX_MEMORY_CHARACTER_COUNT } from './claudemd.js';
+import { getGlobalConfig } from './config.js';
 import { getDoctorDiagnostic } from './doctorDiagnostic.js';
 import { getAWSRegion, getDefaultVertexRegion, isEnvTruthy } from './envUtils.js';
 import { getDisplayPath } from './file.js';
@@ -239,6 +240,7 @@ export function buildAccountProperties(): Property[] {
 }
 export function buildAPIProviderProperties(): Property[] {
   const apiProvider = getAPIProvider();
+  const discoveryStatus = getGlobalConfig().providerModelDiscoveryLastStatus;
   const properties: Property[] = [];
   if (apiProvider !== 'firstParty') {
     const providerLabel = {
@@ -258,6 +260,27 @@ export function buildAPIProviderProperties(): Property[] {
         label: 'Anthropic base URL',
         value: anthropicBaseUrl
       });
+    }
+    if (discoveryStatus) {
+      if (discoveryStatus.state === 'success') {
+        properties.push({
+          label: 'Model discovery',
+          value: `success (${String(discoveryStatus.discoveredModelCount ?? 0)} models)`
+        });
+      } else {
+        const statusCodeSuffix = discoveryStatus.statusCode !== undefined ? `, status=${String(discoveryStatus.statusCode)}` : '';
+        const endpointSuffix = discoveryStatus.endpoint ? `, endpoint=${discoveryStatus.endpoint}` : '';
+        properties.push({
+          label: 'Model discovery',
+          value: `error (${discoveryStatus.errorType ?? 'unknown'}${statusCodeSuffix}${endpointSuffix})`
+        });
+        if (discoveryStatus.message) {
+          properties.push({
+            label: 'Model discovery message',
+            value: discoveryStatus.message
+          });
+        }
+      }
     }
   } else if (apiProvider === 'bedrock') {
     const bedrockBaseUrl = process.env.BEDROCK_BASE_URL;
