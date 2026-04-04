@@ -40,7 +40,23 @@ if (gateway && key) {
       const base = process.env.SMOKE_GATEWAY_BASE_URL?.replace(/\\/+$/, '');
       const key = process.env.SMOKE_GATEWAY_API_KEY;
       if (!base || !key) throw new Error('Missing SMOKE_GATEWAY_* env');
-      const candidates = [base + '/models', base + '/v1/models'];
+
+      const getPathname = (url) => {
+        try {
+          return new URL(url).pathname || '';
+        } catch {
+          const schemeSep = url.indexOf('://');
+          const hostStart = schemeSep >= 0 ? schemeSep + 3 : 0;
+          const pathStart = url.indexOf('/', hostStart);
+          return pathStart >= 0 ? url.slice(pathStart) : '';
+        }
+      };
+
+      const pathname = getPathname(base).replace(/\\/+$/, '');
+      const candidates = /^\\/v\\d+$/.test(pathname)
+        ? [base + '/models']
+        : [base + '/v1/models'];
+
       const extract = (payload) => {
         const listFrom = (items) => (items || []).map((item) => {
           if (typeof item === 'string') return item.trim();
@@ -63,11 +79,12 @@ if (gateway && key) {
           models = extract(data);
           if (models.length > 0) break;
         } catch {
-          // try next endpoint
+          // no-op
         }
       }
-      if (models.length === 0) throw new Error('No models discovered from gateway endpoints');
+      if (models.length === 0) throw new Error('No models discovered from mapped gateway endpoint');
       console.log('discovered models:', models.length);
+      console.log('endpoint used:', candidates[0]);
     `],
     r => r.stdout.includes('discovered models:'),
     {

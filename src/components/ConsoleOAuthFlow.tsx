@@ -522,7 +522,7 @@ function OAuthStatusMessage({
           <Text bold>Configure Gateway Platform</Text>
           <Text dimColor>
             This saves gateway settings to local config and enables model discovery via
-            /models (fallback: /v1/models).
+            conditional endpoint mapping: base URL -> /v1/models, and base URL ending in /vN -> /models.
           </Text>
 
           {platformStep === 'base_url' ? (

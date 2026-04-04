@@ -120,3 +120,10 @@
 - smoke 脚本已新增：`bun run smoke`、`bun run smoke:gui`
 - 已修复网关模型发现回归：清空 provider flag 后仍可基于 `ANTHROPIC_BASE_URL` 刷新 `/models`
 - 备注：全量 `bun run typecheck` 当前受仓库既有错误影响，不作为本轮唯一阻断
+- 已按网关 URL 规则收敛模型发现端点：
+  - `ANTHROPIC_BASE_URL=http://host` -> `http://host/v1/models`
+  - `ANTHROPIC_BASE_URL=http://host/vN` -> `http://host/vN/models`
+- 回归验证：
+  - `http://localhost:8086` 场景通过，命中 `/v1/models`
+  - `http://localhost:8086/v1` 场景通过，命中 `/v1/models`（由 base `/v1` + `/models` 组成）
+  - `http://localhost:8086/v2` 场景失败（网关该版本路径无模型列表，属环境能力差异）

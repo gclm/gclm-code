@@ -30,11 +30,29 @@ function getGatewayBaseUrl(): string | null {
   return trimTrailingSlash(baseUrl)
 }
 
+function getPathname(baseUrl: string): string {
+  try {
+    return new URL(baseUrl).pathname || ''
+  } catch {
+    const schemeSep = baseUrl.indexOf('://')
+    const hostStart = schemeSep >= 0 ? schemeSep + 3 : 0
+    const pathStart = baseUrl.indexOf('/', hostStart)
+    return pathStart >= 0 ? baseUrl.slice(pathStart) : ''
+  }
+}
+
 function getCandidateModelEndpoints(baseUrl: string): string[] {
-  return [
-    `${baseUrl}/models`,
-    `${baseUrl}/v1/models`,
-  ]
+  const normalized = trimTrailingSlash(baseUrl)
+  const pathname = getPathname(normalized).replace(/\/+$/, '')
+
+  // Gateway endpoint mapping rule:
+  // - base URL ending with /vN      => append /models
+  // - other base URL forms          => append /v1/models
+  if (/^\/v\d+$/.test(pathname)) {
+    return [`${normalized}/models`]
+  }
+
+  return [`${normalized}/v1/models`]
 }
 
 function getStringField(
