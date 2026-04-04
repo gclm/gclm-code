@@ -78,9 +78,11 @@ bun run smoke:packages
 - 网关是否允许该 key 访问 models
 - 执行 `bun run smoke:packages:gateway` 验证网关最小链路
 
-## 6. 错误语义回归（M3-1）
+## 6. 错误语义回归（M3）
 
-登录等效脚本 `bun run smoke:login-gateway` 已支持错误语义断言：
+### 6.1 单用例
+
+登录等效脚本 `bun run smoke:login-gateway` 支持错误语义断言：
 
 ```bash
 SMOKE_GATEWAY_EXPECT_ERROR="404" bun run smoke:login-gateway
@@ -89,4 +91,20 @@ SMOKE_GATEWAY_EXPECT_ERROR="404" bun run smoke:login-gateway
 说明：
 - 不设置 `SMOKE_GATEWAY_EXPECT_ERROR` 时，脚本校验成功发现并缓存模型
 - 设置后，脚本要求 discovery 抛错，且错误消息包含指定关键字
-- 推荐关键字：`401/403`、`404`、`429`、`Gateway is unavailable`
+
+### 6.2 矩阵用例（推荐）
+
+统一回归命令：
+
+```bash
+bun run smoke:login-gateway:matrix
+```
+
+默认覆盖：
+- 成功路径（base URL）
+- 404 映射路径（`/v1/v1`）
+
+可选扩展（按环境启用）：
+- `SMOKE_GATEWAY_EXPECT_401_KEY`：无权限 key，校验 `401/403` 文案
+- `SMOKE_GATEWAY_EXPECT_429_BASE_URL`：限流网关入口，校验 `429` 文案
+- `SMOKE_GATEWAY_EXPECT_5XX_BASE_URL`：异常网关入口，校验 `Gateway is unavailable` 文案

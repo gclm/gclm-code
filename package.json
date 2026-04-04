@@ -30,7 +30,8 @@
     "smoke:packages:core": "bun run ./scripts/smoke-packages.mjs core",
     "smoke:packages:gui": "bun run ./scripts/smoke-packages.mjs gui",
     "smoke:packages:gateway": "bun run ./scripts/smoke-packages.mjs gateway",
-    "smoke:login-gateway": "bun run ./scripts/smoke-login-gateway.mjs"
+    "smoke:login-gateway": "bun run ./scripts/smoke-login-gateway.mjs",
+    "smoke:login-gateway:matrix": "bun run ./scripts/smoke-login-gateway-matrix.mjs"
   },
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.3.0",
