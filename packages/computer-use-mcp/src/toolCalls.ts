@@ -543,7 +543,7 @@ async function runInputActionGates(
     // Keyboard safety net — defocus (prepareForAction step B) should have
     // moved us off. If we're still here, typing would go to our chat box.
     return errorResult(
-      "Claude's own window still has keyboard focus. This should not happen " +
+      "Gclm Code's own window still has keyboard focus. This should not happen " +
         "after the pre-action defocus. Click on the target application first.",
       "state_conflict",
     );
@@ -3785,8 +3785,8 @@ export async function handleToolCall(
   if (lock) {
     if (lock.holder !== undefined && !lock.isSelf) {
       return errorResult(
-        "Another Claude session is currently using the computer. Wait for " +
-          "the user to acknowledge it is finished (stop button in the Claude " +
+        "Another Gclm Code session is currently using the computer. Wait for " +
+          "the user to acknowledge it is finished (stop button in the Gclm Code " +
           "window), or find a non-computer-use approach if one is readily " +
           "apparent.",
         "cu_lock_held",

@@ -162,3 +162,13 @@
   - 本地验收通过：`http://localhost:8086` 场景发现 9 个模型并写入缓存
 - 已修复 brand-guard 阻断：清理 `packages/computer-use-mcp` 中一处 legacy 品牌注释
 - 最新验证：`bun run verify` 通过
+- 已检查新拷贝 packages 中 legacy 品牌文案用途：
+  - 对外可见提示文案已替换为 `Gclm Code`
+  - 协议/工具标识（如 `mcp__Claude_in_Chrome__*`）保持不变以避免兼容性风险
+- 已替换位置（用户可见）：
+  - `packages/computer-use-mcp/src/mcpServer.ts`
+  - `packages/computer-use-mcp/src/toolCalls.ts`
+  - `packages/computer-use-mcp/src/tools.ts`
+- 验证结果：
+  - `bun run brand:guard` 通过
+  - `bun run smoke:packages:gui` 通过
