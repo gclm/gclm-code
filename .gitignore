@@ -15,7 +15,10 @@ gen
 # build artifacts
 /cli
 /cli-dev
+/gc
+/gc-dev
 /dist/
 
 # local logs
 *.log
+/harness/.runtime/

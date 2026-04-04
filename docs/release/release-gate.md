@@ -56,8 +56,8 @@ bun run smoke:login-gateway:matrix
 4. 校验：
 
 ```bash
-npm view @gclm/gclm-code version
-npm dist-tag ls @gclm/gclm-code
+npm view gclm-code version
+npm dist-tag ls gclm-code
 ```
 
 ## 6. 失败处置

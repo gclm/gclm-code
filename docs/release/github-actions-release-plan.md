@@ -1,6 +1,6 @@
 # GitHub Actions 自动发布方案（npm）
 
-这份方案用于把 `@gclm/gclm-code` 发布流程自动化。
+这份方案用于把 `gclm-code` 发布流程自动化。
 
 ## 目标
 
@@ -14,12 +14,12 @@
 
 - `NPM_TOKEN`
 
-该 token 需要有发布 `@gclm/gclm-code` 的权限。
+该 token 需要有发布 `gclm-code` 的权限。
 
 2. npm 包权限：
 
-- 包名：`@gclm/gclm-code`
-- `publishConfig.access = public`
+- 包名：`gclm-code`
+- 发布命令使用 `npm publish --access public --tag latest`
 
 ## 触发策略
 

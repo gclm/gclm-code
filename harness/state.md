@@ -20,8 +20,14 @@
 
 ## 已完成
 
+- 已新增 `smoke:npm-install`：在临时空目录执行 `npm pack + npm i` 并校验 8 个本地 file-deps 可解析；`release-npm` 已接入该校验作为发布前门禁
+- `scripts/build.ts` 已优化为统一产物命名：默认输出 `gc`、dev 输出 `gc-dev`，并联动更新 smoke/install/release 引用
+- release 产物结构已调整为 `bin/gc`（默认可执行）+ `bin/claude -> gc` 软链，并通过 tar 包对外分发
+- `release-npm` workflow 已增强：支持 `workflow_dispatch` 手动参数（release_tag/publish_to_npm/npm_tag/attach_release_assets），并支持将编译产物上传到 GitHub Releases
+- npm 包名已从 `@gclm/gclm-code` 调整为 `gclm-code`，并同步 CLI 默认 PACKAGE_URL、发布 workflow 与相关文档
+- 已为 npm 发布增加 `files` 白名单（`gc`、`README.md`、`install.sh`、`packages`），`npm pack --dry-run` 已验证发布内容收敛为 42 个文件
 - README 已重写为“参考 free-code 项目实践”表述，并同步网关优先策略、验收入口与发布门禁说明
-- npm 包基础发布配置已落地：`@gclm/gclm-code`
+- npm 包基础发布配置已落地：`gclm-code`
 - CI 验收工作流已落地：`bun run verify`
 - npm tag 发布工作流已落地
 - 第二批 telemetry 清理已有明显进展：

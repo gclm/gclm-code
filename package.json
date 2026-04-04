@@ -1,16 +1,13 @@
 {
-  "name": "@gclm/gclm-code",
+  "name": "gclm-code",
   "version": "1.0.0",
   "private": false,
   "description": "Customized Bun CLI workspace for the Gclm Code build.",
   "type": "module",
   "packageManager": "bun@1.3.11",
   "bin": {
-    "gc": "./cli",
-    "claude": "./cli"
-  },
-  "publishConfig": {
-    "access": "public"
+    "gc": "./gc",
+    "claude": "./gc"
   },
   "engines": {
     "bun": ">=1.3.11"
@@ -31,7 +28,8 @@
     "smoke:packages:gui": "bun run ./scripts/smoke-packages.mjs gui",
     "smoke:packages:gateway": "bun run ./scripts/smoke-packages.mjs gateway",
     "smoke:login-gateway": "bun run ./scripts/smoke-login-gateway.mjs",
-    "smoke:login-gateway:matrix": "bun run ./scripts/smoke-login-gateway-matrix.mjs"
+    "smoke:login-gateway:matrix": "bun run ./scripts/smoke-login-gateway-matrix.mjs",
+    "smoke:npm-install": "bun run ./scripts/smoke-npm-install.mjs"
   },
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.3.0",
@@ -140,5 +138,11 @@
   "devDependencies": {
     "@types/bun": "^1.3.11",
     "typescript": "^6.0.2"
-  }
+  },
+  "files": [
+    "gc",
+    "README.md",
+    "install.sh",
+    "packages"
+  ]
 }

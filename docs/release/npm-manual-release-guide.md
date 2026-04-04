@@ -1,4 +1,4 @@
-# `@gclm/gclm-code` 手动发布指南
+# `gclm-code` 手动发布指南
 
 这份文档用于手动发布 `Gclm Code` 到 npm。
 
@@ -12,7 +12,7 @@
 
 1. 确认 `package.json`:
 
-- `name` 是 `@gclm/gclm-code`
+- `name` 是 `gclm-code`
 - `private` 是 `false`
 - `bin` 包含 `gc` 和 `claude`
 
@@ -53,8 +53,8 @@ npm publish --access public --tag latest
 发布成功后校验：
 
 ```bash
-npm view @gclm/gclm-code version
-npm dist-tag ls @gclm/gclm-code
+npm view gclm-code version
+npm dist-tag ls gclm-code
 ```
 
 ## 4. 维护 `stable` 频道
@@ -62,13 +62,13 @@ npm dist-tag ls @gclm/gclm-code
 将某个版本标记为 `stable`：
 
 ```bash
-npm dist-tag add @gclm/gclm-code@<version> stable
+npm dist-tag add gclm-code@<version> stable
 ```
 
 示例：
 
 ```bash
-npm dist-tag add @gclm/gclm-code@2.1.87 stable
+npm dist-tag add gclm-code@2.1.87 stable
 ```
 
 ## 5. 安装与升级验证
@@ -76,7 +76,7 @@ npm dist-tag add @gclm/gclm-code@2.1.87 stable
 安装：
 
 ```bash
-npm i -g @gclm/gclm-code
+npm i -g gclm-code
 ```
 
 命令验证：
@@ -100,13 +100,13 @@ npm 不能重新发布同版本，可用以下方式处理：
 2. 移除错误 dist-tag：
 
 ```bash
-npm dist-tag rm @gclm/gclm-code latest
+npm dist-tag rm gclm-code latest
 ```
 
 3. 重新把 `latest` 指向正确版本：
 
 ```bash
-npm dist-tag add @gclm/gclm-code@<good-version> latest
+npm dist-tag add gclm-code@<good-version> latest
 ```
 
 不建议 `npm unpublish` 已超过短窗口的版本。

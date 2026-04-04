@@ -5,7 +5,7 @@ if (typeof MACRO === 'undefined') {
   (globalThis as any).MACRO = {
     VERSION: '2.1.87-dev',
     BUILD_TIME: new Date().toISOString(),
-    PACKAGE_URL: '@gclm/gclm-code',
+    PACKAGE_URL: 'gclm-code',
     FEEDBACK_CHANNEL: 'github',
   };
 }

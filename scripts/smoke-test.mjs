@@ -27,9 +27,9 @@ function mustPass(name, command, args, check, env) {
   if (check && !check(r)) throw new Error(`${name} output check failed`)
 }
 
-mustPass('build', 'bun', ['run', 'build'], r => r.stdout.includes('Built ./cli'))
-mustPass('version', './cli', ['--version'], r => r.stdout.length > 0)
-mustPass('help', './cli', ['--help'], r => r.stdout.includes('Usage:'))
+mustPass('build', 'bun', ['run', 'build'], r => r.stdout.includes('Built ./gc'))
+mustPass('version', './gc', ['--version'], r => r.stdout.length > 0)
+mustPass('help', './gc', ['--help'], r => r.stdout.includes('Usage:'))
 
 const gateway = process.env.SMOKE_GATEWAY_BASE_URL
 const key = process.env.SMOKE_GATEWAY_API_KEY

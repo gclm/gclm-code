@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Gclm Code source installer (optional path)
-# Recommended install: npm i -g @gclm/gclm-code
+# Recommended install: npm i -g gclm-code
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -34,7 +34,7 @@ header() {
 ART
   printf "${RESET}"
   printf "${DIM}  Gclm Code source installer${RESET}\n"
-  printf "${DIM}  Recommended: npm i -g @gclm/gclm-code${RESET}\n"
+  printf "${DIM}  Recommended: npm i -g gclm-code${RESET}\n"
   echo ""
 }
 
@@ -108,15 +108,15 @@ build_binary() {
   info "Building Gclm Code..."
   cd "$INSTALL_DIR"
   bun run build
-  ok "Binary built: $INSTALL_DIR/cli"
+  ok "Binary built: $INSTALL_DIR/gc"
 }
 
 link_binary() {
   local link_dir="$HOME/.local/bin"
   mkdir -p "$link_dir"
 
-  ln -sf "$INSTALL_DIR/cli" "$link_dir/gc"
-  ln -sf "$INSTALL_DIR/cli" "$link_dir/claude"
+  ln -sf "$INSTALL_DIR/gc" "$link_dir/gc"
+  ln -sf "$INSTALL_DIR/gc" "$link_dir/claude"
   ok "Symlinked: $link_dir/gc and $link_dir/claude"
 
   if ! echo "$PATH" | tr ':' '\n' | grep -qx "$link_dir"; then
@@ -142,5 +142,5 @@ echo ""
 printf "${GREEN}${BOLD}Installation complete!${RESET}\n"
 printf "${BOLD}Run:${RESET} ${CYAN}gc${RESET} or ${CYAN}claude${RESET}\n"
 printf "${DIM}Source: $INSTALL_DIR${RESET}\n"
-printf "${DIM}Binary: $INSTALL_DIR/cli${RESET}\n"
+printf "${DIM}Binary: $INSTALL_DIR/gc${RESET}\n"
 printf "${DIM}Links: ~/.local/bin/gc, ~/.local/bin/claude${RESET}\n"

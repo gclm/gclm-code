@@ -1,11 +1,10 @@
 # Gclm Code
 
 Gclm Code 是面向团队交付的命令行 AI 编码助手。
-项目在能力盘点和工程策略上参考了 `free-code` 项目实践，但当前代码线独立维护，发布与验收流程以本仓库为准。
 
 ## 项目定位
 
-- 品牌与发行：统一为 `Gclm / Gclm Code`，npm 包名为 `@gclm/gclm-code`
+- 品牌与发行：统一为 `Gclm / Gclm Code`，npm 包名为 `gclm-code`
 - 接入策略：客户端走 `ANTHROPIC_BASE_URL / ANTHROPIC_API_KEY`，协议转换下沉网关
 - 模型发现：优先从网关 `/models` 动态获取，并支持缓存与错误语义提示
 - 验收门禁：以 `verify + smoke` 为发布前标准回归链路
@@ -15,7 +14,7 @@ Gclm Code 是面向团队交付的命令行 AI 编码助手。
 ### npm 安装（推荐）
 
 ```bash
-npm i -g @gclm/gclm-code
+npm i -g gclm-code
 ```
 
 安装后可用命令：
@@ -35,7 +34,7 @@ claude
 ```bash
 bun install
 bun run build
-./cli
+./gc
 ```
 
 ## 快速使用

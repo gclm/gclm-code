@@ -17,7 +17,7 @@
 ## 3. release（发布与交付）
 
 - `docs/release/npm-manual-release-guide.md`
-  - `@gclm/gclm-code` 手动发布流程
+  - `gclm-code` 手动发布流程
 - `docs/release/github-actions-release-plan.md`
   - GitHub Actions 自动发布设计
 - `docs/release/gateway-smoke-and-login.md`

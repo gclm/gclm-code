@@ -45,7 +45,7 @@ bun run smoke:packages
 可用命令做只读确认：
 
 ```bash
-./cli auth status
+./gc auth status
 ```
 
 ## 4. CI 接入建议

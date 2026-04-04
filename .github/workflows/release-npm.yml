@@ -4,12 +4,33 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g. v1.0.1). Leave empty to use v<package.json version>'
+        required: false
+        type: string
+      publish_to_npm:
+        description: 'Publish package to npm'
+        required: true
+        default: false
+        type: boolean
+      npm_tag:
+        description: 'npm dist-tag used when publish_to_npm=true'
+        required: true
+        default: 'latest'
+        type: string
+      attach_release_assets:
+        description: 'Upload built CLI artifacts to GitHub Release'
+        required: true
+        default: true
+        type: boolean
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,18 +49,69 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Resolve release metadata
+        id: meta
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${GITHUB_REF_NAME}"
+            NPM_TAG="latest"
+            PUBLISH_NPM="true"
+            ATTACH_ASSETS="true"
+          else
+            TAG_INPUT="${{ inputs.release_tag }}"
+            if [ -n "$TAG_INPUT" ]; then
+              TAG="$TAG_INPUT"
+            else
+              TAG="v${VERSION}"
+            fi
+            NPM_TAG="${{ inputs.npm_tag }}"
+            PUBLISH_NPM="${{ inputs.publish_to_npm }}"
+            ATTACH_ASSETS="${{ inputs.attach_release_assets }}"
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "npm_tag=${NPM_TAG}" >> "$GITHUB_OUTPUT"
+          echo "publish_npm=${PUBLISH_NPM}" >> "$GITHUB_OUTPUT"
+          echo "attach_assets=${ATTACH_ASSETS}" >> "$GITHUB_OUTPUT"
+
       - name: Verify build
         run: bun run verify
 
-      - name: Publish to npm (latest)
-        run: npm publish --access public --tag latest
+      - name: Verify npm tarball installability
+        run: bun run smoke:npm-install
+
+      - name: Prepare release artifacts
+        run: |
+          mkdir -p release-assets/bin
+          cp gc release-assets/bin/gc
+          chmod +x release-assets/bin/gc
+          ln -sf gc release-assets/bin/claude
+          sha256sum release-assets/bin/gc > release-assets/gc-linux-x64.sha256
+          tar -czf "release-assets/gclm-code-${{ steps.meta.outputs.version }}-linux-x64.tar.gz" -C release-assets bin
+
+      - name: Publish GitHub Release assets
+        if: ${{ steps.meta.outputs.attach_assets == 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: |
+            release-assets/gc-linux-x64.sha256
+            release-assets/gclm-code-${{ steps.meta.outputs.version }}-linux-x64.tar.gz
+
+      - name: Publish to npm
+        if: ${{ steps.meta.outputs.publish_npm == 'true' }}
+        run: npm publish --access public --tag "${{ steps.meta.outputs.npm_tag }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Tag current version as stable
+        if: ${{ steps.meta.outputs.publish_npm == 'true' && steps.meta.outputs.npm_tag == 'latest' }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          npm dist-tag add @gclm/gclm-code@${VERSION} stable
+          npm dist-tag add gclm-code@${VERSION} stable
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
