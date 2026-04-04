@@ -27,7 +27,6 @@ import {
   getOauthAccountInfo,
   getSubscriptionType,
   isUsing3PServices,
-  saveCodexOAuthTokens,
   saveOAuthTokensIfNeeded,
   validateForceLoginOrg,
 } from '../../utils/auth.js'
@@ -46,7 +45,7 @@ import {
 
 /**
  * Returns true if the token carries any Anthropic-issued scope (user:* or org:*).
- * Codex tokens use OpenID Connect scopes (openid, profile, email, offline_access)
+ * Third-party OpenID Connect tokens use scopes like openid/profile/email/offline_access
  * which are not Anthropic scopes, so this returns false for them.
  */
 function hasAnyAnthropicScope(scopes: string[] | undefined): boolean {
@@ -115,16 +114,6 @@ export async function installOAuthTokens(tokens: OAuthTokens): Promise<void> {
         'Unable to create API key. The server accepted the request but did not return a key.',
       )
     }
-  } else {
-    // Third-party provider (e.g. OpenAI Codex) — tokens carry no Anthropic
-    // scopes. Skip Anthropic API key creation entirely and store the tokens
-    // in their own dedicated config slot.
-    saveCodexOAuthTokens({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken ?? '',
-      expiresAt: tokens.expiresAt ?? Date.now() + 3600_000,
-      accountId: (tokens.tokenAccount?.uuid ?? ''),
-    })
   }
 
   await clearAuthRelatedCaches()

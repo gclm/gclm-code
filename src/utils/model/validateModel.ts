@@ -41,13 +41,6 @@ export async function validateModel(
     return { valid: true }
   }
 
-  // Check if it's a known Codex/OpenAI model (skip Anthropic API validation)
-  const { isCodexSubscriber } = await import('../auth.js')
-  const { isCodexModel } = await import('../../services/api/codex-fetch-adapter.js')
-  if (isCodexSubscriber() && isCodexModel(normalizedModel)) {
-    validModelCache.set(normalizedModel, true)
-    return { valid: true }
-  }
 
   // Check if it matches ANTHROPIC_CUSTOM_MODEL_OPTION (pre-validated by the user)
   if (normalizedModel === process.env.ANTHROPIC_CUSTOM_MODEL_OPTION) {

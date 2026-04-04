@@ -8,14 +8,15 @@
 - 当前 focus：
   - 落地网关优先方案：客户端统一走 `anthropic-compatible + ANTHROPIC_BASE_URL`
   - 协议切换与多 provider 聚合全部下沉网关
-  - 模型发现改为优先读取网关 `/models`（含 `/v1/models` 回退）
+  - 模型发现优先读取网关 `/models`（含 `/v1/models` 回退）
+  - 登录流重构：去除 Codex 登录选项，新增网关参数输入并自动保存
 
 ## 当前判断
 
 - 这是一次 `scope-refresh`，不是全新规划。
 - 发布链路已基本落地，当前不以 release 作为主阻塞项。
-- telemetry 第二批“直接删除”已推进较多，剩余重点是语义迁移而不是继续粗删。
-- 当前不做 OAuth 大重构，客户端维持最小认证逻辑，provider 差异交给网关
+- 当前重点从“新增 provider 适配”转为“客户端收敛到网关参数化入口”。
+- 客户端不继续扩展 provider 协议分支，统一依赖 `ANTHROPIC_BASE_URL/KEY` + 网关能力。
 
 ## 已完成
 
@@ -42,26 +43,42 @@
 - `analytics/index.ts` 类型边界已完成中性化：
   - `AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS` -> `SafeEventValue`
   - `AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED` -> `PiiEventValue`
+- 登录流/网关配置本轮落地：
+- 第二刀净化（codex 全量移除）已完成：
+  - 已删除 `src/services/oauth/codex-client.ts`
+  - 已删除 `src/services/api/codex-fetch-adapter.ts`
+  - 已删除 `src/constants/codex-oauth.ts`
+  - 已删除 `src/utils/codex-fetch-adapter.ts`
+  - 已移除 `auth/config/model/providers/oauth` 中全部 codex/openai-codex 相关定义
+  - `ConsoleOAuthFlow` 已移除 `OpenAI Codex account` 选项与登录分支
+  - 旧“3rd-party platform”说明页改为可交互网关配置：依次输入 `ANTHROPIC_BASE_URL`、`ANTHROPIC_API_KEY`
+  - 输入后自动保存到 `GlobalConfig.env`，并同步当前 `process.env`
+  - 保存后清理显式 provider flag：`CLAUDE_CODE_USE_BEDROCK/VERTEX/FOUNDRY/OPENAI`
+  - 保存后立即触发 `refreshProviderModelOptions(true)`，执行 `/models` 自动发现
+  - 同批清理关键路径 codex 引用：
+    - `src/services/api/client.ts` 移除 codex fetch adapter 分支
+    - `src/cli/handlers/auth.ts` 移除 codex token 存储分支
+    - `src/hooks/useApiKeyVerification.ts` 移除 codex subscriber 判定依赖
 
 ## 进行中
 
 - M1 执行中：
-  - 已落地 openai provider 的 `/models` 动态拉取主链（后台启动 + 定时刷新）
-  - 已接入缓存 TTL 与失败降级（失败保留旧缓存，不阻断模型选择）
-  - 下一步进入 M2（openai-compatible 请求通路）
+  - `/models` 动态拉取与缓存链路已接入并可由网关配置流程即时触发刷新
+  - 下一阶段进入网关主链稳定化与历史残余能力彻底清理（代码与文档）
 
 ## 已知未完成项
 
+- `docs` 历史文档中可能仍有 codex 文案残留（不影响运行时）；后续可按文档清理批次处理
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否进一步去品牌化或去历史产品语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
-- `openai-compatible` 通用请求路径尚未接入（当前 OpenAI 仍偏 Codex 专用适配）
-- `/models` 动态发现当前仅落地 openai provider；其他第三方 provider 尚未接入
-- 当前缓存 TTL/降级为 openai provider 的最小实现，尚未统一到全部 provider
+- 当前全量 typecheck 在仓库基线上有大量既有错误，无法作为本轮单改动通过标准
 
 ## 执行边界
 
-- 当前 must-fix：无
-- same-batch can-include：文档与注释回写、后续阶段任务收敛
+- 当前 must-fix：
+  - 网关主链稳定性验证与 /models 回退路径覆盖
+- same-batch can-include：
+  - 文档与注释回写、后续阶段任务收敛
 - follow-up：
   - provider 枚举进一步中性化（如 `firstParty`）
   - `runtimeConfig/growthbook.ts` 是否继续去品牌化
@@ -69,10 +86,10 @@
 
 ## 新执行顺序（务实版）
 
-1. `M1`：`/models` 动态模型发现
-2. `M2`：网关优先接入（客户端不再扩展 openai 协议适配）
+1. `M1`：`/models` 动态模型发现 + 登录入口网关参数化
+2. `M2`：网关优先接入（客户端不再扩展 openai/codex 协议适配）
 3. `M3`：`anthropic-compatible` 补强
-4. `M4`：收尾清理
+4. `M4`：收尾清理（含 codex 遗留能力全量摘除）
 
 ## OAuth 策略结论
 
@@ -99,4 +116,5 @@
 - 运行环境：Bun 1.3.11 项目
 - 当前统一验收门槛：`bun run verify`
 - 当前策略已调整为“不保留兼容层，直接修复断点”
-- 最新验证结果：2026-04-04 已执行本轮 `bun run verify`，通过；包含 openai `/models` 动态发现（M1 最小实现）后的全量验证
+- 最新验证结果：2026-04-04 已执行 `bun run build`，构建通过（含第二刀 codex 全量移除）
+- 备注：全量 `bun run typecheck` 当前受仓库既有错误影响，不作为本轮唯一阻断

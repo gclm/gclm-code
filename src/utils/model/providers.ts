@@ -1,7 +1,7 @@
 import type { SafeEventValue } from '../../services/analytics/index.js'
 import { isEnvTruthy } from '../envUtils.js'
 
-export type APIProvider = 'firstParty' | 'bedrock' | 'vertex' | 'foundry' | 'openai'
+export type APIProvider = 'firstParty' | 'bedrock' | 'vertex' | 'foundry'
 
 export function getAPIProvider(): APIProvider {
   return isEnvTruthy(process.env.CLAUDE_CODE_USE_BEDROCK)
@@ -10,9 +10,7 @@ export function getAPIProvider(): APIProvider {
       ? 'vertex'
       : isEnvTruthy(process.env.CLAUDE_CODE_USE_FOUNDRY)
         ? 'foundry'
-        : isEnvTruthy(process.env.CLAUDE_CODE_USE_OPENAI)
-          ? 'openai'
-          : 'firstParty'
+        : 'firstParty'
 }
 
 export function getProviderForDiagnostics(): SafeEventValue {
