@@ -8,6 +8,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || 'test'
 
 const baseUrl = process.env.SMOKE_GATEWAY_BASE_URL?.trim()
 const apiKey = process.env.SMOKE_GATEWAY_API_KEY?.trim()
+const expectError = process.env.SMOKE_GATEWAY_EXPECT_ERROR?.trim()
 
 if (!baseUrl || !apiKey) {
   process.stderr.write('Missing SMOKE_GATEWAY_BASE_URL or SMOKE_GATEWAY_API_KEY.\n')
@@ -39,7 +40,25 @@ delete process.env.CLAUDE_CODE_USE_BEDROCK
 delete process.env.CLAUDE_CODE_USE_VERTEX
 delete process.env.CLAUDE_CODE_USE_FOUNDRY
 
-await refreshProviderModelOptions(true)
+try {
+  await refreshProviderModelOptions({ force: true, interactive: true })
+
+  if (expectError) {
+    throw new Error(`Expected error containing "${expectError}" but discovery succeeded`)
+  }
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error)
+  if (!expectError) {
+    throw error
+  }
+  if (!message.includes(expectError)) {
+    throw new Error(
+      `Expected error containing "${expectError}", but got: ${message}`,
+    )
+  }
+  process.stdout.write(`Gateway login-path expected error matched: ${message}\n`)
+  process.exit(0)
+}
 
 const config = getGlobalConfig()
 const discovered = config.additionalModelOptionsCache ?? []

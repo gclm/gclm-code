@@ -77,3 +77,16 @@ bun run smoke:packages
 - `ANTHROPIC_BASE_URL` / `ANTHROPIC_API_KEY` 是否保存
 - 网关是否允许该 key 访问 models
 - 执行 `bun run smoke:packages:gateway` 验证网关最小链路
+
+## 6. 错误语义回归（M3-1）
+
+登录等效脚本 `bun run smoke:login-gateway` 已支持错误语义断言：
+
+```bash
+SMOKE_GATEWAY_EXPECT_ERROR="404" bun run smoke:login-gateway
+```
+
+说明：
+- 不设置 `SMOKE_GATEWAY_EXPECT_ERROR` 时，脚本校验成功发现并缓存模型
+- 设置后，脚本要求 discovery 抛错，且错误消息包含指定关键字
+- 推荐关键字：`401/403`、`404`、`429`、`Gateway is unavailable`

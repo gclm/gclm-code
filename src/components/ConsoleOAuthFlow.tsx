@@ -287,7 +287,7 @@ export function ConsoleOAuthFlow({
 
       saveGatewayEnv(platformBaseUrl, platformApiKey)
       logEvent('tengu_oauth_platform_gateway_saved', {})
-      await refreshProviderModelOptions(true)
+      await refreshProviderModelOptions({ force: true, interactive: true })
 
       setOAuthStatus({ state: 'success' })
       void sendNotification(

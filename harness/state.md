@@ -180,3 +180,9 @@
   - `bun run verify` 通过
   - `bun run smoke:packages:gateway` 通过（无 env 时按预期 skip）
   - `SMOKE_GATEWAY_* bun run smoke:login-gateway` 通过（discovered=9）
+- M3-1 已开始并落地首批改造（错误语义统一）：
+  - `refreshProviderModelOptions` 新增 `interactive` 模式，供 `/login` 平台配置路径直出可操作错误
+  - 网关模型发现新增结构化错误分类：`auth/not_found/rate_limit/gateway_unavailable/empty_models/invalid_payload/unknown`
+  - 401/403、404、429、5xx、网络超时/连接失败均映射为明确提示文案
+  - `/login` 平台保存后刷新改为 `refreshProviderModelOptions({ force: true, interactive: true })`
+  - `smoke:login-gateway` 新增 `SMOKE_GATEWAY_EXPECT_ERROR` 断言能力，可回归错误语义稳定性

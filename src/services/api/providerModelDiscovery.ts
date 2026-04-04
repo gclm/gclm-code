@@ -9,6 +9,48 @@ import type { ModelOption } from '../../utils/model/modelOptions.js'
 const DEFAULT_REFRESH_TTL_MS = 10 * 60 * 1000
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000
 
+export type ProviderModelDiscoveryErrorType =
+  | 'auth'
+  | 'not_found'
+  | 'rate_limit'
+  | 'gateway_unavailable'
+  | 'empty_models'
+  | 'invalid_payload'
+  | 'unknown'
+
+export class ProviderModelDiscoveryError extends Error {
+  readonly type: ProviderModelDiscoveryErrorType
+  readonly endpoint?: string
+  readonly statusCode?: number
+
+  constructor(
+    message: string,
+    options: {
+      type: ProviderModelDiscoveryErrorType
+      endpoint?: string
+      statusCode?: number
+    },
+  ) {
+    super(message)
+    this.name = 'ProviderModelDiscoveryError'
+    this.type = options.type
+    this.endpoint = options.endpoint
+    this.statusCode = options.statusCode
+  }
+}
+
+type RefreshOptions = {
+  force?: boolean
+  interactive?: boolean
+}
+
+type FetchFailure = {
+  endpoint: string
+  statusCode?: number
+  code?: string
+  error?: unknown
+}
+
 function getRefreshTtlMs(): number {
   const raw = process.env.CLAUDE_CODE_PROVIDER_MODELS_TTL_MS
   if (!raw) {
@@ -106,6 +148,17 @@ function extractModelIds(payload: unknown): string[] {
   return []
 }
 
+function hasRecognizedModelListShape(payload: unknown): boolean {
+  if (Array.isArray(payload)) {
+    return true
+  }
+  if (!payload || typeof payload !== 'object') {
+    return false
+  }
+  const record = payload as Record<string, unknown>
+  return Array.isArray(record.data) || Array.isArray(record.models)
+}
+
 function toModelOptions(modelIds: string[]): ModelOption[] {
   const unique = [...new Set(modelIds)].slice(0, 200)
   return unique.map(id => ({
@@ -115,10 +168,81 @@ function toModelOptions(modelIds: string[]): ModelOption[] {
   }))
 }
 
+function mapFailureToDiscoveryError(
+  failure: FetchFailure,
+): ProviderModelDiscoveryError {
+  const status = failure.statusCode
+
+  if (status === 401 || status === 403) {
+    return new ProviderModelDiscoveryError(
+      'Gateway authentication failed (401/403). Check ANTHROPIC_API_KEY and gateway permission settings.',
+      {
+        type: 'auth',
+        endpoint: failure.endpoint,
+        statusCode: status,
+      },
+    )
+  }
+
+  if (status === 404) {
+    return new ProviderModelDiscoveryError(
+      'Gateway /models endpoint returned 404. Check ANTHROPIC_BASE_URL path mapping: host -> /v1/models, host/vN -> /models.',
+      {
+        type: 'not_found',
+        endpoint: failure.endpoint,
+        statusCode: status,
+      },
+    )
+  }
+
+  if (status === 429) {
+    return new ProviderModelDiscoveryError(
+      'Gateway rate limit reached while discovering models (429). Retry later or increase gateway quota.',
+      {
+        type: 'rate_limit',
+        endpoint: failure.endpoint,
+        statusCode: status,
+      },
+    )
+  }
+
+  if (typeof status === 'number' && status >= 500) {
+    return new ProviderModelDiscoveryError(
+      'Gateway is unavailable while discovering models (5xx). Check gateway health and upstream status.',
+      {
+        type: 'gateway_unavailable',
+        endpoint: failure.endpoint,
+        statusCode: status,
+      },
+    )
+  }
+
+  if (failure.code && ['ECONNABORTED', 'ETIMEDOUT', 'ECONNREFUSED', 'ENOTFOUND'].includes(failure.code)) {
+    return new ProviderModelDiscoveryError(
+      `Gateway request failed (${failure.code}). Check ANTHROPIC_BASE_URL reachability and network connectivity.`,
+      {
+        type: 'gateway_unavailable',
+        endpoint: failure.endpoint,
+      },
+    )
+  }
+
+  return new ProviderModelDiscoveryError(
+    'Gateway model discovery failed. Check ANTHROPIC_BASE_URL and gateway availability.',
+    {
+      type: 'unknown',
+      endpoint: failure.endpoint,
+      statusCode: status,
+    },
+  )
+}
+
 async function fetchModelsFromGateway(
   endpoints: string[],
   headers: Record<string, string>,
 ): Promise<{ endpoint: string; modelIds: string[] } | null> {
+  let lastFailure: FetchFailure | null = null
+
   for (const endpoint of endpoints) {
     try {
       const response = await axios.get<unknown>(endpoint, {
@@ -134,22 +258,79 @@ async function fetchModelsFromGateway(
         return { endpoint, modelIds }
       }
 
-      logForDebugging(
-        `[ProviderModels] endpoint responded but no model ids: ${endpoint}`,
+      if (!hasRecognizedModelListShape(response.data)) {
+        throw new ProviderModelDiscoveryError(
+          'Gateway /models returned an unexpected payload shape. Expected array, {data: []}, or {models: []}.',
+          {
+            type: 'invalid_payload',
+            endpoint,
+          },
+        )
+      }
+
+      throw new ProviderModelDiscoveryError(
+        'Gateway /models responded successfully but returned no models.',
+        {
+          type: 'empty_models',
+          endpoint,
+        },
       )
     } catch (error) {
-      logForDebugging(
-        `[ProviderModels] endpoint failed: ${endpoint} (${axios.isAxiosError(error) ? (error.response?.status ?? error.code) : 'unknown'})`,
-      )
+      if (error instanceof ProviderModelDiscoveryError) {
+        throw error
+      }
+
+      if (axios.isAxiosError(error)) {
+        const statusCode = error.response?.status
+        const code = typeof error.code === 'string' ? error.code : undefined
+        const failure: FetchFailure = {
+          endpoint,
+          statusCode,
+          code,
+          error,
+        }
+        lastFailure = failure
+        logForDebugging(
+          `[ProviderModels] endpoint failed: ${endpoint} (${statusCode ?? code ?? 'unknown'})`,
+        )
+        continue
+      }
+
+      lastFailure = { endpoint, error }
+      logForDebugging(`[ProviderModels] endpoint failed: ${endpoint} (unknown)`) 
     }
+  }
+
+  if (lastFailure) {
+    throw mapFailureToDiscoveryError(lastFailure)
   }
 
   return null
 }
 
+function toDiscoveryError(error: unknown): ProviderModelDiscoveryError {
+  if (error instanceof ProviderModelDiscoveryError) {
+    return error
+  }
+
+  if (error instanceof Error) {
+    return new ProviderModelDiscoveryError(error.message, { type: 'unknown' })
+  }
+
+  return new ProviderModelDiscoveryError('Unknown model discovery failure', {
+    type: 'unknown',
+  })
+}
+
 export async function refreshProviderModelOptions(
-  force = false,
+  forceOrOptions: boolean | RefreshOptions = false,
 ): Promise<void> {
+  const options: RefreshOptions =
+    typeof forceOrOptions === 'boolean' ? { force: forceOrOptions } : forceOrOptions
+
+  const force = options.force ?? false
+  const interactive = options.interactive ?? false
+
   if (isEssentialTrafficOnly()) {
     return
   }
@@ -160,6 +341,15 @@ export async function refreshProviderModelOptions(
 
   const gatewayBaseUrl = getGatewayBaseUrl()
   if (!gatewayBaseUrl) {
+    const error = new ProviderModelDiscoveryError(
+      'ANTHROPIC_BASE_URL is not set. Configure gateway base URL first.',
+      {
+        type: 'gateway_unavailable',
+      },
+    )
+    if (interactive) {
+      throw error
+    }
     logForDebugging('[ProviderModels] skipped: ANTHROPIC_BASE_URL not set')
     return
   }
@@ -176,41 +366,75 @@ export async function refreshProviderModelOptions(
 
   const authResult = getAuthHeaders()
   if (authResult.error) {
+    const error = new ProviderModelDiscoveryError(authResult.error, {
+      type: 'auth',
+    })
+
+    if (interactive) {
+      throw error
+    }
+
     logForDebugging(`[ProviderModels] skipped: ${authResult.error}`)
     return
   }
 
   const endpoints = getCandidateModelEndpoints(gatewayBaseUrl)
-  const fetched = await fetchModelsFromGateway(endpoints, authResult.headers)
 
-  if (!fetched) {
-    logForDebugging('[ProviderModels] all gateway /models endpoints failed')
-    return
-  }
+  try {
+    const fetched = await fetchModelsFromGateway(endpoints, authResult.headers)
 
-  const additionalModelOptions = toModelOptions(fetched.modelIds)
-  saveGlobalConfig(current => {
-    const unchanged = isEqual(
-      current.additionalModelOptionsCache,
-      additionalModelOptions,
-    )
-    if (unchanged) {
+    if (!fetched) {
+      const error = new ProviderModelDiscoveryError(
+        'Gateway model discovery failed: no candidate endpoints available.',
+        {
+          type: 'unknown',
+        },
+      )
+
+      if (interactive) {
+        throw error
+      }
+
+      logForDebugging('[ProviderModels] all gateway /models endpoints failed')
+      return
+    }
+
+    const additionalModelOptions = toModelOptions(fetched.modelIds)
+    saveGlobalConfig(current => {
+      const unchanged = isEqual(
+        current.additionalModelOptionsCache,
+        additionalModelOptions,
+      )
+      if (unchanged) {
+        return {
+          ...current,
+          additionalModelOptionsCacheFetchedAt: now,
+        }
+      }
+
       return {
         ...current,
+        additionalModelOptionsCache: additionalModelOptions,
         additionalModelOptionsCacheFetchedAt: now,
       }
-    }
+    })
 
-    return {
-      ...current,
-      additionalModelOptionsCache: additionalModelOptions,
-      additionalModelOptionsCacheFetchedAt: now,
-    }
-  })
+    logForDebugging(
+      `[ProviderModels] refreshed ${additionalModelOptions.length} models from ${fetched.endpoint}`,
+    )
+  } catch (error) {
+    const mapped = toDiscoveryError(error)
+    const detail =
+      mapped.statusCode !== undefined
+        ? `${mapped.type}, status=${mapped.statusCode}`
+        : mapped.type
 
-  logForDebugging(
-    `[ProviderModels] refreshed ${additionalModelOptions.length} models from ${fetched.endpoint}`,
-  )
+    logForDebugging(`[ProviderModels] model discovery failed: ${detail}`)
+
+    if (interactive) {
+      throw mapped
+    }
+  }
 }
 
 export function startProviderModelDiscovery(): void {
