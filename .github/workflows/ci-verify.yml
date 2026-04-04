@@ -24,3 +24,11 @@ jobs:
       - name: Verify build
         run: bun run verify
 
+      - name: Smoke packages (core)
+        run: bun run smoke:packages:core
+
+      - name: Smoke packages (gateway)
+        env:
+          SMOKE_GATEWAY_BASE_URL: ${{ secrets.SMOKE_GATEWAY_BASE_URL }}
+          SMOKE_GATEWAY_API_KEY: ${{ secrets.SMOKE_GATEWAY_API_KEY }}
+        run: bun run smoke:packages:gateway

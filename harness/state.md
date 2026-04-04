@@ -152,3 +152,13 @@
   - gui 通过
   - gateway 通过（`http://localhost:8086/v1/models`, models=9）
   - all 通过
+- CI `verify` 已补充分层 smoke：
+  - `smoke:packages:core`
+  - `smoke:packages:gateway`
+  - gateway 依赖 Secrets：`SMOKE_GATEWAY_BASE_URL`、`SMOKE_GATEWAY_API_KEY`
+- 新增运维文档：`docs/release/gateway-smoke-and-login.md`
+- 新增登录等效验收脚本：`bun run smoke:login-gateway`
+  - 脚本对齐 `/login` 平台路径核心逻辑：保存 `ANTHROPIC_BASE_URL/KEY` + 清理 provider flags + 强制刷新模型
+  - 本地验收通过：`http://localhost:8086` 场景发现 9 个模型并写入缓存
+- 已修复 brand-guard 阻断：清理 `packages/computer-use-mcp` 中一处 legacy 品牌注释
+- 最新验证：`bun run verify` 通过
