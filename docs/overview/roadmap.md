@@ -70,43 +70,51 @@
 
 ## M1：`/models` 动态模型发现
 
-状态：`当前进行中`
+状态：`已完成（网关优先路径）`
 
 目标：让第三方 provider 模型列表从静态枚举切到动态优先。
 
-范围：
+范围（已落地）：
 
-- 以 `openai-compatible` 为第一落点
-- 复用现有 `additionalModelOptionsCache` 接口先打通最小路径
-- 增加缓存、TTL、失败降级
+- 模型发现切换为网关驱动（`ANTHROPIC_BASE_URL`）
+- 复用 `additionalModelOptionsCache` 进行缓存
+- 支持强制刷新与定时刷新
+- 失败降级为不阻断模型选择主流程
 
-验收：
+验收（已达成）：
 
-- 第三方模型列表可动态刷新
+- 网关模型列表可动态刷新
 - 网络失败不阻断模型选择流程
 - `bun run verify` 通过
 
 ## M2：网关优先接入
 
-状态：`当前进行中`
+状态：`已完成`
 
 目标：客户端只保留 anthropic-compatible 主链，协议切换下沉网关。
 
-策略：
+策略（已落地）：
 
 - 客户端统一通过 `ANTHROPIC_BASE_URL` 对接网关
 - 不再继续扩展客户端 openai 协议适配层
-- `/models` 由网关聚合返回（支持 `/models` 与 `/v1/models`）
+- `/models` 由网关聚合返回，并按 base URL 自动映射：
+  - `http://host` -> `/v1/models`
+  - `http://host/vN` -> `/models`
 
-验收：
+验收（已达成）：
 
 - 客户端不再承担 openai 协议转换
 - 网关可对接多上游并对客户端暴露统一能力
+- 已新增分层 smoke：
+  - `bun run smoke:packages:core`
+  - `bun run smoke:packages:gateway`
+  - `bun run smoke:login-gateway`
+- `CI Verify` 已接入 core + gateway smoke（gateway 依赖 secrets）
 - `bun run verify` 通过
 
 ## M3：`anthropic-compatible` 补强
 
-状态：`待开始`
+状态：`下一阶段`
 
 目标：在当前可用能力基础上做一致性补强，不做大重构。
 
@@ -142,15 +150,15 @@
 
 ## 最近进展
 
-- 已删除 `src/utils/telemetry/bigqueryExporter.ts` 这类无引用孤岛旧实现
-- 已将 `src/services/analytics/metadata.ts` 迁移为中性的 `src/services/toolLogging/metadata.ts`
-- 已完成对应使用点迁移，并通过 `bun run verify`
-- 已完成 `src/services/analytics/index.ts` 类型边界中性化，统一收口为 `SafeEventValue / PiiEventValue`
-- 已确认本仓库当前策略为“不保留兼容层，直接修复断点”
-- 已确认 `anthropic-compatible` 在当前系统中可通过 `ANTHROPIC_BASE_URL` 路径运行
-- 已确认当前主要缺口转为网关能力对齐（模型聚合返回与错误语义）
+- 已删除 codex 相关能力与 wiring，并完成二次净化
+- 登录流程已改为平台输入 `ANTHROPIC_BASE_URL/KEY` 并自动触发模型刷新
+- 已合并 8 个本地 package 至根目录 `packages/*`
+- 已新增并通过分层 smoke 与登录等效验收：
+  - `smoke:packages:{core,gui,gateway,all}`
+  - `smoke:login-gateway`
+- 已补充运维文档：`docs/release/gateway-smoke-and-login.md`
 
 ## 当前推荐动作
 
-- 推荐下一步：`build`
-- 当前 build 目标：执行 `M2` 网关优先收口，保持客户端协议层最小化
+- 推荐下一步：`M3`
+- 当前 M3 目标：补齐 anthropic-compatible 的错误语义与诊断一致性，不做协议层重构

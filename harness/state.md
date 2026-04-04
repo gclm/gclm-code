@@ -172,3 +172,11 @@
 - 验证结果：
   - `bun run brand:guard` 通过
   - `bun run smoke:packages:gui` 通过
+- 已完成 docs 下一步 1+2 开发：
+  - 1) `docs/overview/roadmap.md` 已将 M2 收口为“已完成”，并同步 M1/M3 当前状态
+  - 2) 新增 `docs/release/release-gate.md`（手动发版前必过清单）
+- `docs/README.md` 已补充新文档索引（gateway 验收 + release gate + overview）
+- 校验结果：
+  - `bun run verify` 通过
+  - `bun run smoke:packages:gateway` 通过（无 env 时按预期 skip）
+  - `SMOKE_GATEWAY_* bun run smoke:login-gateway` 通过（discovered=9）
