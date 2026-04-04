@@ -1,13 +1,12 @@
 import axios from 'axios'
 import isEqual from 'lodash-es/isEqual.js'
-import { getCodexOAuthTokens, getAnthropicApiKey } from '../../utils/auth.js'
+import { getAuthHeaders } from '../../utils/http.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { getAPIProvider } from '../../utils/model/providers.js'
 import { isEssentialTrafficOnly } from '../../utils/privacyLevel.js'
 import type { ModelOption } from '../../utils/model/modelOptions.js'
 
-const DEFAULT_OPENAI_MODELS_BASE_URL = 'https://api.openai.com/v1'
 const DEFAULT_REFRESH_TTL_MS = 10 * 60 * 1000
 const REFRESH_INTERVAL_MS = 30 * 60 * 1000
 
@@ -22,30 +21,21 @@ function getRefreshTtlMs(): number {
     : DEFAULT_REFRESH_TTL_MS
 }
 
-function getModelsBaseUrl(): string {
-  const raw =
-    process.env.OPENAI_BASE_URL ||
-    process.env.ANTHROPIC_BASE_URL ||
-    DEFAULT_OPENAI_MODELS_BASE_URL
-  return raw.endsWith('/') ? raw.slice(0, -1) : raw
+function trimTrailingSlash(url: string): string {
+  return url.endsWith('/') ? url.slice(0, -1) : url
 }
 
-function getAuthHeaders(): Record<string, string> | null {
-  if (process.env.OPENAI_API_KEY) {
-    return { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` }
-  }
+function getGatewayBaseUrl(): string | null {
+  const baseUrl = process.env.ANTHROPIC_BASE_URL
+  if (!baseUrl) return null
+  return trimTrailingSlash(baseUrl)
+}
 
-  const codexTokens = getCodexOAuthTokens()
-  if (codexTokens?.accessToken) {
-    return { Authorization: `Bearer ${codexTokens.accessToken}` }
-  }
-
-  const apiKey = getAnthropicApiKey()
-  if (apiKey) {
-    return { Authorization: `Bearer ${apiKey}` }
-  }
-
-  return null
+function getCandidateModelEndpoints(baseUrl: string): string[] {
+  return [
+    `${baseUrl}/models`,
+    `${baseUrl}/v1/models`,
+  ]
 }
 
 function getStringField(
@@ -104,8 +94,40 @@ function toModelOptions(modelIds: string[]): ModelOption[] {
   return unique.map(id => ({
     value: id,
     label: id,
-    description: 'Discovered via /models',
+    description: 'Discovered via gateway /models',
   }))
+}
+
+async function fetchModelsFromGateway(
+  endpoints: string[],
+  headers: Record<string, string>,
+): Promise<{ endpoint: string; modelIds: string[] } | null> {
+  for (const endpoint of endpoints) {
+    try {
+      const response = await axios.get<unknown>(endpoint, {
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        timeout: 5000,
+      })
+
+      const modelIds = extractModelIds(response.data)
+      if (modelIds.length > 0) {
+        return { endpoint, modelIds }
+      }
+
+      logForDebugging(
+        `[ProviderModels] endpoint responded but no model ids: ${endpoint}`,
+      )
+    } catch (error) {
+      logForDebugging(
+        `[ProviderModels] endpoint failed: ${endpoint} (${axios.isAxiosError(error) ? (error.response?.status ?? error.code) : 'unknown'})`,
+      )
+    }
+  }
+
+  return null
 }
 
 export async function refreshProviderModelOptions(
@@ -114,7 +136,16 @@ export async function refreshProviderModelOptions(
   if (isEssentialTrafficOnly()) {
     return
   }
-  if (getAPIProvider() !== 'openai') {
+
+  // Gateway-first: provider aggregation lives in the gateway behind ANTHROPIC_BASE_URL.
+  // We keep first-party untouched and avoid client-side provider protocol switching.
+  if (getAPIProvider() === 'firstParty') {
+    return
+  }
+
+  const gatewayBaseUrl = getGatewayBaseUrl()
+  if (!gatewayBaseUrl) {
+    logForDebugging('[ProviderModels] skipped: ANTHROPIC_BASE_URL not set')
     return
   }
 
@@ -128,57 +159,43 @@ export async function refreshProviderModelOptions(
     return
   }
 
-  const authHeaders = getAuthHeaders()
-  if (!authHeaders) {
-    logForDebugging('[ProviderModels] skipped: no auth header source')
+  const authResult = getAuthHeaders()
+  if (authResult.error) {
+    logForDebugging(`[ProviderModels] skipped: ${authResult.error}`)
     return
   }
 
-  const endpoint = `${getModelsBaseUrl()}/models`
+  const endpoints = getCandidateModelEndpoints(gatewayBaseUrl)
+  const fetched = await fetchModelsFromGateway(endpoints, authResult.headers)
 
-  try {
-    const response = await axios.get<unknown>(endpoint, {
-      headers: {
-        ...authHeaders,
-        'Content-Type': 'application/json',
-      },
-      timeout: 5000,
-    })
+  if (!fetched) {
+    logForDebugging('[ProviderModels] all gateway /models endpoints failed')
+    return
+  }
 
-    const modelIds = extractModelIds(response.data)
-    if (modelIds.length === 0) {
-      logForDebugging('[ProviderModels] no model ids found in /models response')
-      return
-    }
-
-    const additionalModelOptions = toModelOptions(modelIds)
-    saveGlobalConfig(current => {
-      const unchanged = isEqual(
-        current.additionalModelOptionsCache,
-        additionalModelOptions,
-      )
-      if (unchanged) {
-        return {
-          ...current,
-          additionalModelOptionsCacheFetchedAt: now,
-        }
-      }
-
+  const additionalModelOptions = toModelOptions(fetched.modelIds)
+  saveGlobalConfig(current => {
+    const unchanged = isEqual(
+      current.additionalModelOptionsCache,
+      additionalModelOptions,
+    )
+    if (unchanged) {
       return {
         ...current,
-        additionalModelOptionsCache: additionalModelOptions,
         additionalModelOptionsCacheFetchedAt: now,
       }
-    })
+    }
 
-    logForDebugging(
-      `[ProviderModels] refreshed ${additionalModelOptions.length} models from ${endpoint}`,
-    )
-  } catch (error) {
-    logForDebugging(
-      `[ProviderModels] refresh failed: ${axios.isAxiosError(error) ? (error.response?.status ?? error.code) : 'unknown'}`,
-    )
-  }
+    return {
+      ...current,
+      additionalModelOptionsCache: additionalModelOptions,
+      additionalModelOptionsCacheFetchedAt: now,
+    }
+  })
+
+  logForDebugging(
+    `[ProviderModels] refreshed ${additionalModelOptions.length} models from ${fetched.endpoint}`,
+  )
 }
 
 export function startProviderModelDiscovery(): void {

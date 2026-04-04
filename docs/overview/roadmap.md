@@ -9,7 +9,7 @@
 接下来的工作顺序改为务实版实施路径：
 
 1. `M1`：优先实现 `/models` 动态模型发现（含缓存/TTL/降级）
-2. `M2`：接入 `openai-compatible` 请求通路（可复用 OpenAI SDK）
+2. `M2`：网关优先接入（客户端统一 anthropic-compatible，不再扩展 openai 协议适配）
 3. `M3`：`anthropic-compatible` 能力补强（保持现有可用路径，不做重构）
 4. `M4`：收尾清理（删除重复分支、回写文档、稳定验证）
 
@@ -86,22 +86,22 @@
 - 网络失败不阻断模型选择流程
 - `bun run verify` 通过
 
-## M2：`openai-compatible` 请求接入
+## M2：网关优先接入
 
-状态：`待开始`
+状态：`当前进行中`
 
-目标：快速打通通用 OpenAI-compatible 请求链路。
+目标：客户端只保留 anthropic-compatible 主链，协议切换下沉网关。
 
 策略：
 
-- 允许接入 OpenAI SDK
-- 不重做 OAuth：复用现有 Codex OAuth token 存储与刷新机制
-- 通过 provider 配置完成 endpoint/key/token 注入
+- 客户端统一通过 `ANTHROPIC_BASE_URL` 对接网关
+- 不再继续扩展客户端 openai 协议适配层
+- `/models` 由网关聚合返回（支持 `/models` 与 `/v1/models`）
 
 验收：
 
-- 至少 1 个 openai-compatible endpoint 可完成请求（含流式）
-- 错误分类可区分 auth/model/rate-limit/schema
+- 客户端不再承担 openai 协议转换
+- 网关可对接多上游并对客户端暴露统一能力
 - `bun run verify` 通过
 
 ## M3：`anthropic-compatible` 补强
@@ -148,9 +148,9 @@
 - 已完成 `src/services/analytics/index.ts` 类型边界中性化，统一收口为 `SafeEventValue / PiiEventValue`
 - 已确认本仓库当前策略为“不保留兼容层，直接修复断点”
 - 已确认 `anthropic-compatible` 在当前系统中可通过 `ANTHROPIC_BASE_URL` 路径运行
-- 已确认当前主要缺口在模型发现层（`/models` 动态拉取）
+- 已确认当前主要缺口转为网关能力对齐（模型聚合返回与错误语义）
 
 ## 当前推荐动作
 
 - 推荐下一步：`build`
-- 当前 build 目标：执行 `M1`，先打通 `/models` 动态发现与缓存降级
+- 当前 build 目标：执行 `M2` 网关优先收口，保持客户端协议层最小化

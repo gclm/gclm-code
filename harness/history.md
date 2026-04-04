@@ -20,3 +20,5 @@
 - 完成 M1 最小实现：新增 openai provider `/models` 动态发现（后台触发 + 定时刷新），结果写入 `additionalModelOptionsCache`。
 - 新增缓存时间戳 `additionalModelOptionsCacheFetchedAt`，引入 TTL 与失败降级（刷新失败保留旧缓存）。
 - 保持 OAuth 策略不变：未做 OAuth 重设计，继续复用现有 Codex OAuth token 链路。
+- 根据新决策切换为网关优先：回滚客户端 openai-compatible 适配提交（`229802e`、`f6ffe92`），请求协议统一回到 anthropic-compatible。
+- 动态模型发现改为网关路径：优先 `ANTHROPIC_BASE_URL/models`，失败回退 `ANTHROPIC_BASE_URL/v1/models`。

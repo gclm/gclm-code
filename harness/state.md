@@ -6,16 +6,16 @@
 
 - Active phase：`M1 - /models 动态模型发现（进行中）`
 - 当前 focus：
-  - 落地务实版新方案：`M1 -> M2 -> M3 -> M4`
-  - 优先解决模型发现层缺口（`/models` 动态拉取）
-  - 保持当前 `anthropic-compatible` 可用路径稳定
+  - 落地网关优先方案：客户端统一走 `anthropic-compatible + ANTHROPIC_BASE_URL`
+  - 协议切换与多 provider 聚合全部下沉网关
+  - 模型发现改为优先读取网关 `/models`（含 `/v1/models` 回退）
 
 ## 当前判断
 
 - 这是一次 `scope-refresh`，不是全新规划。
 - 发布链路已基本落地，当前不以 release 作为主阻塞项。
 - telemetry 第二批“直接删除”已推进较多，剩余重点是语义迁移而不是继续粗删。
-- 当前不做 OAuth 大重构，避免为接入 OpenAI SDK 额外引入改造成本
+- 当前不做 OAuth 大重构，客户端维持最小认证逻辑，provider 差异交给网关
 
 ## 已完成
 
@@ -70,14 +70,14 @@
 ## 新执行顺序（务实版）
 
 1. `M1`：`/models` 动态模型发现
-2. `M2`：`openai-compatible` 请求接入（可使用 OpenAI SDK）
+2. `M2`：网关优先接入（客户端不再扩展 openai 协议适配）
 3. `M3`：`anthropic-compatible` 补强
 4. `M4`：收尾清理
 
 ## OAuth 策略结论
 
-- 当前不建议为接入 OpenAI SDK 做 OAuth 重设计
-- 建议复用现有 Codex OAuth token 存储/刷新链路，仅在请求接入层适配
+- 当前不建议因 provider 协议适配做 OAuth 重设计
+- 客户端维持已有 token 链路，网关负责上游认证与路由编排
 - 触发 OAuth 重设计的条件：
   - 同一会话需要并发多 provider token 编排
   - 现有 token lifecycle 无法覆盖新 provider 的刷新/吊销语义
