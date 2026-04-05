@@ -27,27 +27,17 @@ on:
         type: boolean
 
 jobs:
-  publish:
+  meta:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      npm_tag: ${{ steps.meta.outputs.npm_tag }}
+      publish_npm: ${{ steps.meta.outputs.publish_npm }}
+      attach_assets: ${{ steps.meta.outputs.attach_assets }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.3.11'
-
-      - name: Setup Node (npm)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
 
       - name: Resolve release metadata
         id: meta
@@ -58,6 +48,10 @@ jobs:
             NPM_TAG="latest"
             PUBLISH_NPM="true"
             ATTACH_ASSETS="true"
+            if [ "$TAG" != "v${VERSION}" ]; then
+              echo "Tag ${TAG} does not match package.json version v${VERSION}" >&2
+              exit 1
+            fi
           else
             TAG_INPUT="${{ inputs.release_tag }}"
             if [ -n "$TAG_INPUT" ]; then
@@ -76,42 +70,268 @@ jobs:
           echo "publish_npm=${PUBLISH_NPM}" >> "$GITHUB_OUTPUT"
           echo "attach_assets=${ATTACH_ASSETS}" >> "$GITHUB_OUTPUT"
 
+  verify:
+    runs-on: ubuntu-latest
+    needs: meta
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.11'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
       - name: Verify build
         run: bun run verify
 
-      - name: Verify npm tarball installability
-        run: bun run smoke:npm-install
+  build-darwin-x64:
+    runs-on: macos-15-intel
+    needs: [meta, verify]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Prepare release artifacts
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.11'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build macOS x64 binary
+        run: bun run build
+
+      - name: Prepare artifact
         run: |
-          mkdir -p release-assets/bin
-          cp gc release-assets/bin/gc
-          chmod +x release-assets/bin/gc
-          ln -sf gc release-assets/bin/claude
-          sha256sum release-assets/bin/gc > release-assets/gc-linux-x64.sha256
-          tar -czf "release-assets/gclm-code-${{ steps.meta.outputs.version }}-linux-x64.tar.gz" -C release-assets bin
+          mkdir -p dist/release
+          cp gc dist/release/gc-darwin-x64
+          chmod +x dist/release/gc-darwin-x64
+          ./dist/release/gc-darwin-x64 --version
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gc-darwin-x64
+          path: dist/release/gc-darwin-x64
+          if-no-files-found: error
+
+  build-darwin-arm64:
+    runs-on: macos-15
+    needs: [meta, verify]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.11'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build macOS arm64 binary
+        run: bun run build
+
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist/release
+          cp gc dist/release/gc-darwin-arm64
+          chmod +x dist/release/gc-darwin-arm64
+          ./dist/release/gc-darwin-arm64 --version
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gc-darwin-arm64
+          path: dist/release/gc-darwin-arm64
+          if-no-files-found: error
+
+  package-mac-npm:
+    runs-on: ubuntu-latest
+    needs: [meta, build-darwin-x64, build-darwin-arm64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node (npm)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download macOS x64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: gc-darwin-x64
+          path: dist/release-inputs
+
+      - name: Download macOS arm64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: gc-darwin-arm64
+          path: dist/release-inputs
+
+      - name: Prepare staged npm packages
+        run: |
+          node ./scripts/prepare-mac-binary-npm.mjs \
+            --output-dir dist/npm-release \
+            --version "${{ needs.meta.outputs.version }}" \
+            --darwin-x64-binary dist/release-inputs/gc-darwin-x64 \
+            --darwin-arm64-binary dist/release-inputs/gc-darwin-arm64
+
+      - name: Pack staged npm packages
+        run: |
+          node ./scripts/pack-mac-binary-npm.mjs \
+            --staging-dir dist/npm-release \
+            --output-dir dist/npm-tarballs
+
+      - name: Prepare GitHub release assets
+        run: |
+          node ./scripts/prepare-mac-release-assets.mjs \
+            --output-dir release-assets \
+            --version "${{ needs.meta.outputs.version }}" \
+            --darwin-x64-binary dist/release-inputs/gc-darwin-x64 \
+            --darwin-arm64-binary dist/release-inputs/gc-darwin-arm64
+
+      - name: Upload staged npm packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-npm-staging
+          path: dist/npm-release
+          if-no-files-found: error
+
+      - name: Upload packed npm tarballs
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-npm-tarballs
+          path: dist/npm-tarballs
+          if-no-files-found: error
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-release-assets
+          path: release-assets
+          if-no-files-found: error
+
+  smoke-darwin-x64:
+    runs-on: macos-15-intel
+    needs: [meta, package-mac-npm]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node (npm)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download staged npm packages
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-npm-staging
+          path: dist/npm-release
+
+      - name: Smoke staged npm packages on macOS x64
+        run: |
+          node ./scripts/smoke-mac-binary-npm.mjs \
+            --skip-prepare \
+            --staging-dir dist/npm-release \
+            --version "${{ needs.meta.outputs.version }}"
+
+  smoke-darwin-arm64:
+    runs-on: macos-15
+    needs: [meta, package-mac-npm]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node (npm)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download staged npm packages
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-npm-staging
+          path: dist/npm-release
+
+      - name: Smoke staged npm packages on macOS arm64
+        run: |
+          node ./scripts/smoke-mac-binary-npm.mjs \
+            --skip-prepare \
+            --staging-dir dist/npm-release \
+            --version "${{ needs.meta.outputs.version }}"
+
+  publish-release-assets:
+    runs-on: ubuntu-latest
+    needs: [meta, package-mac-npm, smoke-darwin-x64, smoke-darwin-arm64]
+    if: ${{ needs.meta.outputs.attach_assets == 'true' }}
+    permissions:
+      contents: write
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-release-assets
+          path: release-assets
 
       - name: Publish GitHub Release assets
-        if: ${{ steps.meta.outputs.attach_assets == 'true' }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.meta.outputs.tag }}
+          tag_name: ${{ needs.meta.outputs.tag }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
           files: |
-            release-assets/gc-linux-x64.sha256
-            release-assets/gclm-code-${{ steps.meta.outputs.version }}-linux-x64.tar.gz
+            release-assets/*.tar.gz
+            release-assets/*.sha256
 
-      - name: Publish to npm
-        if: ${{ steps.meta.outputs.publish_npm == 'true' }}
-        run: npm publish --access public --tag "${{ steps.meta.outputs.npm_tag }}"
+  publish-npm:
+    runs-on: ubuntu-latest
+    needs: [meta, package-mac-npm, smoke-darwin-x64, smoke-darwin-arm64]
+    if: ${{ needs.meta.outputs.publish_npm == 'true' }}
+    steps:
+      - name: Setup Node (npm)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download packed npm tarballs
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-npm-tarballs
+          path: dist/npm-tarballs
+
+      - name: Publish macOS architecture packages
+        run: |
+          npm publish --access public --tag "${{ needs.meta.outputs.npm_tag }}" \
+            "dist/npm-tarballs/gclm-code-darwin-x64-${{ needs.meta.outputs.version }}.tgz"
+          npm publish --access public --tag "${{ needs.meta.outputs.npm_tag }}" \
+            "dist/npm-tarballs/gclm-code-darwin-arm64-${{ needs.meta.outputs.version }}.tgz"
+          npm publish --access public --tag "${{ needs.meta.outputs.npm_tag }}" \
+            "dist/npm-tarballs/gclm-code-${{ needs.meta.outputs.version }}.tgz"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+  tag-stable:
+    runs-on: ubuntu-latest
+    needs: [meta, publish-npm]
+    if: ${{ needs.meta.outputs.publish_npm == 'true' && needs.meta.outputs.npm_tag == 'latest' }}
+    steps:
+      - name: Setup Node (npm)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
       - name: Tag current version as stable
-        if: ${{ steps.meta.outputs.publish_npm == 'true' && steps.meta.outputs.npm_tag == 'latest' }}
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          npm dist-tag add gclm-code@${VERSION} stable
+        run: npm dist-tag add gclm-code@${{ needs.meta.outputs.version }} stable
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

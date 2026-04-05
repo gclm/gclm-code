@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-04-04（M4 收尾完成）
+更新时间：2026-04-05（M4 收尾完成）
 
 ## 当前阶段
 
@@ -17,13 +17,32 @@
 - 发布链路已基本落地，当前不以 release 作为主阻塞项。
 - 当前重点从“新增 provider 适配”转为“客户端收敛到网关参数化入口”。
 - 客户端不继续扩展 provider 协议分支，统一依赖 `ANTHROPIC_BASE_URL/KEY` + 网关能力。
+- 仓库开发态继续保留 `workspace:*` 结构，但对外交付主路径已切到 `mac binary-first`：
+  - npm 渠道当前主形态为 `gclm-code` + `gclm-code-darwin-x64` + `gclm-code-darwin-arm64`
+  - GitHub Release 同步产出双架构 mac 资产与 `sha256`
+- 若后续重新投入 release 架构，长期优先探索 `binary-first`（原 Option B）作为产品分发主形态：
+  - 当前进一步收敛为 `mac binary-first`：优先支持 `darwin-x64`、`darwin-arm64`
+  - `linux-x64` 暂不纳入首批目标，除非后续产品侧重新确认有明显收益
+  - 若需要单一 mac 下载入口，可评估产出一个对外“macOS 通用包”，内部仍以双架构构建为基础
+  - 其余平台按实现复杂度决定是否补齐，不作为首批阻塞
+  - 该方向的价值主要在后期扩展性与交付一致性，不在当前短期发布收益
+- 若通过 npm 分发二进制，当前推荐形态不是继续发布源码 workspace 包，而是：
+  - 根包 `gclm-code` 作为 npm 入口与命令包装层
+  - 子包按架构拆分为 `gclm-code-darwin-x64` 与 `gclm-code-darwin-arm64`
+  - 根包通过 `optionalDependencies + os/cpu + bin` 选择并转发到匹配架构二进制
+  - 不优先推荐“单个 npm 包同时内置两份 mac 二进制”，原因是当前单个 `gc` 本地体积已约 171MB，合包后体积会显著上升
+  - 当前已落地首批组装骨架：通过脚本生成三包目录，并在本地验证 `npm pack + launcher` 主链
+- 不推荐直接复用 `references/cli` 作为 npm 发布方案蓝本：
+  - 该参考项目保留 `workspace:*` 依赖且 `prepublishOnly` 阻止直发，更接近受控内部发布链路，而非面向 npm 消费者的安装模型
+- “把 workspace 一起打进二进制”只能解决一部分模块解析问题，不能替代运行时能力分发：
+  - 当前 external 包中仍包含依赖 `sharp`、`bun:ffi`、`osascript`、`swiftc`、`screencapture`、`rec/play` 等宿主能力的模块
+  - 若转为二进制优先，还需同时解决多平台构建矩阵与 sidecar/runtime 依赖交付
 
 ## 已完成
 
-- 已新增 `smoke:npm-install`：在临时空目录执行 `npm pack + npm i` 并校验 8 个本地 file-deps 可解析；`release-npm` 已接入该校验作为发布前门禁
 - `scripts/build.ts` 已优化为统一产物命名：默认输出 `gc`、dev 输出 `gc-dev`，并联动更新 smoke/install/release 引用
 - release 产物结构已调整为 `bin/gc`（默认可执行）+ `bin/claude -> gc` 软链，并通过 tar 包对外分发
-- `release-npm` workflow 已增强：支持 `workflow_dispatch` 手动参数（release_tag/publish_to_npm/npm_tag/attach_release_assets），并支持将编译产物上传到 GitHub Releases
+- `release-npm` workflow 已切换为 `mac binary-first` 主链：双 mac runner 构建、三包 staging/pack、双架构 smoke、按顺序发布 npm，并可同步上传 GitHub Release 资产
 - npm 包名已从 `@gclm/gclm-code` 调整为 `gclm-code`，并同步 CLI 默认 PACKAGE_URL、发布 workflow 与相关文档
 - 已为 npm 发布增加 `files` 白名单（`gc`、`README.md`、`install.sh`、`packages`），`npm pack --dry-run` 已验证发布内容收敛为 42 个文件
 - README 已重写为“参考 free-code 项目实践”表述，并同步网关优先策略、验收入口与发布门禁说明
@@ -203,3 +222,29 @@
   - 401/403、404、429、5xx、网络超时/连接失败均映射为明确提示文案
   - `/login` 平台保存后刷新改为 `refreshProviderModelOptions({ force: true, interactive: true })`
   - `smoke:login-gateway` 新增 `SMOKE_GATEWAY_EXPECT_ERROR` 断言能力，可回归错误语义稳定性
+- 已移除 legacy workspace 发布兼容链：
+  - 不再维护 `prepack/postpack` 的 `workspace:* -> file:` 重写
+  - 不再维护 `smoke:npm-install`
+  - 仓库根 `package.json` 已改为 `private: true`，防止误走根目录直发
+  - 对外交付只保留 `mac binary-first` 主路径
+- 已新增 mac binary-first 组装与发布脚手架：
+  - `node ./scripts/prepare-mac-binary-npm.mjs`
+  - `node ./scripts/pack-mac-binary-npm.mjs`
+  - `node ./scripts/prepare-mac-release-assets.mjs`
+  - `bun run smoke:mac-binary-npm`
+- `release-npm` 当前门禁已切换为：
+  - `verify`
+  - `build-darwin-x64`
+  - `build-darwin-arm64`
+  - `package-mac-npm`
+  - `smoke-darwin-x64`
+  - `smoke-darwin-arm64`
+- 当前骨架能力：
+  - 可生成 `dist/npm/gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64`
+  - 可生成三包 npm tarball 与双架构 GitHub Release 资产
+  - 根包 launcher 已能按 `process.arch` 选择架构子包并转发到真实二进制
+  - 本地已验证三包 `npm pack` 成功
+  - 本地已验证模拟安装布局下 `darwin-x64` launcher 执行 `gc --version` 成功
+- 当前已识别的实现细节：
+  - 本地目录 `npm install` 会优先走 symlink 路径，不足以代表未来 registry 安装对 `optionalDependencies` 的最终行为
+  - 因此现阶段 smoke 采用 `npm pack + 模拟 installed layout` 组合验证，真实 registry/install 闭环留待 CI 阶段补齐

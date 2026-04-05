@@ -26,7 +26,7 @@
 
 已完成内容：
 
-- npm 包名、`bin` 与 `publishConfig` 已配置完成
+- npm 包名、CLI 入口与 release workflow 已配置完成
 - `CI Verify` 工作流已落地
 - `Release NPM` 工作流已落地
 - 第二批 telemetry 清理中的多项“直接删除”已完成
@@ -162,8 +162,19 @@
   - `smoke:packages:{core,gui,gateway,all}`
   - `smoke:login-gateway`
 - 已补充运维文档：`docs/release/gateway-smoke-and-login.md`
+- `release-npm` workflow 已切换到 `mac binary-first`：
+  - 使用 `macos-15-intel` / `macos-15` 双 runner 分别构建 `darwin-x64` / `darwin-arm64`
+  - 统一组装 `gclm-code` + 两个架构子包
+  - 在双架构 runner 上分别执行 launcher smoke
+  - npm 发布顺序固定为两个子包先发、根包后发
 
 ## 当前推荐动作
 
 - 推荐下一步：进入持续维护周期（按 release gate 执行发版验证）
 - 重点关注：网关可用性监控、错误语义回归矩阵、文档与实现同步
+- release 主链已切到 `mac binary-first + npm 根包/架构子包`
+- 仓库根 `package.json` 已改为 `private: true`，避免误走 legacy 直发路径
+- 若继续投入 release 能力，优先补：
+  - codesign / notarization
+  - 真实 registry 安装后的双架构闭环验证
+  - 视产品需要再评估 Linux / Windows 子包

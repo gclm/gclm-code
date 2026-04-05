@@ -17,13 +17,15 @@
 ## 3. release（发布与交付）
 
 - `docs/release/npm-manual-release-guide.md`
-  - `gclm-code` 手动发布流程
+  - mac binary-first 手动发布流程（根包 + 架构子包）
 - `docs/release/github-actions-release-plan.md`
-  - GitHub Actions 自动发布设计
+  - GitHub Actions 自动发布设计（双 mac runner + 三包顺序发布）
+- `docs/release/mac-binary-first-npm-plan.md`
+  - mac binary-first + npm 分发设计（根包 + 架构子包）
 - `docs/release/gateway-smoke-and-login.md`
   - 网关 smoke 与登录验收
 - `docs/release/release-gate.md`
-  - 手动发版前必过清单（release gate，含 smoke:login-gateway:matrix）
+  - 当前发布门禁说明（mac binary-first）
 - `docs/release/FEATURES.en.md`
   - 功能开关审计（英文）
 - `docs/release/FEATURES.zh-CN.md`

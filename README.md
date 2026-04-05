@@ -11,11 +11,17 @@ Gclm Code 是面向团队交付的命令行 AI 编码助手。
 
 ## 安装
 
-### npm 安装（推荐）
+### npm 安装（推荐，当前仅支持 macOS）
 
 ```bash
 npm i -g gclm-code
 ```
+
+说明：
+
+- 当前 npm 对外交付已切到 `mac binary-first`
+- 首批仅支持 `darwin-x64` 与 `darwin-arm64`
+- Linux / Windows 暂未纳入当前 npm 发布范围
 
 安装后可用命令：
 
@@ -85,6 +91,8 @@ bun run smoke:login-gateway:matrix
 手动发版前请先执行 release gate：
 
 - `docs/release/release-gate.md`
+
+当前仓库根 `package.json` 仅用于开发工作区，不作为对外直发入口。
 
 本项目当前以手动发布为主，PR 不是发布前置条件。
 

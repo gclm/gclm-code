@@ -1,7 +1,7 @@
 {
   "name": "gclm-code",
   "version": "1.0.0",
-  "private": false,
+  "private": true,
   "description": "Customized Bun CLI workspace for the Gclm Code build.",
   "type": "module",
   "packageManager": "bun@1.3.11",
@@ -29,7 +29,10 @@
     "smoke:packages:gateway": "bun run ./scripts/smoke-packages.mjs gateway",
     "smoke:login-gateway": "bun run ./scripts/smoke-login-gateway.mjs",
     "smoke:login-gateway:matrix": "bun run ./scripts/smoke-login-gateway-matrix.mjs",
-    "smoke:npm-install": "bun run ./scripts/smoke-npm-install.mjs"
+    "prepare:mac-binary-npm": "node ./scripts/prepare-mac-binary-npm.mjs",
+    "pack:mac-binary-npm": "node ./scripts/pack-mac-binary-npm.mjs",
+    "release-assets:mac-binary-npm": "node ./scripts/prepare-mac-release-assets.mjs",
+    "smoke:mac-binary-npm": "bun run ./scripts/smoke-mac-binary-npm.mjs"
   },
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.3.0",
@@ -126,14 +129,14 @@
     "xxhash-wasm": "^1.1.0",
     "yaml": "^2.8.3",
     "zod": "^4.3.6",
-    "audio-capture-napi": "file:./packages/audio-capture-napi",
-    "image-processor-napi": "file:./packages/image-processor-napi",
-    "modifiers-napi": "file:./packages/modifiers-napi",
-    "url-handler-napi": "file:./packages/url-handler-napi",
-    "@ant/claude-for-chrome-mcp": "file:./packages/claude-for-chrome-mcp",
-    "@ant/computer-use-input": "file:./packages/computer-use-input",
-    "@ant/computer-use-mcp": "file:./packages/computer-use-mcp",
-    "@ant/computer-use-swift": "file:./packages/computer-use"
+    "audio-capture-napi": "workspace:*",
+    "image-processor-napi": "workspace:*",
+    "modifiers-napi": "workspace:*",
+    "url-handler-napi": "workspace:*",
+    "@ant/claude-for-chrome-mcp": "workspace:*",
+    "@ant/computer-use-input": "workspace:*",
+    "@ant/computer-use-mcp": "workspace:*",
+    "@ant/computer-use-swift": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.3.11",
@@ -144,5 +147,8 @@
     "README.md",
     "install.sh",
     "packages"
+  ],
+  "workspaces": [
+    "packages/*"
   ]
 }

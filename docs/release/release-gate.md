@@ -1,67 +1,99 @@
-# Release Gate（手动发版前必过清单）
+# Release Gate（mac binary-first）
 
-本文定义手动发版前的最小放行门槛，目标是保证网关路径与本地组件回归稳定。
+本文定义 `gclm-code` 当前 mac binary-first 发布链路的最小放行门槛。
 
-## 1. 必过命令（标准集）
+目标：
+
+- 保证双 mac 架构二进制都已产出
+- 保证三包目录可组装、可打包、可 smoke
+- 保证 npm 发布顺序不会把根包先于子包发出去
+
+## 1. 必过门禁
+
+当前正式门禁以 `Release NPM` workflow 为准，至少需要以下 job 全部通过：
+
+1. `verify`
+2. `build-darwin-x64`
+3. `build-darwin-arm64`
+4. `package-mac-npm`
+5. `smoke-darwin-x64`
+6. `smoke-darwin-arm64`
+
+判定标准：
+
+- `verify` 通过，仓库基线可构建
+- 两个 mac runner 都能产出并执行自己的 `gc --version`
+- 三包 staging 目录可生成
+- 三个生成包都可执行 `npm pack`
+- 根包 launcher 在 `x64` 与 `arm64` 上都能找到匹配子包并成功启动
+
+## 2. 本地演练命令
+
+如果需要在本地或临时 runner 演练当前发布链路，推荐顺序：
 
 ```bash
 bun run verify
-bun run smoke:packages
-SMOKE_GATEWAY_BASE_URL="http://localhost:8086" \
-SMOKE_GATEWAY_API_KEY="<your-key>" \
-bun run smoke:login-gateway:matrix
+node ./scripts/prepare-mac-binary-npm.mjs \
+  --output-dir dist/npm-check \
+  --darwin-x64-binary /path/to/gc-darwin-x64 \
+  --darwin-arm64-binary /path/to/gc-darwin-arm64
+node ./scripts/pack-mac-binary-npm.mjs \
+  --staging-dir dist/npm-check \
+  --output-dir dist/npm-tarballs-check
+node ./scripts/prepare-mac-release-assets.mjs \
+  --output-dir release-assets-check \
+  --darwin-x64-binary /path/to/gc-darwin-x64 \
+  --darwin-arm64-binary /path/to/gc-darwin-arm64
+node ./scripts/smoke-mac-binary-npm.mjs \
+  --skip-prepare \
+  --staging-dir dist/npm-check
 ```
 
-判定标准：
-- 三条命令全部 `exit 0`
-- `smoke:packages` 覆盖 core/gui/gateway 三层
-- `smoke:login-gateway:matrix` 至少覆盖：
-  - 登录网关成功路径（`discovered > 0`）
-  - 404 错误语义路径（base URL 映射错误）
+说明：
 
-## 2. 网关配置核对
+- 最后一条 smoke 只覆盖“当前机器架构”
+- `x64` 与 `arm64` 双路径必须分别在对应机器或 CI runner 上补齐
 
-发版前确认：
-- `SMOKE_GATEWAY_BASE_URL` 可访问
-- `SMOKE_GATEWAY_API_KEY` 具备 `/models` 访问权限
-- base URL 映射规则符合预期：
-  - `http://host` -> `/v1/models`
-  - `http://host/vN` -> `/models`
+## 3. GitHub Actions 输入与 Secrets
 
-## 3. 错误语义扩展回归（可选）
+`Release NPM` workflow 当前支持：
 
-`smoke:login-gateway:matrix` 支持按环境变量扩展错误场景：
-- `SMOKE_GATEWAY_EXPECT_401_KEY`：无权限 key，校验 `401/403`
-- `SMOKE_GATEWAY_EXPECT_429_BASE_URL`：限流入口，校验 `429`
-- `SMOKE_GATEWAY_EXPECT_5XX_BASE_URL`：异常入口，校验 `Gateway is unavailable`
+- `release_tag`
+- `publish_to_npm`
+- `npm_tag`
+- `attach_release_assets`
 
-建议：
-- 本地或预发环境至少启用 1 个扩展错误场景
-- 生产发版窗口前执行完整矩阵
+必需 Secrets：
 
-## 4. CI 环境核对
+- `NPM_TOKEN`
 
-`CI Verify` 依赖以下 secrets：
-- `SMOKE_GATEWAY_BASE_URL`
-- `SMOKE_GATEWAY_API_KEY`
+说明：
 
-若 secrets 缺失，`smoke:packages:gateway` 将无法形成有效保护。
+- `push tag v*` 时默认直接发布到 npm `latest`
+- `workflow_dispatch` 可只做构建/打包/烟测，不必真的发布到 npm
 
-## 5. 发版执行建议（手动）
+## 4. 发布顺序
 
-推荐顺序：
-1. 执行本 gate 三条命令
-2. 更新版本号（`npm version patch|minor|major`）
-3. `npm publish --access public --tag latest`
-4. 校验：
+发布顺序固定为：
 
-```bash
-npm view gclm-code version
-npm dist-tag ls gclm-code
-```
+1. `gclm-code-darwin-x64`
+2. `gclm-code-darwin-arm64`
+3. `gclm-code`
+
+根包必须最后发布，否则 npm 消费者在安装窗口期可能拿到“根包已可见，但子包尚未可见”的不完整状态。
+
+## 5. GitHub Release 资产要求
+
+如果开启 `attach_release_assets=true`，应至少上传：
+
+- `gclm-code-<version>-darwin-x64.tar.gz`
+- `gclm-code-<version>-darwin-x64.tar.gz.sha256`
+- `gclm-code-<version>-darwin-arm64.tar.gz`
+- `gclm-code-<version>-darwin-arm64.tar.gz.sha256`
 
 ## 6. 失败处置
 
-- `verify` 失败：先修构建/品牌守卫问题，再重跑
-- `smoke:packages` 失败：按 core/gui/gateway 子项定位
-- `smoke:login-gateway:matrix` 失败：优先看失败用例名，再定位网关连通性、key 权限、模型响应结构
+- `build-darwin-x64` / `build-darwin-arm64` 失败：先定位当前 runner 上的 Bun compile 或宿主依赖问题
+- `package-mac-npm` 失败：优先检查传入的二进制路径、staging 目录内容、tarball 生成脚本
+- `smoke-darwin-x64` / `smoke-darwin-arm64` 失败：优先检查根包 launcher 是否选中了正确子包，以及下载后的二进制权限是否正常
+- `publish-npm` 失败：优先确认 tarball 名称、发布顺序、`NPM_TOKEN` 权限与目标版本是否已占用
