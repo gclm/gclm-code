@@ -42,13 +42,13 @@
 
 - `scripts/build.ts` 已优化为统一产物命名：默认输出 `gc`、dev 输出 `gc-dev`，并联动更新 smoke/install/release 引用
 - release 产物结构已调整为 `bin/gc`（默认可执行）+ `bin/claude -> gc` 软链，并通过 tar 包对外分发
-- `release-npm` workflow 已切换为 `mac binary-first` 主链：双 mac runner 构建、三包 staging/pack、双架构 smoke、按顺序发布 npm，并可同步上传 GitHub Release 资产
+- `release-npm` workflow 已切换为 `mac binary-first` 主链，并已升级为 fan-out / matrix 流水线：`meta -> preflight -> build-binary(matrix) -> package-mac-npm -> smoke-tarball(matrix) + smoke-registry(matrix) -> publish-*`
 - npm 包名已从 `@gclm/gclm-code` 调整为 `gclm-code`，并同步 CLI 默认 PACKAGE_URL、发布 workflow 与相关文档
 - 已为 npm 发布增加 `files` 白名单（`gc`、`README.md`、`install.sh`、`packages`），`npm pack --dry-run` 已验证发布内容收敛为 42 个文件
 - README 已重写为“参考 free-code 项目实践”表述，并同步网关优先策略、验收入口与发布门禁说明
 - npm 包基础发布配置已落地：`gclm-code`
 - 已补充 `.gitignore`：忽略根目录 npm tarball、本地 `release-assets-check/` 目录与 `packages/*/node_modules/`，减少发布调试时的工作区噪音
-- CI 验收工作流已落地：`bun run verify`
+- CI 验收工作流已落地，并已升级为 fan-out 结构：`preflight + build + smoke-packages(matrix)`
 - npm tag 发布工作流已落地
 - 第二批 telemetry 清理已有明显进展：
   - `feedbackSurvey*` 相关残留已不在主代码中
@@ -236,14 +236,11 @@
   - `node ./scripts/prepare-mac-release-assets.mjs`
   - `bun run smoke:mac-binary-npm`
 - `release-npm` 当前门禁已切换为：
-  - `verify`
-  - `build-darwin-x64`
-  - `build-darwin-arm64`
+  - `preflight`
+  - `build-binary`（matrix）
   - `package-mac-npm`
-  - `smoke-darwin-x64`
-  - `smoke-darwin-arm64`
-  - `registry-smoke-darwin-x64`
-  - `registry-smoke-darwin-arm64`
+  - `smoke-tarball`（matrix）
+  - `smoke-registry`（matrix）
 - 当前骨架能力：
   - 可生成 `dist/npm/gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64`
   - 可生成三包 npm tarball 与双架构 GitHub Release 资产
@@ -256,3 +253,4 @@
   - 已新增 Verdaccio 私有 registry smoke：按顺序发布三包后，再从 registry 安装根包验证消费者路径
   - 当前整体验证已提升为“staging + tarball install + private registry install”三层；其中 CI 固定覆盖后两层，staging smoke 保留为本地演练入口；公网 npm registry 闭环仍留待后续最终补齐
   - 已定位并修复 2026-04-05 两次 Actions 失败（`23992808000`、`23992815249`）的共同根因：`bun.lock` 仍保留旧的 `file:` workspace 解析结果，导致 GitHub Actions 上的 `bun install --frozen-lockfile` 报 `lockfile had changes, but lockfile is frozen`
+  - 已按 Option C 升级 workflow：平台列表由 `meta` 输出统一 `platform_matrix`，供 `build-binary`、`smoke-tarball`、`smoke-registry` 复用，便于后续追加 Linux / Windows 平台

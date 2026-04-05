@@ -12,18 +12,15 @@
 
 当前正式门禁以 `Release NPM` workflow 为准，至少需要以下 job 全部通过：
 
-1. `verify`
-2. `build-darwin-x64`
-3. `build-darwin-arm64`
-4. `package-mac-npm`
-5. `smoke-darwin-x64`
-6. `smoke-darwin-arm64`
-7. `registry-smoke-darwin-x64`
-8. `registry-smoke-darwin-arm64`
+1. `preflight`
+2. `build-binary` 矩阵中的全部平台实例
+3. `package-mac-npm`
+4. `smoke-tarball` 矩阵中的全部平台实例
+5. `smoke-registry` 矩阵中的全部平台实例
 
 判定标准：
 
-- `verify` 通过，仓库基线可构建
+- `preflight` 通过，锁文件与基础仓库门禁通过
 - 两个 mac runner 都能产出并执行自己的 `gc --version`
 - 三包 staging 目录可生成
 - 三个生成包都可执行 `npm pack`
@@ -104,8 +101,8 @@ node ./scripts/smoke-mac-binary-npm-registry.mjs \
 
 ## 6. 失败处置
 
-- `build-darwin-x64` / `build-darwin-arm64` 失败：先定位当前 runner 上的 Bun compile 或宿主依赖问题
+- `build-binary` 某个平台实例失败：先定位对应 runner 上的 Bun compile 或宿主依赖问题
 - `package-mac-npm` 失败：优先检查传入的二进制路径、staging 目录内容、tarball 生成脚本
-- `smoke-darwin-x64` / `smoke-darwin-arm64` 失败：优先检查根包 launcher 是否选中了正确子包，以及下载后的二进制权限是否正常
-- `registry-smoke-darwin-x64` / `registry-smoke-darwin-arm64` 失败：优先检查 Verdaccio 是否启动成功、登录/发布顺序是否正确、registry 安装时是否拉到了当前架构子包
+- `smoke-tarball` 某个平台实例失败：优先检查根包 launcher 是否选中了正确子包，以及下载后的二进制权限是否正常
+- `smoke-registry` 某个平台实例失败：优先检查 Verdaccio 是否启动成功、登录/发布顺序是否正确、registry 安装时是否拉到了当前架构子包
 - `publish-npm` 失败：优先确认 tarball 名称、发布顺序、`NPM_TOKEN` 权限与目标版本是否已占用

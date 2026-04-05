@@ -26,6 +26,10 @@ on:
         default: true
         type: boolean
 
+concurrency:
+  group: release-npm-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   meta:
     runs-on: ubuntu-latest
@@ -35,6 +39,7 @@ jobs:
       npm_tag: ${{ steps.meta.outputs.npm_tag }}
       publish_npm: ${{ steps.meta.outputs.publish_npm }}
       attach_assets: ${{ steps.meta.outputs.attach_assets }}
+      platform_matrix: ${{ steps.meta.outputs.platform_matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,8 +74,19 @@ jobs:
           echo "npm_tag=${NPM_TAG}" >> "$GITHUB_OUTPUT"
           echo "publish_npm=${PUBLISH_NPM}" >> "$GITHUB_OUTPUT"
           echo "attach_assets=${ATTACH_ASSETS}" >> "$GITHUB_OUTPUT"
+          {
+            echo 'platform_matrix<<EOF'
+            cat <<'JSON'
+          {"include":[
+            {"platform_id":"darwin-x64","runner":"macos-15-intel","arch":"x64","binary_artifact":"gc-darwin-x64"},
+            {"platform_id":"darwin-arm64","runner":"macos-15","arch":"arm64","binary_artifact":"gc-darwin-arm64"}
+          ]}
+          JSON
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
 
-  verify:
+  preflight:
+    name: Preflight
     runs-on: ubuntu-latest
     needs: meta
     steps:
@@ -85,12 +101,16 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Verify build
-        run: bun run verify
+      - name: Brand guard
+        run: bun run brand:guard
 
-  build-darwin-x64:
-    runs-on: macos-15-intel
-    needs: [meta, verify]
+  build-binary:
+    name: Build binary (${{ matrix.platform_id }})
+    runs-on: ${{ matrix.runner }}
+    needs: [meta, preflight]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.meta.outputs.platform_matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -103,58 +123,27 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build macOS x64 binary
+      - name: Build binary
         run: bun run build
 
       - name: Prepare artifact
         run: |
           mkdir -p dist/release
-          cp gc dist/release/gc-darwin-x64
-          chmod +x dist/release/gc-darwin-x64
-          ./dist/release/gc-darwin-x64 --version
+          cp gc "dist/release/${{ matrix.binary_artifact }}"
+          chmod +x "dist/release/${{ matrix.binary_artifact }}"
+          "./dist/release/${{ matrix.binary_artifact }}" --version
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gc-darwin-x64
-          path: dist/release/gc-darwin-x64
-          if-no-files-found: error
-
-  build-darwin-arm64:
-    runs-on: macos-15
-    needs: [meta, verify]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.3.11'
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build macOS arm64 binary
-        run: bun run build
-
-      - name: Prepare artifact
-        run: |
-          mkdir -p dist/release
-          cp gc dist/release/gc-darwin-arm64
-          chmod +x dist/release/gc-darwin-arm64
-          ./dist/release/gc-darwin-arm64 --version
-
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: gc-darwin-arm64
-          path: dist/release/gc-darwin-arm64
+          name: ${{ matrix.binary_artifact }}
+          path: dist/release/${{ matrix.binary_artifact }}
           if-no-files-found: error
 
   package-mac-npm:
+    name: Package mac npm artifacts
     runs-on: ubuntu-latest
-    needs: [meta, build-darwin-x64, build-darwin-arm64]
+    needs: [meta, build-binary]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -219,9 +208,13 @@ jobs:
           path: release-assets
           if-no-files-found: error
 
-  smoke-darwin-x64:
-    runs-on: macos-15-intel
+  smoke-tarball:
+    name: Tarball smoke (${{ matrix.platform_id }})
+    runs-on: ${{ matrix.runner }}
     needs: [meta, package-mac-npm]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.meta.outputs.platform_matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -237,42 +230,21 @@ jobs:
           name: mac-npm-tarballs
           path: dist/npm-tarballs
 
-      - name: Smoke tarball install on macOS x64
+      - name: Smoke tarball install
         run: |
           node ./scripts/smoke-mac-binary-npm-install.mjs \
             --skip-pack \
             --tarballs-dir dist/npm-tarballs \
             --version "${{ needs.meta.outputs.version }}"
 
-  smoke-darwin-arm64:
-    runs-on: macos-15
+  smoke-registry:
+    name: Registry smoke (${{ matrix.platform_id }})
+    runs-on: ${{ matrix.runner }}
     needs: [meta, package-mac-npm]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node (npm)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Download packed npm tarballs
-        uses: actions/download-artifact@v4
-        with:
-          name: mac-npm-tarballs
-          path: dist/npm-tarballs
-
-      - name: Smoke tarball install on macOS arm64
-        run: |
-          node ./scripts/smoke-mac-binary-npm-install.mjs \
-            --skip-pack \
-            --tarballs-dir dist/npm-tarballs \
-            --version "${{ needs.meta.outputs.version }}"
-
-  registry-smoke-darwin-x64:
-    runs-on: macos-15-intel
-    needs: [meta, package-mac-npm, smoke-darwin-x64]
     if: ${{ needs.meta.outputs.publish_npm == 'true' || needs.meta.outputs.attach_assets == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.meta.outputs.platform_matrix) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -288,33 +260,7 @@ jobs:
           name: mac-npm-tarballs
           path: dist/npm-tarballs
 
-      - name: Smoke private registry install on macOS x64
-        run: |
-          node ./scripts/smoke-mac-binary-npm-registry.mjs \
-            --skip-pack \
-            --tarballs-dir dist/npm-tarballs \
-            --version "${{ needs.meta.outputs.version }}"
-
-  registry-smoke-darwin-arm64:
-    runs-on: macos-15
-    needs: [meta, package-mac-npm, smoke-darwin-arm64]
-    if: ${{ needs.meta.outputs.publish_npm == 'true' || needs.meta.outputs.attach_assets == 'true' }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node (npm)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Download packed npm tarballs
-        uses: actions/download-artifact@v4
-        with:
-          name: mac-npm-tarballs
-          path: dist/npm-tarballs
-
-      - name: Smoke private registry install on macOS arm64
+      - name: Smoke private registry install
         run: |
           node ./scripts/smoke-mac-binary-npm-registry.mjs \
             --skip-pack \
@@ -323,7 +269,7 @@ jobs:
 
   publish-release-assets:
     runs-on: ubuntu-latest
-    needs: [meta, package-mac-npm, smoke-darwin-x64, smoke-darwin-arm64, registry-smoke-darwin-x64, registry-smoke-darwin-arm64]
+    needs: [meta, package-mac-npm, smoke-tarball, smoke-registry]
     if: ${{ needs.meta.outputs.attach_assets == 'true' }}
     permissions:
       contents: write
@@ -346,7 +292,7 @@ jobs:
 
   publish-npm:
     runs-on: ubuntu-latest
-    needs: [meta, package-mac-npm, smoke-darwin-x64, smoke-darwin-arm64, registry-smoke-darwin-x64, registry-smoke-darwin-arm64]
+    needs: [meta, package-mac-npm, smoke-tarball, smoke-registry]
     if: ${{ needs.meta.outputs.publish_npm == 'true' }}
     steps:
       - name: Setup Node (npm)

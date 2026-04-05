@@ -39,31 +39,36 @@ GitHub Release 资产：
 
 ## 4. job 拆分
 
-当前发布链路拆成 8 类 job：
+当前发布链路拆成 7 类 job：
 
 1. `meta`
    - 解析版本、tag、npm dist-tag、是否发 npm、是否附加 release asset
-2. `verify`
-   - 运行基础构建验收
-3. `build-darwin-x64`
-   - 在 Intel mac runner 构建 `gc`
-4. `build-darwin-arm64`
-   - 在 Apple Silicon mac runner 构建 `gc`
-5. `package-mac-npm`
+2. `preflight`
+   - 在 Ubuntu 上做轻量预检：冻结锁文件安装 + brand guard
+3. `build-binary`
+   - 基于 `platform_matrix` 做矩阵构建
+   - 当前矩阵包含 `darwin-x64` 与 `darwin-arm64`
+4. `package-mac-npm`
    - 下载两份二进制，生成 staging 三包目录
    - 生成 npm tarball
    - 生成 GitHub Release 资产与校验和
-6. `smoke-darwin-x64` / `smoke-darwin-arm64`
-   - 分别在两种 mac 架构上执行“当前架构子包 tarball -> 根包 tarball”的离线安装 smoke
+5. `smoke-tarball`
+   - 基于 `platform_matrix` 做矩阵 tarball 安装 smoke
    - 验证 `node_modules/.bin/gc` 可成功启动 launcher 并转发到真实二进制
-7. `registry-smoke-darwin-x64` / `registry-smoke-darwin-arm64`
-   - 分别在两种 mac 架构上启动临时 Verdaccio 私有 registry
+6. `smoke-registry`
+   - 基于 `platform_matrix` 做矩阵私有 registry smoke
    - 按真实顺序发布两个子包与根包
    - 在临时项目里从 registry 安装 `gclm-code` 并验证 `node_modules/.bin/gc`
-8. `publish-release-assets` / `publish-npm` / `tag-stable`
+7. `publish-release-assets` / `publish-npm` / `tag-stable`
    - 上传 release asset
    - 发布 npm 三包
    - 可选补 `stable` dist-tag
+
+说明：
+
+- `meta` 会输出统一 `platform_matrix`，供 `build-binary`、`smoke-tarball`、`smoke-registry` 复用
+- `smoke-tarball` 与 `smoke-registry` 现在都直接依赖 `package-mac-npm`，在同一批平台矩阵上并行展开
+- 当前仍保留 `package-mac-npm` 作为单一汇总点，避免三包组装逻辑在多个 job 中重复散开
 
 ## 5. 发布顺序
 
@@ -88,7 +93,7 @@ workflow 主要依赖以下脚本：
 说明：
 
 - `scripts/smoke-mac-binary-npm.mjs` 继续作为本地 staging/launcher 演练脚本保留
-- 当前 workflow 中实际执行的是 `tarball install smoke + private registry smoke` 两层、更接近 npm 消费者安装路径的验证
+- 当前 workflow 中实际执行的是 `matrix tarball install smoke + matrix private registry smoke` 两层、更接近 npm 消费者安装路径的验证
 
 ## 7. Secrets 与输入
 
