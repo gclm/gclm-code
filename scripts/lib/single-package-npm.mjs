@@ -29,6 +29,7 @@ export function createVendorManifest({
   runtimeBaseUrl = null,
   releaseTag = `v${version}`,
   generatedAt = new Date().toISOString(),
+  modules = {},
 }) {
   const platforms = Object.fromEntries(
     getBinaryNpmReleasePlatforms().map(platform => {
@@ -60,13 +61,14 @@ export function createVendorManifest({
       baseUrlEnv: DEFAULT_RUNTIME_BASE_URL_ENV,
       platforms,
     },
-    modules: {},
+    modules,
   }
 }
 
 export function createSinglePackageManifest({
   rootPkg,
   version,
+  dependencies = {},
 }) {
   const platforms = getBinaryNpmReleasePlatforms()
   const supportedOs = [...new Set(platforms.map(platform => platform.os))]
@@ -88,6 +90,7 @@ export function createSinglePackageManifest({
     scripts: {
       postinstall: 'node ./bin/install-runtime.js',
     },
+    dependencies,
     files: ['bin', 'vendor', 'README.md'],
   }
 }

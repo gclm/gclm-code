@@ -1,5 +1,6 @@
 import { currentMacArch, getRepoRoot, readRootPackage } from './lib/mac-binary-npm.mjs'
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
+import { copyInstalledDependencyTree } from './lib/vendor-runtime-modules.mjs'
+import { lstatSync, mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -115,27 +116,39 @@ try {
     throw new Error('npm pack did not output tarball name')
   }
 
-  const tempProjectDir = join(tempDir, 'project')
-  mkdirSync(tempProjectDir, { recursive: true })
+  const tempInstallDir = join(tempDir, 'install')
+  mkdirSync(tempInstallDir, { recursive: true })
+  run('tar', ['-xzf', join(options.packDir, tarballName), '-C', tempInstallDir])
 
-  run('npm', ['init', '-y'], { cwd: tempProjectDir })
-  run(
-    'npm',
-    [
-      'install',
-      '--cache',
-      npmCacheDir,
-      '--no-package-lock',
-      join(options.packDir, tarballName),
-    ],
-    { cwd: tempProjectDir },
+  const installedPackageDir = join(tempInstallDir, 'package')
+  const installedPackageManifest = JSON.parse(
+    readFileSync(join(installedPackageDir, 'package.json'), 'utf8'),
   )
 
-  const versionResult = run(
-    join(tempProjectDir, 'node_modules', '.bin', 'gc'),
-    ['--version'],
-    { cwd: tempProjectDir },
+  copyInstalledDependencyTree({
+    rootDir,
+    targetNodeModulesDir: join(installedPackageDir, 'node_modules'),
+    dependencyNames: Object.keys(installedPackageManifest.dependencies ?? {}),
+  })
+
+  run('node', ['bin/install-runtime.js', '--package-dir', installedPackageDir], {
+    cwd: installedPackageDir,
+  })
+
+  const versionResult = run('node', ['bin/gc.js', '--version'], {
+    cwd: installedPackageDir,
+  })
+
+  const runtimeNodeModulesPath = join(
+    installedPackageDir,
+    'vendor',
+    'runtime',
+    `${process.platform}-${process.arch}`,
+    'node_modules',
   )
+  if (!lstatSync(runtimeNodeModulesPath).isSymbolicLink()) {
+    throw new Error('runtime node_modules link was not created')
+  }
 
   const output = `${versionResult.stdout ?? ''}`.trim()
   if (!output.includes(options.version)) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { delimiter, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)))
@@ -54,8 +54,21 @@ if (!existsSync(binaryPath)) {
   )
 }
 
+const moduleNodePath =
+  typeof manifest?.modules?.nodePath === 'string' && manifest.modules.nodePath.length > 0
+    ? join(packageDir, manifest.modules.nodePath)
+    : null
+
+const childEnv = { ...process.env }
+if (moduleNodePath && existsSync(moduleNodePath)) {
+  childEnv.NODE_PATH = childEnv.NODE_PATH
+    ? `${moduleNodePath}${delimiter}${childEnv.NODE_PATH}`
+    : moduleNodePath
+}
+
 const child = spawn(binaryPath, process.argv.slice(2), {
   stdio: 'inherit',
+  env: childEnv,
 })
 
 child.on('error', error => {

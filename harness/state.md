@@ -1,13 +1,13 @@
 # 项目状态
 
-更新时间：2026-04-05（R2 已完成，进入 R3）
+更新时间：2026-04-05（R3 已完成，进入 R4）
 
 ## 当前阶段
 
-- Active phase：`R3 - workspace 运行时物化到 vendor/modules/（进行中）`
+- Active phase：`R4 - 单包 smoke / CI / release 切换（进行中）`
 - 当前 focus：
-  - 识别运行时必需的 workspace 产物并收敛到 `vendor/modules/`
-  - 让发布态 CLI 逐步摆脱对 `packages/*` 原始布局的依赖
+  - 将单包 smoke、CI 与 release workflow 切到 `bin/ + vendor/` 主链
+  - 用 tarball / registry / mirror-like 验证补齐单包消费者证据
   - 保持发布态运行时边界为 `bin/ + vendor/`
   - 保留现行 `mac binary-first + 三包` 作为回退链路
   - 功能侧维持持续维护，不新增 release 之外的大改造
@@ -94,9 +94,9 @@
 
 ## 进行中
 
-- 功能侧已进入持续维护模式；发布侧已进入 `R3 - workspace 运行时物化到 vendor/modules/`
+- 功能侧已进入持续维护模式；发布侧已进入 `R4 - 单包 smoke / CI / release 切换`
 - 已更新 release 迁移提案：当前推荐方向为 `单消费者包 + vendor 运行时 + D-lite 发布边界收敛`，发布态运行时只保留 `bin/ + vendor/`，`dist/` 明确降级为构建中间层；同时保留 `packages/*` 作为内部 workspace，并让 `C + D-lite` 并行推进
-- 已新增实施任务单：`docs/release/single-package-implementation-plan.md`，当前 active phase 已推进到 `R3 - workspace 运行时物化到 vendor/modules/`
+- 已新增实施任务单：`docs/release/single-package-implementation-plan.md`，当前 active phase 已推进到 `R4 - 单包 smoke / CI / release 切换`
 - `R1` 已完成：
   - 已新增 `scripts/prepare-single-package-npm.mjs`
   - 已新增 `scripts/lib/single-package-npm.mjs`
@@ -108,12 +108,19 @@
   - 已为单包 staging manifest 接入 `postinstall -> node ./bin/install-runtime.js`
   - 已支持从 `runtime.baseUrl` / `GCLM_BINARY_BASE_URL` 下载 release 资产并校验 `sha256`
   - 已新增 `scripts/smoke-single-package-runtime-install.mjs`
-  - 已验证真实 `npm install` 后 runtime 可落到 `vendor/runtime/`，且 `gc --version` 可直接运行
+  - 已验证离线解包 + 本地依赖树补齐后，runtime 可落到 `vendor/runtime/`，且 `gc --version` 可直接运行
+- `R3` 已完成：
+  - 已新增 `scripts/lib/vendor-runtime-modules.mjs` 与 `scripts/prepare-vendor-runtime.mjs`
+  - 已将 8 个 runtime workspace 包物化到 `vendor/modules/node_modules/`
+  - 已让单包 staging `package.json` 自动注入最小 runtime 依赖清单，并将 modules 边界回写到 `vendor/manifest.json`
+  - 已让 launcher 为 runtime 注入 `NODE_PATH`，并在安装期为 `vendor/runtime/<platform>/node_modules` 建立到 `vendor/modules/node_modules` 的软链
+  - 已新增 `scripts/smoke-single-package-vendor-modules.mjs`
+  - 已验证安装后目录可在脱离仓库 `packages/*` 布局的条件下加载 vendor modules，并保持 `gc --version` 正常
 
 ## 已知未完成项
 
-- `R3` 尚未完成：workspace 运行时物化仍停留在盘点与实现阶段
-- `R4` 尚未开始：单包 smoke / CI / release 切换仍未落地
+- `R4` 尚未完成：单包 smoke / CI / release workflow 仍需切主链并补镜像回归
+- `R5` 尚未开始：默认发布切换与旧三包清理仍未落地
 - `docs` 历史文档中可能仍有 codex 文案残留（不影响运行时）；后续可按文档清理批次处理
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否进一步去品牌化或去历史产品语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
@@ -122,11 +129,10 @@
 ## 执行边界
 
 - 当前 must-fix：
-  - `R3` workspace 运行时物化与发布态去 workspace 依赖
-- same-batch can-include：
-  - 运行时 package 清单、`vendor/modules/` manifest 扩展、最小发布态加载链收敛
-- follow-up：
   - `R4` 单包 smoke / CI / release 切换
+- same-batch can-include：
+  - 单包 tarball / registry / mirror-like smoke 收敛
+- follow-up：
   - `R5` 默认发布切换与旧三包清理
   - mirror-like registry 的正式回归验证
 
@@ -165,6 +171,9 @@
 - 当前策略已调整为“不保留兼容层，直接修复断点”
 - 最新发布链修复验证：2026-04-05 已执行 `bun install --frozen-lockfile`，通过
 - 最新发布链修复验证：2026-04-05 已执行 `bun run verify`，通过
+- 最新单包 staging 验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-npm.mjs`，通过
+- 最新单包 runtime 安装验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-runtime-install.mjs`，通过
+- 最新单包 vendor modules 验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-vendor-modules.mjs`，通过
 - 最新发布链真实安装验证：2026-04-05 GitHub Actions `Release NPM` run `23998338010` 已通过，证明 `run_registry_smoke=true` 可在 dry-run 场景独立触发 Verdaccio 私有 registry 安装链路，而不会误触发 `publish-npm`、`publish-release-assets`、`tag-stable`
 - 最新真实发版验证：2026-04-05 GitHub Actions `Release NPM` run `23998582683` 中 `build-binary(matrix)`、`package-mac-npm`、`smoke-tarball(matrix)`、`smoke-registry(matrix)` 与 `publish-release-assets` 均通过；唯一失败点是 `publish-npm` 缺少 checkout，属于 workflow 编排问题而非包内容或消费者安装链路问题
 - 最新正式发布结果：2026-04-05 GitHub Actions `Release NPM` run `23998704055` 已通过，`publish-npm` 与 `tag-stable` 成功；npm registry 已确认 `gclm-code@1.0.0`、`gclm-code-darwin-x64@1.0.0`、`gclm-code-darwin-arm64@1.0.0` 可见，且 `latest/stable` 均指向 `1.0.0`

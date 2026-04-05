@@ -73,6 +73,7 @@ const packageDir = join(options.stagingDir, ROOT_PACKAGE_NAME)
 const packageJsonPath = join(packageDir, 'package.json')
 const launcherPath = join(packageDir, 'bin', 'gc.js')
 const vendorManifestPath = join(packageDir, 'vendor', 'manifest.json')
+const vendorModulesPath = join(packageDir, 'vendor', 'modules', 'node_modules')
 const tempDir = mkdtempSync(join(tmpdir(), 'gclm-single-package-smoke-'))
 const npmCacheDir = join(tempDir, '.npm-cache')
 
@@ -93,6 +94,7 @@ try {
     existsSync(vendorManifestPath),
     `missing vendor manifest: ${vendorManifestPath}`,
   )
+  assert(existsSync(vendorModulesPath), `missing vendor modules: ${vendorModulesPath}`)
 
   const packageManifest = JSON.parse(readFileSync(packageJsonPath, 'utf8'))
   assert(packageManifest.name === ROOT_PACKAGE_NAME, 'unexpected package name')
@@ -105,12 +107,28 @@ try {
   const vendorManifest = JSON.parse(readFileSync(vendorManifestPath, 'utf8'))
   assert(vendorManifest.version === options.version, 'unexpected vendor manifest version')
   assert(
+    vendorManifest?.modules?.nodePath === 'vendor/modules/node_modules',
+    'unexpected vendor modules nodePath',
+  )
+  assert(
+    Object.keys(vendorManifest?.modules?.workspacePackages ?? {}).length === 8,
+    'unexpected vendor workspace package count',
+  )
+  assert(
     vendorManifest?.runtime?.platforms?.['darwin-x64'],
     'missing darwin-x64 runtime entry',
   )
   assert(
     vendorManifest?.runtime?.platforms?.['darwin-arm64'],
     'missing darwin-arm64 runtime entry',
+  )
+  assert(
+    Object.keys(packageManifest.dependencies ?? {}).length > 0,
+    'single-package manifest missing runtime dependencies',
+  )
+  assert(
+    packageManifest.dependencies?.sharp === vendorManifest?.modules?.externalDependencies?.sharp,
+    'single-package manifest dependencies out of sync with vendor manifest',
   )
 
   mkdirSync(options.packDir, { recursive: true })
@@ -147,6 +165,10 @@ try {
   assert(
     tarEntries.includes('package/vendor/manifest.json'),
     'tarball does not contain package/vendor/manifest.json',
+  )
+  assert(
+    tarEntries.includes('package/vendor/modules/node_modules/audio-capture-napi/package.json'),
+    'tarball does not contain vendored workspace packages',
   )
 
   const launcherResult = spawnSync('node', ['bin/gc.js', '--version'], {

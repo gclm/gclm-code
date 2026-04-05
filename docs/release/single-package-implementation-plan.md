@@ -9,7 +9,7 @@
 - 主线：`C` 从当前 `根包 + 架构子包 + optionalDependencies` 迁到 `单消费者包`
 - 并行子线：`D-lite` 只收敛发布边界，不做全仓库结构重排
 - 冻结边界：发布态运行时只认 `bin/ + vendor/`，`dist/` 只允许作为构建期 staging
-- 当前 active phase：`R3 - workspace 运行时物化到 vendor/modules/`
+- 当前 active phase：`R4 - 单包 smoke / CI / release 切换`
 - 推荐下一步：`build`
 
 一句话结论：
@@ -20,7 +20,8 @@
 
 - `R1` 已完成：单包 staging、发布态 `bin/gc.js`、`vendor/manifest.json` 与最小 `npm pack` smoke 已落地
 - `R2` 已完成：安装期 runtime 下载、sha 校验、`vendor/runtime/` 落盘与真实安装 smoke 已落地
-- 下一阶段进入 `R3`：workspace 运行时物化与发布态依赖收敛
+- `R3` 已完成：8 个 runtime workspace 包已物化到 `vendor/modules/node_modules/`，modules 清单已回写 `vendor/manifest.json`，并已补齐安装后目录 smoke
+- 下一阶段进入 `R4`：单包 smoke / CI / release 切换
 
 ## 2. Scope Refresh 记录
 

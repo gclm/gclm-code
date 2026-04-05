@@ -25,7 +25,7 @@
 
 ## Release Scope Refresh：单包 + Vendor 运行时
 
-状态：`R2 已完成，进入 R3 build`
+状态：`R3 已完成，进入 R4 build`
 
 目标：把当前 `mac binary-first + 三包` 从“现行主链”降级为“回退链路”，并切到单消费者包模型。
 
@@ -45,7 +45,7 @@
 
 当前推荐动作：
 
-- 进入 `R3` build：识别并物化运行时必需的 workspace 产物到 `vendor/modules/`
+- 进入 `R4` build：把单包 smoke、CI 与 release workflow 切到 `bin/ + vendor/` 主链
 - 详细任务单见 `docs/release/single-package-implementation-plan.md`
 
 ## Phase 0：已完成的基础收口
@@ -200,7 +200,7 @@
 
 ## 当前推荐动作
 
-- 推荐下一步：进入 `R3` build，先完成 workspace 运行时产物盘点与物化
-- 重点关注：哪些 `workspace:*` 必须进入发布态、如何消除对 `packages/*` 原始布局的依赖
+- 推荐下一步：进入 `R4` build，先完成单包 tarball / registry / mirror-like smoke 与 workflow 切换
+- 重点关注：如何让 CI / release 只认 `bin/ + vendor/` 主链，并保留旧三包为回退开关
 - 当前线上 release 主链仍是 `mac binary-first + npm 根包/架构子包`，但仅作为迁移窗口内的回退链路
 - 仓库根 `package.json` 继续作为开发态 workspace manifest；消费者 manifest 在迁移窗口内允许先由 staging package 生成

@@ -2,16 +2,18 @@
 import {
   chmodSync,
   copyFileSync,
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 function fail(message) {
@@ -181,6 +183,10 @@ const assetSource = resolveBaseUrl(manifest, options.packageDir)
 const installPath = join(options.packageDir, platformEntry.installSubpath)
 const installDir = dirname(installPath)
 const tempDir = mkdtempSync(join(tmpdir(), 'gclm-runtime-install-'))
+const moduleNodePath =
+  typeof manifest?.modules?.nodePath === 'string' && manifest.modules.nodePath.length > 0
+    ? join(options.packageDir, manifest.modules.nodePath)
+    : null
 
 try {
   const assetName = platformEntry.assetName
@@ -226,6 +232,12 @@ try {
   mkdirSync(installDir, { recursive: true })
   copyFileSync(extractedBinaryPath, installPath)
   chmodSync(installPath, 0o755)
+
+  if (moduleNodePath && existsSync(moduleNodePath)) {
+    const runtimeNodeModulesPath = join(installDir, 'node_modules')
+    rmSync(runtimeNodeModulesPath, { recursive: true, force: true })
+    symlinkSync(relative(installDir, moduleNodePath), runtimeNodeModulesPath, 'dir')
+  }
 
   process.stdout.write(
     `[gclm-code] runtime 已安装: ${platformId} <- ${assetLocation}\n`,

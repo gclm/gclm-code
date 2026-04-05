@@ -10,6 +10,7 @@ import {
   renderSinglePackageReadme,
   ROOT_PACKAGE_NAME,
 } from './lib/single-package-npm.mjs'
+import { prepareVendorRuntime } from './lib/vendor-runtime-modules.mjs'
 
 const rootDir = getRepoRoot(import.meta.url)
 const rootPkg = readRootPackage(rootDir)
@@ -63,11 +64,18 @@ rmSync(options.outputDir, { recursive: true, force: true })
 mkdirSync(binDir, { recursive: true })
 mkdirSync(vendorDir, { recursive: true })
 
+const vendorRuntime = prepareVendorRuntime({
+  rootDir,
+  packageDir,
+  rootPkg,
+})
+
 writeJson(
   join(packageDir, 'package.json'),
   createSinglePackageManifest({
     rootPkg,
     version: options.version,
+    dependencies: vendorRuntime.runtimeDependencies,
   }),
 )
 
@@ -89,6 +97,7 @@ writeJson(
     version: options.version,
     runtimeBaseUrl: options.runtimeBaseUrl,
     releaseTag: options.releaseTag ?? `v${options.version}`,
+    modules: vendorRuntime.manifestSection,
   }),
 )
 
@@ -104,5 +113,6 @@ process.stdout.write(
     '- bin/gc.js',
     '- bin/install-runtime.js',
     '- vendor/manifest.json',
+    '- vendor/modules/node_modules/*',
   ].join('\n') + '\n',
 )
