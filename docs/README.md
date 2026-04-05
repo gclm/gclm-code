@@ -16,6 +16,10 @@
 
 ## 3. release（发布与交付）
 
+- `docs/release/single-package-migration-proposal.md`
+  - 单包发布、Vendor 运行时与发布边界收敛方案（发布态运行时采用 `bin/ + vendor/`，建议替代三包主链）
+- `docs/release/single-package-implementation-plan.md`
+  - 单包 + Vendor 运行时实施任务单（`C` 主线 + `D-lite` 并行子任务）
 - `docs/release/npm-manual-release-guide.md`
   - mac binary-first 手动发布流程（根包 + 架构子包）
 - `docs/release/github-actions-release-plan.md`
@@ -34,7 +38,7 @@
 ## 4. overview（阶段路线）
 
 - `docs/overview/roadmap.md`
-  - 当前阶段状态与后续动作（M1-M4）
+  - 当前阶段状态与后续动作（功能侧 M1-M4 已完成，发布侧进入单包迁移）
 
 ## 5. 过期文档处理说明
 

@@ -1,22 +1,52 @@
 # 路线图
 
-更新时间：2026-04-04
+更新时间：2026-04-05
 
 ## 总体结论
 
-当前仓库已经越过“初始可发布化”阶段，进入“内核语义收口”阶段。
+当前仓库的功能侧 M1-M4 已完成，现进入新的 release `scope-refresh` 阶段。
 
-接下来的工作顺序改为务实版实施路径：
+接下来的工作顺序改为“功能持续维护 + 发布单包迁移”双轨，其中发布侧按以下顺序推进：
 
-1. `M1`：优先实现 `/models` 动态模型发现（含缓存/TTL/降级）
-2. `M2`：网关优先接入（客户端统一 anthropic-compatible，不再扩展 openai 协议适配）
-3. `M3`：`anthropic-compatible` 能力补强（保持现有可用路径，不做重构）
-4. `M4`：收尾清理（删除重复分支、回写文档、稳定验证）
+1. `R0`：单包 + vendor 运行时方案冻结（已完成）
+2. `R1`：单包发布骨架 + `vendor/manifest.json`
+3. `R2`：平台 runtime 落盘到 `vendor/runtime/`
+4. `R3`：workspace 运行时物化到 `vendor/modules/`
+5. `R4`：单包 smoke / CI / release 切换
+6. `R5`：默认发布切换与旧三包清理
 
 策略约束：
 
 - 不再继续扩展“Phase A 抽象先行”路径
 - 保留当前“无兼容层”策略，断点直接修复
+- 发布态运行时只认 `bin/ + vendor/`
+- `dist/` 只允许作为构建期 staging
+- `C` 是关键路径，`D-lite` 只做发布边界收敛，不进入 repo 级结构迁移
+
+## Release Scope Refresh：单包 + Vendor 运行时
+
+状态：`R1 已完成，进入 R2 build`
+
+目标：把当前 `mac binary-first + 三包` 从“现行主链”降级为“回退链路”，并切到单消费者包模型。
+
+范围：
+
+- 对外 npm 安装入口收敛为一个 `gclm-code`
+- 发布态 CLI 只认 `bin/gc.js` 与 `vendor/manifest.json`
+- runtime 资产落到 `vendor/runtime/`
+- workspace 运行时产物收敛到 `vendor/modules/`
+- GitHub Release 仍可继续产出双架构 mac 二进制
+
+非目标：
+
+- 不做完整 `references/cli` 仓库结构迁移
+- 不在本轮补 Linux / Windows
+- 不把 repo 根 `package.json` 立即强制改造成消费者 manifest
+
+当前推荐动作：
+
+- 进入 `R2` build：实现安装期 runtime 下载、sha 校验与 `vendor/runtime/` 落盘
+- 详细任务单见 `docs/release/single-package-implementation-plan.md`
 
 ## Phase 0：已完成的基础收口
 
@@ -170,11 +200,7 @@
 
 ## 当前推荐动作
 
-- 推荐下一步：进入持续维护周期（按 release gate 执行发版验证）
-- 重点关注：网关可用性监控、错误语义回归矩阵、文档与实现同步
-- release 主链已切到 `mac binary-first + npm 根包/架构子包`
-- 仓库根 `package.json` 已改为 `private: true`，避免误走 legacy 直发路径
-- 若继续投入 release 能力，优先补：
-  - codesign / notarization
-  - 真实 registry 安装后的双架构闭环验证
-  - 视产品需要再评估 Linux / Windows 子包
+- 推荐下一步：进入 `R2` build，先实现安装期 runtime 下载、校验与落盘
+- 重点关注：runtime 来源、sha 校验语义、`vendor/runtime/` 落盘与错误提示
+- 当前线上 release 主链仍是 `mac binary-first + npm 根包/架构子包`，但仅作为迁移窗口内的回退链路
+- 仓库根 `package.json` 继续作为开发态 workspace manifest；消费者 manifest 在迁移窗口内允许先由 staging package 生成

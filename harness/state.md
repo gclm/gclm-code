@@ -1,42 +1,38 @@
 # 项目状态
 
-更新时间：2026-04-05（M4 收尾完成）
+更新时间：2026-04-05（R1 已完成，进入 R2）
 
 ## 当前阶段
 
-- Active phase：`M4 - 收尾清理（已完成）`
+- Active phase：`R2 - 平台 runtime 落盘到 vendor/runtime/（进行中）`
 - 当前 focus：
-  - 落地网关优先方案：客户端统一走 `anthropic-compatible + ANTHROPIC_BASE_URL`
-  - 协议切换与多 provider 聚合全部下沉网关
-  - 模型发现优先读取网关 `/models`（含 `/v1/models` 回退）
-  - 登录流重构：去除 Codex 登录选项，新增网关参数输入并自动保存
+  - 实现安装期 runtime 下载、sha 校验与 `vendor/runtime/` 落盘
+  - 保持发布态运行时边界为 `bin/ + vendor/`
+  - 保留现行 `mac binary-first + 三包` 作为回退链路
+  - 功能侧维持持续维护，不新增 release 之外的大改造
 
 ## 当前判断
 
-- 这是一次 `scope-refresh`，不是全新规划。
-- 发布链路已基本落地，当前不以 release 作为主阻塞项。
-- 当前重点从“新增 provider 适配”转为“客户端收敛到网关参数化入口”。
-- 客户端不继续扩展 provider 协议分支，统一依赖 `ANTHROPIC_BASE_URL/KEY` + 网关能力。
-- 仓库开发态继续保留 `workspace:*` 结构，但对外交付主路径已切到 `mac binary-first`：
+- 这是一次 release 方向的 `scope-refresh`，不是新的产品规划。
+- 功能侧 `M1-M4` 已完成，当前重点从“provider / gateway 收口”切到“发布主链收敛”。
+- 现行线上 release 主链仍是 `mac binary-first + 三包`：
   - npm 渠道当前主形态为 `gclm-code` + `gclm-code-darwin-x64` + `gclm-code-darwin-arm64`
   - GitHub Release 同步产出双架构 mac 资产与 `sha256`
-- 若后续重新投入 release 架构，长期优先探索 `binary-first`（原 Option B）作为产品分发主形态：
-  - 当前进一步收敛为 `mac binary-first`：优先支持 `darwin-x64`、`darwin-arm64`
-  - `linux-x64` 暂不纳入首批目标，除非后续产品侧重新确认有明显收益
-  - 若需要单一 mac 下载入口，可评估产出一个对外“macOS 通用包”，内部仍以双架构构建为基础
-  - 其余平台按实现复杂度决定是否补齐，不作为首批阻塞
-  - 该方向的价值主要在后期扩展性与交付一致性，不在当前短期发布收益
-- 若通过 npm 分发二进制，当前推荐形态不是继续发布源码 workspace 包，而是：
-  - 根包 `gclm-code` 作为 npm 入口与命令包装层
-  - 子包按架构拆分为 `gclm-code-darwin-x64` 与 `gclm-code-darwin-arm64`
-  - 根包通过 `optionalDependencies + os/cpu + bin` 选择并转发到匹配架构二进制
-  - 不优先推荐“单个 npm 包同时内置两份 mac 二进制”，原因是当前单个 `gc` 本地体积已约 171MB，合包后体积会显著上升
-  - 当前已落地首批组装骨架：通过脚本生成三包目录，并在本地验证 `npm pack + launcher` 主链
-- 不推荐直接复用 `references/cli` 作为 npm 发布方案蓝本：
-  - 该参考项目保留 `workspace:*` 依赖且 `prepublishOnly` 阻止直发，更接近受控内部发布链路，而非面向 npm 消费者的安装模型
-- “把 workspace 一起打进二进制”只能解决一部分模块解析问题，不能替代运行时能力分发：
-  - 当前 external 包中仍包含依赖 `sharp`、`bun:ffi`、`osascript`、`swiftc`、`screencapture`、`rec/play` 等宿主能力的模块
-  - 若转为二进制优先，还需同时解决多平台构建矩阵与 sidecar/runtime 依赖交付
+  - 该链路在迁移窗口内只作回退，不再作为长期推荐结构继续增强
+- 已冻结的新方向是 `单消费者包 + vendor 运行时`：
+  - 发布态运行时只认 `bin/ + vendor/`
+  - `vendor/manifest.json` 作为运行时单一事实源
+  - `dist/` 仅保留为构建期 staging
+  - `packages/*` 继续作为内部 workspace，不进入全仓库结构重排
+- 当前实施模式为 `staged hybrid`：
+  - `C` 是关键路径，负责消除 `optionalDependencies` 主程序缺失问题
+  - `D-lite` 同批并行，但只收敛发布边界，不触发 `src/` / `packages/` 大搬迁
+- 单包方案仍采用“轻资产发布期物化 + 重型 runtime 安装期落盘”的混合模型：
+  - `vendor/modules/` 收敛 workspace 运行时产物
+  - `vendor/runtime/` 收敛平台 runtime 与 sidecar
+  - 目标是同时解决 `npmmirror` 安装缺子包问题与 fat tarball 体积问题
+- 不推荐直接复用 `references/cli` 作为发布蓝本：
+  - 更适合借鉴的是消费者边界组织方式，而不是整仓结构复制
 
 ## 已完成
 
@@ -97,10 +93,20 @@
 
 ## 进行中
 
-- 当前进入持续维护模式：以 release gate 为发版前统一门禁
+- 功能侧已进入持续维护模式；发布侧已进入 `R2 - 平台 runtime 落盘到 vendor/runtime/`
+- 已更新 release 迁移提案：当前推荐方向为 `单消费者包 + vendor 运行时 + D-lite 发布边界收敛`，发布态运行时只保留 `bin/ + vendor/`，`dist/` 明确降级为构建中间层；同时保留 `packages/*` 作为内部 workspace，并让 `C + D-lite` 并行推进
+- 已新增实施任务单：`docs/release/single-package-implementation-plan.md`，当前 active phase 已推进到 `R2 - 平台 runtime 落盘到 vendor/runtime/`
+- `R1` 已完成：
+  - 已新增 `scripts/prepare-single-package-npm.mjs`
+  - 已新增 `scripts/lib/single-package-npm.mjs`
+  - 已新增发布态 `bin/gc.js`
+  - 已新增 `scripts/smoke-single-package-npm.mjs`
+  - 已验证单包 staging 可生成、`vendor/manifest.json` 可读取、`npm pack` 与最小 launcher smoke 通过
 
 ## 已知未完成项
 
+- `R2` 尚未完成：安装期 runtime 下载、sha 校验、`vendor/runtime/` 落盘脚本仍未实现
+- `R3` 尚未开始：workspace 运行时物化仍停留在任务分解阶段
 - `docs` 历史文档中可能仍有 codex 文案残留（不影响运行时）；后续可按文档清理批次处理
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否进一步去品牌化或去历史产品语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
@@ -109,20 +115,21 @@
 ## 执行边界
 
 - 当前 must-fix：
-  - 网关主链稳定性验证与 /models 回退路径覆盖
+  - `R2` 安装期 runtime 下载、sha 校验与 `vendor/runtime/` 落盘
 - same-batch can-include：
-  - 文档与注释回写、后续阶段任务收敛
+  - `npm rebuild gclm-code` 路径、release 资产来源模板、错误语义收敛
 - follow-up：
-  - provider 枚举进一步中性化（如 `firstParty`）
-  - `runtimeConfig/growthbook.ts` 是否继续去品牌化
-  - 第三方兼容 API 与 auth 策略层优化
+  - `R3` workspace 运行时物化
+  - `R4` 单包 smoke / CI / release 切换
+  - `R5` 默认发布切换与旧三包清理
 
-## 新执行顺序（务实版）
+## 当前发布迁移执行顺序
 
-1. `M1`：`/models` 动态模型发现 + 登录入口网关参数化
-2. `M2`：网关优先接入（客户端不再扩展 openai/codex 协议适配）
-3. `M3`：`anthropic-compatible` 补强
-4. `M4`：收尾清理（含 codex 遗留能力全量摘除）
+1. `R1`：单包发布骨架 + `vendor/manifest.json`
+2. `R2`：平台 runtime 落盘到 `vendor/runtime/`
+3. `R3`：workspace 运行时物化到 `vendor/modules/`
+4. `R4`：单包 smoke / CI / release 切换
+5. `R5`：默认发布切换与旧三包清理
 
 ## OAuth 策略结论
 
