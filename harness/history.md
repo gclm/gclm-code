@@ -43,6 +43,7 @@
 - 已根据 review 收紧矩阵门禁顺序：`CI Verify` 的 `smoke-packages(matrix)` 改为依赖 `build`；`Release NPM` 的 `smoke-registry(matrix)` 改为依赖 `smoke-tarball(matrix)`，避免在已知前置失败后继续消耗重型 smoke 资源。
 - 已继续推进 Option C 的平台目录抽象：新增 `scripts/lib/release-platforms.mjs` 作为发布平台单一事实源，并让 workflow matrix、artifact 下载、tarball 发布顺序与打包脚本统一消费该目录。
 - 已为 `Release NPM` 增加 `run_registry_smoke` 手动开关：允许在 `publish_to_npm=false` 且 `attach_release_assets=false` 时，单独补跑 Verdaccio 私有 registry 安装验证。
+- 已完成线上 dry-run 验证：GitHub Actions `Release NPM` run `23998338010` 在 `publish_to_npm=false`、`attach_release_assets=false`、`run_registry_smoke=true` 下全绿，`Tarball smoke` 与 `Registry smoke` 双矩阵均实际执行成功，`publish-npm`、`publish-release-assets`、`tag-stable` 均保持 `skipped`，证明可在无发布副作用前提下单独补跑私有 registry 安装验证。
 - 已完成本地验证：
   - 三个生成包均可执行 `npm pack`
   - `pack-mac-binary-npm` 已验证可输出 `gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三个 tarball
