@@ -47,6 +47,7 @@
 - `Release NPM` 已新增 `run_registry_smoke` 手动开关：dry-run 场景下可单独补 Verdaccio 私有 registry 验证，而不必真的发布 npm 或上传 release 资产
 - `Release NPM` 的线上 dry-run 已验证该开关生效：run `23998338010` 在不发布 npm / 不上传 release assets 的前提下，仍成功执行 `smoke-tarball(matrix)` 与 `smoke-registry(matrix)`，且 `publish-*` / `tag-stable` 均按预期跳过
 - `v1.0.0` 已完成正式发布：首次 tag run `23998582683` 成功上传 GitHub Release 资产，随后通过补丁提交 `edf2304` 修复 `publish-npm` 缺少 checkout 的 workflow 问题，并通过 workflow_dispatch run `23998704055` 完成 npm 发布与 `stable` 打标收尾
+- 已完成本机真实安装验证：保留原有 `Claude Code 2.1.76` 不卸载的前提下，全局安装 `gclm-code@1.0.0` 后 `gc` 命令已可用；`claude` 仍优先指向 `/Users/gclm/.local/bin/claude`，未覆盖现有本机安装
 - npm 包名已从 `@gclm/gclm-code` 调整为 `gclm-code`，并同步 CLI 默认 PACKAGE_URL、发布 workflow 与相关文档
 - 已为 npm 发布增加 `files` 白名单（`gc`、`README.md`、`install.sh`、`packages`），`npm pack --dry-run` 已验证发布内容收敛为 42 个文件
 - README 已重写为“参考 free-code 项目实践”表述，并同步网关优先策略、验收入口与发布门禁说明
@@ -150,6 +151,7 @@
 - 最新发布链真实安装验证：2026-04-05 GitHub Actions `Release NPM` run `23998338010` 已通过，证明 `run_registry_smoke=true` 可在 dry-run 场景独立触发 Verdaccio 私有 registry 安装链路，而不会误触发 `publish-npm`、`publish-release-assets`、`tag-stable`
 - 最新真实发版验证：2026-04-05 GitHub Actions `Release NPM` run `23998582683` 中 `build-binary(matrix)`、`package-mac-npm`、`smoke-tarball(matrix)`、`smoke-registry(matrix)` 与 `publish-release-assets` 均通过；唯一失败点是 `publish-npm` 缺少 checkout，属于 workflow 编排问题而非包内容或消费者安装链路问题
 - 最新正式发布结果：2026-04-05 GitHub Actions `Release NPM` run `23998704055` 已通过，`publish-npm` 与 `tag-stable` 成功；npm registry 已确认 `gclm-code@1.0.0`、`gclm-code-darwin-x64@1.0.0`、`gclm-code-darwin-arm64@1.0.0` 可见，且 `latest/stable` 均指向 `1.0.0`
+- 最新本机安装验证：2026-04-05 在本机以 `npm install -g gclm-code@1.0.0` 安装时，因默认 registry 为 `https://registry.npmmirror.com` 且镜像缺少 `gclm-code-darwin-x64@1.0.0` tarball，根包 `optionalDependencies` 未落地，首次 `gc --version` 报“未找到匹配架构包”；随后改用官方 npm registry 补装 `gclm-code-darwin-x64@1.0.0` 后恢复正常
 - 最新验证结果：2026-04-04 已执行 `bun run build`，构建通过（含第二刀 codex 全量移除）
 - smoke 脚本已新增：`bun run smoke`、`bun run smoke:gui`
 - 已修复网关模型发现回归：清空 provider flag 后仍可基于 `ANTHROPIC_BASE_URL` 刷新 `/models`

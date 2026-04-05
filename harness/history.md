@@ -47,6 +47,8 @@
 - 已触发真实 `v1.0.0` 发布：run `23998582683` 中构建、`Tarball smoke`、`Registry smoke` 与 GitHub Release 资产上传全部成功，但 `publish-npm` 因缺少 `actions/checkout` 导致 `./scripts/publish-binary-npm-tarballs.mjs` 不存在而失败。
 - 已修复 `publish-npm` job：补回 `Checkout` 步骤，确保正式发布时可读取仓库内发布脚本，随后可通过 `workflow_dispatch` 补跑 `v1.0.0` 的 npm 发布。
 - 已完成 `v1.0.0` 正式补发：workflow_dispatch run `23998704055` 全绿，`publish-npm`、`tag-stable` 均成功；npm registry 已可见 `gclm-code@1.0.0`、`gclm-code-darwin-x64@1.0.0`、`gclm-code-darwin-arm64@1.0.0`，且 `latest/stable` 均指向 `1.0.0`。
+- 已完成一轮真实本机安装验证：在本机保留原有 `Claude Code 2.1.76` 的前提下，全局安装 `gclm-code@1.0.0` 后新增 `gc` 命令入口，但因本机 npm registry 指向 `https://registry.npmmirror.com`，镜像缺少 `gclm-code-darwin-x64@1.0.0` tarball，导致根包的 `optionalDependencies` 被跳过，首次 `gc --version` 失败。
+- 已在本机通过官方 npm registry 补装 `gclm-code-darwin-x64@1.0.0` 修复该问题；随后 `gc --version` 成功输出 `1.0.0 (Gclm Code)`，而 `claude` 仍继续指向原有 `/Users/gclm/.local/bin/claude`，未被新包覆盖。
 - 已完成本地验证：
   - 三个生成包均可执行 `npm pack`
   - `pack-mac-binary-npm` 已验证可输出 `gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三个 tarball
