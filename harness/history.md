@@ -37,6 +37,7 @@
 - 已新增 `smoke-mac-binary-npm-install.mjs`：通过“当前架构子包 tarball -> 根包 tarball -> 离线安装”验证更接近 npm 消费者的安装路径。
 - 已新增 `smoke-mac-binary-npm-registry.mjs`：通过 Verdaccio 私有 registry 按顺序发布三包，再从 registry 安装根包验证真实安装链路。
 - 已补齐收尾对齐：`registry-smoke-*` 仅在需要发布 npm 或上传 release assets 时触发，避免 workflow dry-run 也依赖 Verdaccio；文档同步明确 CI 当前固定覆盖 `tarball install + private registry` 两层验证。
+- 已修复 GitHub Actions 的冻结锁文件阻断：更新 `bun.lock` 中 workspace 依赖解析记录，解决 `CI Verify` 与 `Release NPM` 在 `bun install --frozen-lockfile` 阶段报 `lockfile had changes, but lockfile is frozen` 的问题。
 - 已完成本地验证：
   - 三个生成包均可执行 `npm pack`
   - `pack-mac-binary-npm` 已验证可输出 `gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三个 tarball
