@@ -251,4 +251,4 @@
   - 本地目录 `npm install` 会优先走 symlink 路径，不足以代表未来 registry 安装对 `optionalDependencies` 的最终行为
   - 已新增 tarball 安装 smoke：先装当前架构子包，再离线装根包，验证 `node_modules/.bin/gc` 消费者路径
   - 已新增 Verdaccio 私有 registry smoke：按顺序发布三包后，再从 registry 安装根包验证消费者路径
-  - 因此现阶段 smoke 已从“只看 staging 布局”提升为“staging + tarball install + private registry install”三层验证；公网 npm registry 闭环仍留待后续最终补齐
+  - 当前整体验证已提升为“staging + tarball install + private registry install”三层；其中 CI 固定覆盖后两层，staging smoke 保留为本地演练入口；公网 npm registry 闭环仍留待后续最终补齐

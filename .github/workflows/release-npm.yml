@@ -272,6 +272,7 @@ jobs:
   registry-smoke-darwin-x64:
     runs-on: macos-15-intel
     needs: [meta, package-mac-npm, smoke-darwin-x64]
+    if: ${{ needs.meta.outputs.publish_npm == 'true' || needs.meta.outputs.attach_assets == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -297,6 +298,7 @@ jobs:
   registry-smoke-darwin-arm64:
     runs-on: macos-15
     needs: [meta, package-mac-npm, smoke-darwin-arm64]
+    if: ${{ needs.meta.outputs.publish_npm == 'true' || needs.meta.outputs.attach_assets == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

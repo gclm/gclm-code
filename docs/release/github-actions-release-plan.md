@@ -82,9 +82,13 @@ workflow 主要依赖以下脚本：
 - `scripts/prepare-mac-binary-npm.mjs`
 - `scripts/pack-mac-binary-npm.mjs`
 - `scripts/prepare-mac-release-assets.mjs`
-- `scripts/smoke-mac-binary-npm.mjs`
 - `scripts/smoke-mac-binary-npm-install.mjs`
 - `scripts/smoke-mac-binary-npm-registry.mjs`
+
+说明：
+
+- `scripts/smoke-mac-binary-npm.mjs` 继续作为本地 staging/launcher 演练脚本保留
+- 当前 workflow 中实际执行的是 `tarball install smoke + private registry smoke` 两层、更接近 npm 消费者安装路径的验证
 
 ## 7. Secrets 与输入
 
