@@ -1,26 +1,30 @@
-# `gclm-code` 手动发布指南（mac binary-first）
+# `gclm-code` 手动发布指南（single-package + vendor runtime）
 
-这份文档用于在 CI 不可用时，手动发布 `Gclm Code` 的 macOS 二进制 npm 包。
+这份文档用于在 CI 不可用时，手动发布 `Gclm Code` 的单包 npm 版本。
 
 适用范围：
 
 - 发布前人工演练
 - CI 不可用时的兜底发布
-- 需要手动检查三包产物内容时
+- 需要手动检查单包产物内容时
 
-当前对外交付主路径已经不是“仓库根目录直接 `npm publish`”，而是：
+当前对外交付主路径已经收敛为：
 
-- 根包：`gclm-code`
-- 架构子包：`gclm-code-darwin-x64`
-- 架构子包：`gclm-code-darwin-arm64`
+- 一个 npm 包：`gclm-code`
+- 一份运行时事实源：`vendor/manifest.json`
+- 一组 GitHub Release runtime 资产：双架构 `tar.gz + sha256`
 
-因此手动发布时，只发布 `scripts/prepare-mac-binary-npm.mjs` 生成的三包产物，不直接发布仓库根目录的开发态 `package.json`。
+因此手动发布时：
+
+- 不直接发布仓库根目录的开发态 `package.json`
+- 只发布 `prepare-single-package-npm.mjs` 生成的 staging 包
+- 先上传 GitHub Release 资产，再发布 npm 包
 
 补充说明：
 
 - 仓库根 `package.json` 当前仅用于 workspace 开发，已显式设为 `private: true`
-- 对外可发布的根包 manifest 由 `prepare-mac-binary-npm.mjs` 在 staging 目录中生成
-- 当前平台清单、runner 映射、子包名与发布顺序统一维护在 `scripts/lib/release-platforms.mjs`
+- 对外可发布的消费者 manifest 由 `prepare-single-package-npm.mjs` 在 staging 目录中生成
+- 当前平台清单、runner 映射与 runtime 资产命名统一维护在 `scripts/lib/release-platforms.mjs`
 
 ## 1. 发布前准备
 
@@ -49,31 +53,29 @@ bun run verify
 
 如果这里失败，不要继续进入打包发布。
 
-## 3. 组装三包目录
+## 3. 组装单包目录
 
 示例：
 
 ```bash
-node ./scripts/prepare-mac-binary-npm.mjs \
-  --output-dir dist/npm-manual-release \
-  --darwin-x64-binary /path/to/gc-darwin-x64 \
-  --darwin-arm64-binary /path/to/gc-darwin-arm64
+node ./scripts/prepare-single-package-npm.mjs \
+  --output-dir dist/single-package-manual-release \
+  --release-tag v<version> \
+  --runtime-base-url https://github.com/<owner>/<repo>/releases/download/v<version>/
 ```
 
 产物目录：
 
-- `dist/npm-manual-release/gclm-code`
-- `dist/npm-manual-release/gclm-code-darwin-x64`
-- `dist/npm-manual-release/gclm-code-darwin-arm64`
+- `dist/single-package-manual-release/gclm-code`
 
 ## 4. 生成 npm tarball 与 Release 资产
 
 生成 npm tarball：
 
 ```bash
-node ./scripts/pack-mac-binary-npm.mjs \
-  --staging-dir dist/npm-manual-release \
-  --output-dir dist/npm-manual-tarballs
+node ./scripts/pack-single-package-npm.mjs \
+  --staging-dir dist/single-package-manual-release \
+  --output-dir dist/single-package-manual-tarballs
 ```
 
 生成 GitHub Release 资产与校验和：
@@ -87,9 +89,7 @@ node ./scripts/prepare-mac-release-assets.mjs \
 
 预期产物：
 
-- `dist/npm-manual-tarballs/gclm-code-<version>.tgz`
-- `dist/npm-manual-tarballs/gclm-code-darwin-x64-<version>.tgz`
-- `dist/npm-manual-tarballs/gclm-code-darwin-arm64-<version>.tgz`
+- `dist/single-package-manual-tarballs/gclm-code-<version>.tgz`
 - `release-assets-manual/gclm-code-<version>-darwin-x64.tar.gz`
 - `release-assets-manual/gclm-code-<version>-darwin-x64.tar.gz.sha256`
 - `release-assets-manual/gclm-code-<version>-darwin-arm64.tar.gz`
@@ -100,42 +100,49 @@ node ./scripts/prepare-mac-release-assets.mjs \
 在当前机器对应架构上执行：
 
 ```bash
-node ./scripts/smoke-mac-binary-npm.mjs \
+node ./scripts/smoke-single-package-npm.mjs \
   --skip-prepare \
-  --staging-dir dist/npm-manual-release
-node ./scripts/smoke-mac-binary-npm-install.mjs \
+  --staging-dir dist/single-package-manual-release \
+  --pack-dir dist/single-package-manual-tarballs
+node ./scripts/smoke-single-package-npm-install.mjs \
+  --skip-prepare \
   --skip-pack \
-  --tarballs-dir dist/npm-manual-tarballs
-node ./scripts/smoke-mac-binary-npm-registry.mjs \
+  --tarballs-dir dist/single-package-manual-tarballs \
+  --release-assets-dir release-assets-manual
+node ./scripts/smoke-single-package-npm-registry.mjs \
+  --skip-prepare \
   --skip-pack \
-  --tarballs-dir dist/npm-manual-tarballs
+  --tarballs-dir dist/single-package-manual-tarballs \
+  --release-assets-dir release-assets-manual
+node ./scripts/smoke-single-package-vendor-modules.mjs
 ```
 
 说明：
 
-- 该 smoke 会验证三包目录可以 `npm pack`
-- 会验证根包 launcher 能在“模拟安装布局”中选择当前架构子包并执行 `gc --version`
-- 会进一步验证“当前架构子包 tarball + 根包 tarball”可在临时项目中离线安装并跑通 `node_modules/.bin/gc --version`
+- 该 smoke 会验证 staging 内容、tarball 内容与 `vendor/manifest.json`
+- 会验证真实 `npm install <tarball>` 后，`node_modules/.bin/gc --version` 与 `vendor/runtime/<platform>/gc` 均可用
 - 会进一步验证“临时私有 registry 发布 -> 从 registry 安装根包”可跑通 `node_modules/.bin/gc --version`
+- 会额外验证 vendored workspace 包与 sidecar 文件已随发布物落地
 - `x64` 与 `arm64` 两条路径需要分别在对应 runner 或机器上验证；正式发布建议交给 CI workflow 自动完成
 
-## 6. 发布到 npm
+## 6. 先上传 GitHub Release 资产
 
-发布顺序必须固定：
+在发布 npm 之前，先把 `release-assets-manual/` 下的文件上传到目标 tag 对应的 GitHub Release：
 
-1. `gclm-code-darwin-x64`
-2. `gclm-code-darwin-arm64`
-3. `gclm-code`
+- `gclm-code-<version>-darwin-x64.tar.gz`
+- `gclm-code-<version>-darwin-x64.tar.gz.sha256`
+- `gclm-code-<version>-darwin-arm64.tar.gz`
+- `gclm-code-<version>-darwin-arm64.tar.gz.sha256`
+
+原因：消费者安装 npm 包时会立即运行 `postinstall`，如果 runtime 资产尚未可下载，就会在安装阶段失败。
+
+## 7. 发布到 npm
 
 示例：
 
 ```bash
 npm publish --access public --tag latest \
-  dist/npm-manual-tarballs/gclm-code-darwin-x64-<version>.tgz
-npm publish --access public --tag latest \
-  dist/npm-manual-tarballs/gclm-code-darwin-arm64-<version>.tgz
-npm publish --access public --tag latest \
-  dist/npm-manual-tarballs/gclm-code-<version>.tgz
+  dist/single-package-manual-tarballs/gclm-code-<version>.tgz
 ```
 
 发布后校验：
@@ -145,22 +152,13 @@ npm view gclm-code version
 npm dist-tag ls gclm-code
 ```
 
-## 7. 维护 `stable` 频道
+## 8. 维护 `stable` 频道
 
 当本次发布需要同步标记为 `stable`：
 
 ```bash
 npm dist-tag add gclm-code@<version> stable
 ```
-
-## 8. GitHub Release 资产上传
-
-如需补发 GitHub Release：
-
-- 上传 `release-assets-manual/` 下的两个 `tar.gz`
-- 同时上传对应 `.sha256`
-
-建议保持与 npm 版本号完全一致。
 
 ## 9. 回滚策略（npm）
 

@@ -24,6 +24,17 @@ export function singlePackageAssetName(version, platform) {
   return `${ROOT_PACKAGE_NAME}-${version}-${platform.releaseLabel}.tar.gz`
 }
 
+export function npmPackFileName(packageName, version) {
+  return `${packageName.replace(/^@/, '').replaceAll('/', '-')}-${version}.tgz`
+}
+
+export function singlePackageTarballName(
+  version,
+  packageName = ROOT_PACKAGE_NAME,
+) {
+  return `${packageName.replace(/^@/, '').replaceAll('/', '-')}-${version}.tgz`
+}
+
 export function createVendorManifest({
   version,
   runtimeBaseUrl = null,

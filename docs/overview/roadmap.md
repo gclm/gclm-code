@@ -25,9 +25,9 @@
 
 ## Release Scope Refresh：单包 + Vendor 运行时
 
-状态：`R3 已完成，进入 R4 build`
+状态：`R4 已完成，进入 R5 build`
 
-目标：把当前 `mac binary-first + 三包` 从“现行主链”降级为“回退链路”，并切到单消费者包模型。
+目标：把当前发布默认路径稳定在“单消费者包 + vendor 运行时”，并清理旧三包遗留耦合。
 
 范围：
 
@@ -45,7 +45,7 @@
 
 当前推荐动作：
 
-- 进入 `R4` build：把单包 smoke、CI 与 release workflow 切到 `bin/ + vendor/` 主链
+- 进入 `R5` build：清理旧三包脚本、旧 workflow 命名与历史文档耦合
 - 详细任务单见 `docs/release/single-package-implementation-plan.md`
 
 ## Phase 0：已完成的基础收口
@@ -192,15 +192,16 @@
   - `smoke:packages:{core,gui,gateway,all}`
   - `smoke:login-gateway`
 - 已补充运维文档：`docs/release/gateway-smoke-and-login.md`
-- `release-npm` workflow 已切换到 `mac binary-first`：
-  - 使用 `macos-15-intel` / `macos-15` 双 runner 分别构建 `darwin-x64` / `darwin-arm64`
-  - 统一组装 `gclm-code` + 两个架构子包
-  - 在双架构 runner 上分别执行 launcher smoke
-  - npm 发布顺序固定为两个子包先发、根包后发
+- `R4` 已完成：
+  - `release-npm` workflow 已切到单包主链：`package-single-package-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-release-assets -> publish-npm`
+  - 当前 npm 默认只发布一个 `gclm-code`，GitHub Release 继续提供双架构 runtime 资产
+  - 已新增单包 `pack / publish / tarball install / registry install` 脚本
+  - 已让 `CI Verify` 增补单包 staging smoke 与 macOS single-package install/vendor smoke
+  - 已在本机完成单包 tarball 安装、单包 registry 安装与 vendored modules 回归验证
 
 ## 当前推荐动作
 
-- 推荐下一步：进入 `R4` build，先完成单包 tarball / registry / mirror-like smoke 与 workflow 切换
-- 重点关注：如何让 CI / release 只认 `bin/ + vendor/` 主链，并保留旧三包为回退开关
-- 当前线上 release 主链仍是 `mac binary-first + npm 根包/架构子包`，但仅作为迁移窗口内的回退链路
+- 推荐下一步：进入 `R5` build，清理旧三包脚本、旧文档与历史 workflow 名称
+- 重点关注：在不动 `src/` / `packages/` 主结构的前提下，彻底收口发布层面的旧三包耦合
+- 当前线上 release 主链已切到 `单包 + vendor runtime`，旧三包只保留为历史实现与待删除资产
 - 仓库根 `package.json` 继续作为开发态 workspace manifest；消费者 manifest 在迁移窗口内允许先由 staging package 生成

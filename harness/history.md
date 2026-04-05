@@ -30,6 +30,7 @@
 - 已完成 `R1 - 单包发布骨架与 vendor manifest`：新增单包 staging 组装脚本、`vendor/manifest.json` schema、发布态 `bin/gc.js` 与最小 `npm pack` smoke，确认单包消费者边界可生成并可独立校验
 - 已完成 `R2 - 平台 runtime 落盘到 vendor/runtime/`：新增安装期 runtime 安装脚本、单包 `postinstall` wiring、`sha256` 校验与真实 `npm install` smoke，确认当前平台安装后可直接通过 `gc` 启动 runtime
 - 已完成 `R3 - workspace 运行时物化到 vendor/modules/`：新增 runtime workspace 包物化脚本与依赖扫描 helper，把 8 个 runtime workspace 包收敛到 `vendor/modules/node_modules/`，并让单包 staging 自动注入最小 runtime 依赖、modules manifest、launcher `NODE_PATH` 与 runtime 目录软链；同时补齐 vendor modules 安装后 smoke，确认发布态可在脱离仓库 `packages/*` 布局时解析这些运行时模块
+- 已完成 `R4 - 单包 smoke / CI / release 切换`：新增单包 `pack / publish / tarball install / registry install` 脚本，把 `Release NPM` workflow 切到 `package-single-package-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-release-assets -> publish-npm` 主链，并让 `CI Verify` 补齐 single-package staging 与 macOS install/vendor smoke；同时通过本机 tarball / registry 安装验证补上真实消费者安装证据
 - 已调整 Logo V2 默认欢迎文案：无用户名或用户名过长时，从 `How are you` 改为 `Are You Ok?`
 - 基于已确认的 `mac binary-first + npm 根包/架构子包` 方向，新增首批可执行骨架。
 - 新增 `scripts/prepare-mac-binary-npm.mjs`：可生成 `dist/npm/gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三包目录。

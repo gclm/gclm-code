@@ -1,25 +1,25 @@
 # 项目状态
 
-更新时间：2026-04-05（R3 已完成，进入 R4）
+更新时间：2026-04-05（R4 已完成，进入 R5）
 
 ## 当前阶段
 
-- Active phase：`R4 - 单包 smoke / CI / release 切换（进行中）`
+- Active phase：`R5 - 默认发布切换与旧三包清理（进行中）`
 - 当前 focus：
-  - 将单包 smoke、CI 与 release workflow 切到 `bin/ + vendor/` 主链
-  - 用 tarball / registry / mirror-like 验证补齐单包消费者证据
+  - 将单包链路正式收敛为默认发布主路径
+  - 清理旧三包脚本、workflow 命名与历史文档耦合
   - 保持发布态运行时边界为 `bin/ + vendor/`
-  - 保留现行 `mac binary-first + 三包` 作为回退链路
+  - 保持 GitHub Release 继续产出双架构 mac runtime 资产
   - 功能侧维持持续维护，不新增 release 之外的大改造
 
 ## 当前判断
 
 - 这是一次 release 方向的 `scope-refresh`，不是新的产品规划。
 - 功能侧 `M1-M4` 已完成，当前重点从“provider / gateway 收口”切到“发布主链收敛”。
-- 现行线上 release 主链仍是 `mac binary-first + 三包`：
-  - npm 渠道当前主形态为 `gclm-code` + `gclm-code-darwin-x64` + `gclm-code-darwin-arm64`
-  - GitHub Release 同步产出双架构 mac 资产与 `sha256`
-  - 该链路在迁移窗口内只作回退，不再作为长期推荐结构继续增强
+- 当前 release 主链已切到 `单消费者包 + vendor 运行时`：
+  - npm 渠道默认只发布一个 `gclm-code`
+  - GitHub Release 继续同步产出双架构 mac runtime 资产与 `sha256`
+  - 旧 `mac binary-first + 三包` 已降级为待清理历史链路，不再作为推荐结构继续增强
 - 已冻结的新方向是 `单消费者包 + vendor 运行时`：
   - 发布态运行时只认 `bin/ + vendor/`
   - `vendor/manifest.json` 作为运行时单一事实源
@@ -40,9 +40,17 @@
 - Logo V2 默认欢迎文案已从 `How are you` 调整为 `Are You Ok?`
 - `scripts/build.ts` 已优化为统一产物命名：默认输出 `gc`、dev 输出 `gc-dev`，并联动更新 smoke/install/release 引用
 - release 产物结构已调整为 `bin/gc`（默认可执行）+ `bin/claude -> gc` 软链，并通过 tar 包对外分发
-- `release-npm` workflow 已切换为 `mac binary-first` 主链，并已升级为 fan-out / matrix 流水线：`meta -> preflight -> build-binary(matrix) -> package-mac-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-*`
+- `release-npm` workflow 已切换为单包主链，并保持 fan-out / matrix 流水线：`meta -> preflight -> build-binary(matrix) -> package-single-package-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-*`
 - `scripts/lib/release-platforms.mjs` 已成为当前发布平台单一事实源：统一维护 `platform_matrix`、runner 映射、artifact 命名、子包名与发布顺序
 - `Release NPM` 已新增 `run_registry_smoke` 手动开关：dry-run 场景下可单独补 Verdaccio 私有 registry 验证，而不必真的发布 npm 或上传 release 资产
+- 已完成 `R4 - 单包 smoke / CI / release 切换`：
+  - 已新增 `scripts/pack-single-package-npm.mjs`
+  - 已新增 `scripts/publish-single-package-npm-tarball.mjs`
+  - 已新增 `scripts/smoke-single-package-npm-install.mjs`
+  - 已新增 `scripts/smoke-single-package-npm-registry.mjs`
+  - `Release NPM` 已切到单包 staging / tarball / registry / publish 主链
+  - `CI Verify` 已补单包 staging smoke 与 macOS single-package install/vendor smoke
+  - 已新增“发布 npm 必须同时上传 release assets”的 workflow 门禁，避免 postinstall 指向空 runtime 源
 - `Release NPM` 的线上 dry-run 已验证该开关生效：run `23998338010` 在不发布 npm / 不上传 release assets 的前提下，仍成功执行 `smoke-tarball(matrix)` 与 `smoke-registry(matrix)`，且 `publish-*` / `tag-stable` 均按预期跳过
 - `v1.0.0` 已完成正式发布：首次 tag run `23998582683` 成功上传 GitHub Release 资产，随后通过补丁提交 `edf2304` 修复 `publish-npm` 缺少 checkout 的 workflow 问题，并通过 workflow_dispatch run `23998704055` 完成 npm 发布与 `stable` 打标收尾
 - 已完成本机真实安装验证：保留原有 `Claude Code 2.1.76` 不卸载的前提下，全局安装 `gclm-code@1.0.0` 后 `gc` 命令已可用；`claude` 仍优先指向 `/Users/gclm/.local/bin/claude`，未覆盖现有本机安装
@@ -94,9 +102,9 @@
 
 ## 进行中
 
-- 功能侧已进入持续维护模式；发布侧已进入 `R4 - 单包 smoke / CI / release 切换`
+- 功能侧已进入持续维护模式；发布侧已进入 `R5 - 默认发布切换与旧三包清理`
 - 已更新 release 迁移提案：当前推荐方向为 `单消费者包 + vendor 运行时 + D-lite 发布边界收敛`，发布态运行时只保留 `bin/ + vendor/`，`dist/` 明确降级为构建中间层；同时保留 `packages/*` 作为内部 workspace，并让 `C + D-lite` 并行推进
-- 已新增实施任务单：`docs/release/single-package-implementation-plan.md`，当前 active phase 已推进到 `R4 - 单包 smoke / CI / release 切换`
+- 已新增实施任务单：`docs/release/single-package-implementation-plan.md`，当前 active phase 已推进到 `R5 - 默认发布切换与旧三包清理`
 - `R1` 已完成：
   - 已新增 `scripts/prepare-single-package-npm.mjs`
   - 已新增 `scripts/lib/single-package-npm.mjs`
@@ -116,25 +124,30 @@
   - 已让 launcher 为 runtime 注入 `NODE_PATH`，并在安装期为 `vendor/runtime/<platform>/node_modules` 建立到 `vendor/modules/node_modules` 的软链
   - 已新增 `scripts/smoke-single-package-vendor-modules.mjs`
   - 已验证安装后目录可在脱离仓库 `packages/*` 布局的条件下加载 vendor modules，并保持 `gc --version` 正常
+- `R4` 已完成：
+  - 已新增单包 pack / publish / tarball install / registry install 脚本
+  - 已让 `Release NPM` 统一产出单包 staging、单包 tarball 与双架构 release assets
+  - 已让 tarball / registry smoke 直接验证真实 `npm install` 路径，而不是继续依赖三包 `optionalDependencies`
+  - 已让 `CI Verify` 增补 single-package staging + runtime/install/vendor smoke
+  - 已验证单包 tarball 安装、单包 registry 安装与 vendored modules 回归全部通过
 
 ## 已知未完成项
 
-- `R4` 尚未完成：单包 smoke / CI / release workflow 仍需切主链并补镜像回归
-- `R5` 尚未开始：默认发布切换与旧三包清理仍未落地
+- `R5` 进行中：旧三包脚本、旧 workflow 命名与历史文档仍需清理
 - `docs` 历史文档中可能仍有 codex 文案残留（不影响运行时）；后续可按文档清理批次处理
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否进一步去品牌化或去历史产品语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
+- 通过安装后的 `gc` 本体显式触发 vendored workspace 懒加载功能的 feature smoke 仍偏弱，后续可补一条更贴近真实功能入口的验证
 - 当前全量 typecheck 在仓库基线上有大量既有错误，无法作为本轮单改动通过标准
 
 ## 执行边界
 
 - 当前 must-fix：
-  - `R4` 单包 smoke / CI / release 切换
-- same-batch can-include：
-  - 单包 tarball / registry / mirror-like smoke 收敛
-- follow-up：
   - `R5` 默认发布切换与旧三包清理
-  - mirror-like registry 的正式回归验证
+- same-batch can-include：
+  - 旧三包脚本、旧 docs 与旧 workflow 名称收口
+- follow-up：
+  - 更贴近真实功能入口的 vendored workspace lazy-load smoke
 
 ## 当前发布迁移执行顺序
 
@@ -173,6 +186,8 @@
 - 最新发布链修复验证：2026-04-05 已执行 `bun run verify`，通过
 - 最新单包 staging 验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-npm.mjs`，通过
 - 最新单包 runtime 安装验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-runtime-install.mjs`，通过
+- 最新单包 tarball 安装验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-npm-install.mjs`，通过
+- 最新单包 registry 安装验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-npm-registry.mjs`，通过
 - 最新单包 vendor modules 验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-vendor-modules.mjs`，通过
 - 最新发布链真实安装验证：2026-04-05 GitHub Actions `Release NPM` run `23998338010` 已通过，证明 `run_registry_smoke=true` 可在 dry-run 场景独立触发 Verdaccio 私有 registry 安装链路，而不会误触发 `publish-npm`、`publish-release-assets`、`tag-stable`
 - 最新真实发版验证：2026-04-05 GitHub Actions `Release NPM` run `23998582683` 中 `build-binary(matrix)`、`package-mac-npm`、`smoke-tarball(matrix)`、`smoke-registry(matrix)` 与 `publish-release-assets` 均通过；唯一失败点是 `publish-npm` 缺少 checkout，属于 workflow 编排问题而非包内容或消费者安装链路问题
