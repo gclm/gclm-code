@@ -18,6 +18,9 @@ gen
 /gc
 /gc-dev
 /dist/
+/gclm-code-*.tgz
+/release-assets-check/
+/packages/*/node_modules/
 
 # local logs
 *.log

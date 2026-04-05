@@ -47,6 +47,7 @@
 - 已为 npm 发布增加 `files` 白名单（`gc`、`README.md`、`install.sh`、`packages`），`npm pack --dry-run` 已验证发布内容收敛为 42 个文件
 - README 已重写为“参考 free-code 项目实践”表述，并同步网关优先策略、验收入口与发布门禁说明
 - npm 包基础发布配置已落地：`gclm-code`
+- 已补充 `.gitignore`：忽略根目录 npm tarball、本地 `release-assets-check/` 目录与 `packages/*/node_modules/`，减少发布调试时的工作区噪音
 - CI 验收工作流已落地：`bun run verify`
 - npm tag 发布工作流已落地
 - 第二批 telemetry 清理已有明显进展：
