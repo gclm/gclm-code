@@ -1,7 +1,6 @@
 import {
   chmodSync,
   copyFileSync,
-  existsSync,
   mkdirSync,
   readFileSync,
   rmSync,
@@ -11,19 +10,28 @@ import {
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { join, resolve } from 'node:path'
-import { getRepoRoot, MAC_ARCH_PACKAGES, readRootPackage } from './lib/mac-binary-npm.mjs'
+import {
+  consumePlatformBinaryArg,
+  createBinaryPathOverrides,
+  ensurePlatformBinaries,
+  getBinaryNpmReleasePlatforms,
+  resolvePlatformBinaryPaths,
+} from './lib/release-platforms.mjs'
+import { getRepoRoot, readRootPackage } from './lib/mac-binary-npm.mjs'
 
 const rootDir = getRepoRoot(import.meta.url)
 const rootPkg = readRootPackage(rootDir)
+const LEGACY_BINARY_FLAGS = Object.freeze({
+  '--darwin-x64-binary': 'darwin-x64',
+  '--darwin-arm64-binary': 'darwin-arm64',
+})
 
 function parseArgs(argv) {
   const options = {
     outputDir: resolve(rootDir, 'release-assets'),
     version: rootPkg.version,
-    binaries: {
-      x64: null,
-      arm64: null,
-    },
+    binaryInputDir: null,
+    binaries: createBinaryPathOverrides(),
   }
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -38,29 +46,26 @@ function parseArgs(argv) {
       i += 1
       continue
     }
-    if (arg === '--darwin-x64-binary' && argv[i + 1]) {
-      options.binaries.x64 = resolve(rootDir, argv[i + 1])
+    if (arg === '--binary-input-dir' && argv[i + 1]) {
+      options.binaryInputDir = argv[i + 1]
       i += 1
       continue
     }
-    if (arg === '--darwin-arm64-binary' && argv[i + 1]) {
-      options.binaries.arm64 = resolve(rootDir, argv[i + 1])
-      i += 1
+    const consumed = consumePlatformBinaryArg({
+      argv,
+      index: i,
+      binaries: options.binaries,
+      rootDir,
+      aliasMap: LEGACY_BINARY_FLAGS,
+    })
+    if (consumed > 0) {
+      i += consumed
       continue
     }
     throw new Error(`Unknown argument: ${arg}`)
   }
 
   return options
-}
-
-function ensureBinary(path, label) {
-  if (!path) {
-    throw new Error(`Missing binary path for ${label}`)
-  }
-  if (!existsSync(path)) {
-    throw new Error(`Binary for ${label} does not exist: ${path}`)
-  }
 }
 
 function run(command, args, options = {}) {
@@ -82,8 +87,12 @@ function sha256(path) {
 }
 
 const options = parseArgs(process.argv.slice(2))
-ensureBinary(options.binaries.x64, 'darwin-x64')
-ensureBinary(options.binaries.arm64, 'darwin-arm64')
+const binaries = resolvePlatformBinaryPaths({
+  rootDir,
+  binaries: options.binaries,
+  binaryInputDir: options.binaryInputDir,
+})
+ensurePlatformBinaries(binaries)
 
 rmSync(options.outputDir, { recursive: true, force: true })
 mkdirSync(options.outputDir, { recursive: true })
@@ -91,19 +100,15 @@ mkdirSync(options.outputDir, { recursive: true })
 const stagingRoot = join(options.outputDir, '.staging')
 const assets = []
 
-for (const [arch, binaryPath] of [
-  ['x64', options.binaries.x64],
-  ['arm64', options.binaries.arm64],
-]) {
-  const meta = MAC_ARCH_PACKAGES[arch]
-  const assetBaseName = `gclm-code-${options.version}-${meta.releaseLabel}.tar.gz`
+for (const platform of getBinaryNpmReleasePlatforms()) {
+  const assetBaseName = `gclm-code-${options.version}-${platform.releaseLabel}.tar.gz`
   const assetPath = join(options.outputDir, assetBaseName)
   const checksumPath = join(options.outputDir, `${assetBaseName}.sha256`)
-  const stageDir = join(stagingRoot, meta.releaseLabel)
+  const stageDir = join(stagingRoot, platform.releaseLabel)
   const binDir = join(stageDir, 'bin')
 
   mkdirSync(binDir, { recursive: true })
-  copyFileSync(binaryPath, join(binDir, 'gc'))
+  copyFileSync(binaries[platform.platformId], join(binDir, 'gc'))
   chmodSync(join(binDir, 'gc'), 0o755)
   symlinkSync('gc', join(binDir, 'claude'))
 

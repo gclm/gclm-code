@@ -36,6 +36,7 @@
 - `.github/workflows/release-npm.yml`
   - 已接入 `platform_matrix` 驱动的双 mac runner 构建与 smoke
   - 已接入双架构 `tarball install smoke + private registry smoke` 与 npm 顺序发布
+  - 当前 `platform_matrix`、runner 映射、发布顺序统一由 `scripts/lib/release-platforms.mjs` 驱动
 
 当前验证分成三层：
 
@@ -45,6 +46,11 @@
 
 其中 CI 当前固定覆盖后两层；第一层 staging smoke 继续保留为本地演练与脚本自检入口。
 当前 `Release NPM` 已切到 fan-out 结构：`preflight -> build-binary(matrix) -> package-mac-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish`。
+当前已额外补一层“平台目录抽象”：
+
+- `scripts/lib/release-platforms.mjs` 维护当前启用平台、runner、artifact 命名、子包名与发布顺序
+- `scripts/release-platform-matrix.mjs` 负责把平台目录转成 workflow 需要的 matrix JSON
+- `scripts/publish-binary-npm-tarballs.mjs` 负责按同一份平台目录顺序发布 tarball
 
 之所以不直接用“仓库目录 `npm install`”做最终断言，是因为 npm 对本地目录安装会优先走 symlink 路径，这与未来 registry 安装行为不完全一致。
 

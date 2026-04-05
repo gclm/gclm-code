@@ -1,15 +1,21 @@
 import {
   chmodSync,
   copyFileSync,
-  existsSync,
   mkdirSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
 import { join, resolve } from 'node:path'
 import {
-  MAC_ARCH_PACKAGES,
+  ACTIVE_BINARY_NPM_PLATFORM_IDS,
+  consumePlatformBinaryArg,
+  createBinaryPathOverrides,
+  ensurePlatformBinaries,
+  getBinaryNpmReleasePlatforms,
   ROOT_PACKAGE_NAME,
+  resolvePlatformBinaryPaths,
+} from './lib/release-platforms.mjs'
+import {
   getRepoRoot,
   readRootPackage,
   renderRootLauncher,
@@ -17,15 +23,17 @@ import {
 
 const rootDir = getRepoRoot(import.meta.url)
 const rootPkg = readRootPackage(rootDir)
+const LEGACY_BINARY_FLAGS = Object.freeze({
+  '--darwin-x64-binary': 'darwin-x64',
+  '--darwin-arm64-binary': 'darwin-arm64',
+})
 
 function parseArgs(argv) {
   const options = {
     outputDir: resolve(rootDir, 'dist', 'npm'),
     version: rootPkg.version,
-    binaries: {
-      x64: null,
-      arm64: null,
-    },
+    binaryInputDir: null,
+    binaries: createBinaryPathOverrides(ACTIVE_BINARY_NPM_PLATFORM_IDS),
   }
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -40,29 +48,26 @@ function parseArgs(argv) {
       i += 1
       continue
     }
-    if (arg === '--darwin-x64-binary' && argv[i + 1]) {
-      options.binaries.x64 = resolve(rootDir, argv[i + 1])
+    if (arg === '--binary-input-dir' && argv[i + 1]) {
+      options.binaryInputDir = argv[i + 1]
       i += 1
       continue
     }
-    if (arg === '--darwin-arm64-binary' && argv[i + 1]) {
-      options.binaries.arm64 = resolve(rootDir, argv[i + 1])
-      i += 1
+    const consumed = consumePlatformBinaryArg({
+      argv,
+      index: i,
+      binaries: options.binaries,
+      rootDir,
+      aliasMap: LEGACY_BINARY_FLAGS,
+    })
+    if (consumed > 0) {
+      i += consumed
       continue
     }
     throw new Error(`Unknown argument: ${arg}`)
   }
 
   return options
-}
-
-function ensureBinary(path, label) {
-  if (!path) {
-    throw new Error(`Missing binary path for ${label}`)
-  }
-  if (!existsSync(path)) {
-    throw new Error(`Binary for ${label} does not exist: ${path}`)
-  }
 }
 
 function writeJson(path, value) {
@@ -82,8 +87,8 @@ function ensureDir(path) {
 
 function rootOptionalDependencies(options) {
   const specs = {}
-  for (const meta of Object.values(MAC_ARCH_PACKAGES)) {
-    specs[meta.packageName] = options.version
+  for (const platform of getBinaryNpmReleasePlatforms()) {
+    specs[platform.packageName] = options.version
   }
   return specs
 }
@@ -92,16 +97,19 @@ function writeRootPackage(outputDir, options) {
   const packageDir = join(outputDir, ROOT_PACKAGE_NAME)
   const binDir = join(packageDir, 'bin')
   ensureDir(binDir)
+  const platforms = getBinaryNpmReleasePlatforms()
+  const supportedOs = [...new Set(platforms.map(platform => platform.os))]
+  const supportedCpu = [...new Set(platforms.map(platform => platform.arch))]
 
   const manifest = {
     name: ROOT_PACKAGE_NAME,
     version: options.version,
     private: false,
-    description: 'macOS binary launcher package for Gclm Code.',
+    description: 'Binary launcher package for Gclm Code.',
     type: 'module',
     license: rootPkg.license ?? 'UNLICENSED',
-    os: ['darwin'],
-    cpu: ['x64', 'arm64'],
+    os: supportedOs,
+    cpu: supportedCpu,
     bin: {
       gc: './bin/gc.js',
       claude: './bin/gc.js',
@@ -117,13 +125,12 @@ function writeRootPackage(outputDir, options) {
   writeText(join(binDir, 'gc.js'), renderRootLauncher(), true)
   writeText(
     join(packageDir, 'README.md'),
-    '# gclm-code\n\nGenerated macOS npm launcher package.\n',
+    '# gclm-code\n\nGenerated binary launcher package.\n',
   )
 }
 
-function writeArchPackage(outputDir, arch, binaryPath, version) {
-  const meta = MAC_ARCH_PACKAGES[arch]
-  const packageDir = join(outputDir, meta.packageName)
+function writePlatformPackage(outputDir, platform, binaryPath, version) {
+  const packageDir = join(outputDir, platform.packageName)
   const binDir = join(packageDir, 'bin')
   const resourcesDir = join(packageDir, 'resources')
   ensureDir(binDir)
@@ -134,14 +141,14 @@ function writeArchPackage(outputDir, arch, binaryPath, version) {
   chmodSync(targetBinaryPath, 0o755)
 
   const manifest = {
-    name: meta.packageName,
+    name: platform.packageName,
     version,
     private: false,
-    description: meta.description,
+    description: platform.description,
     type: 'module',
     license: rootPkg.license ?? 'UNLICENSED',
-    os: ['darwin'],
-    cpu: meta.cpu,
+    os: [platform.os],
+    cpu: [platform.arch],
     files: [
       'bin',
       'resources',
@@ -152,25 +159,35 @@ function writeArchPackage(outputDir, arch, binaryPath, version) {
   writeJson(join(packageDir, 'package.json'), manifest)
   writeText(
     join(packageDir, 'README.md'),
-    `# ${meta.packageName}\n\nGenerated macOS ${arch} binary package for Gclm Code.\n`,
+    `# ${platform.packageName}\n\nGenerated ${platform.releaseLabel} binary package for Gclm Code.\n`,
   )
 }
 
 const options = parseArgs(process.argv.slice(2))
-ensureBinary(options.binaries.x64, 'darwin-x64')
-ensureBinary(options.binaries.arm64, 'darwin-arm64')
+const binaries = resolvePlatformBinaryPaths({
+  rootDir,
+  binaries: options.binaries,
+  binaryInputDir: options.binaryInputDir,
+})
+ensurePlatformBinaries(binaries)
 
 rmSync(options.outputDir, { recursive: true, force: true })
 ensureDir(options.outputDir)
 
 writeRootPackage(options.outputDir, options)
-writeArchPackage(options.outputDir, 'x64', options.binaries.x64, options.version)
-writeArchPackage(options.outputDir, 'arm64', options.binaries.arm64, options.version)
+for (const platform of getBinaryNpmReleasePlatforms()) {
+  writePlatformPackage(
+    options.outputDir,
+    platform,
+    binaries[platform.platformId],
+    options.version,
+  )
+}
 
 process.stdout.write(
   [
     `Prepared mac binary npm packages at ${options.outputDir}`,
     `- ${ROOT_PACKAGE_NAME}`,
-    ...Object.values(MAC_ARCH_PACKAGES).map(meta => `- ${meta.packageName}`),
+    ...getBinaryNpmReleasePlatforms().map(platform => `- ${platform.packageName}`),
   ].join('\n') + '\n',
 )

@@ -10,6 +10,11 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import {
+  consumePlatformBinaryArg,
+  createBinaryPathOverrides,
+  resolvePlatformBinaryPaths,
+} from './lib/release-platforms.mjs'
+import {
   currentMacArch,
   getMacPackageDirectoryNames,
   getRepoRoot,
@@ -20,6 +25,10 @@ import {
 
 const rootDir = getRepoRoot(import.meta.url)
 const currentArch = currentMacArch()
+const LEGACY_BINARY_FLAGS = Object.freeze({
+  '--darwin-x64-binary': 'darwin-x64',
+  '--darwin-arm64-binary': 'darwin-arm64',
+})
 
 if (!currentArch) {
   process.stderr.write('SKIP mac-binary-npm-smoke - 当前仅在 macOS x64/arm64 环境下执行\n')
@@ -31,10 +40,8 @@ function parseArgs(argv) {
   const options = {
     stagingDir: resolve(rootDir, 'dist', 'npm-smoke'),
     version: rootPkg.version,
-    binaries: {
-      x64: resolve(rootDir, 'gc'),
-      arm64: resolve(rootDir, 'gc'),
-    },
+    binaryInputDir: null,
+    binaries: createBinaryPathOverrides(),
     skipPrepare: false,
   }
 
@@ -50,14 +57,20 @@ function parseArgs(argv) {
       i += 1
       continue
     }
-    if (arg === '--darwin-x64-binary' && argv[i + 1]) {
-      options.binaries.x64 = resolve(rootDir, argv[i + 1])
+    if (arg === '--binary-input-dir' && argv[i + 1]) {
+      options.binaryInputDir = argv[i + 1]
       i += 1
       continue
     }
-    if (arg === '--darwin-arm64-binary' && argv[i + 1]) {
-      options.binaries.arm64 = resolve(rootDir, argv[i + 1])
-      i += 1
+    const consumed = consumePlatformBinaryArg({
+      argv,
+      index: i,
+      binaries: options.binaries,
+      rootDir,
+      aliasMap: LEGACY_BINARY_FLAGS,
+    })
+    if (consumed > 0) {
+      i += consumed
       continue
     }
     if (arg === '--skip-prepare') {
@@ -87,6 +100,11 @@ function run(command, args, options = {}) {
 }
 
 const options = parseArgs(process.argv.slice(2))
+const binaries = resolvePlatformBinaryPaths({
+  rootDir,
+  binaries: options.binaries,
+  binaryInputDir: options.binaryInputDir,
+})
 const tempDir = mkdtempSync(join(tmpdir(), 'gclm-mac-binary-npm-'))
 const npmCacheDir = join(tempDir, '.npm-cache')
 
@@ -101,10 +119,10 @@ try {
       options.stagingDir,
       '--version',
       options.version,
-      '--darwin-x64-binary',
-      options.binaries.x64,
-      '--darwin-arm64-binary',
-      options.binaries.arm64,
+      '--binary',
+      `darwin-x64=${binaries['darwin-x64']}`,
+      '--binary',
+      `darwin-arm64=${binaries['darwin-arm64']}`,
     ])
   }
 

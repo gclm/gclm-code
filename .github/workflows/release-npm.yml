@@ -48,6 +48,7 @@ jobs:
         id: meta
         run: |
           VERSION=$(node -p "require('./package.json').version")
+          PLATFORM_MATRIX=$(node ./scripts/release-platform-matrix.mjs)
           if [ "${{ github.event_name }}" = "push" ]; then
             TAG="${GITHUB_REF_NAME}"
             NPM_TAG="latest"
@@ -74,16 +75,7 @@ jobs:
           echo "npm_tag=${NPM_TAG}" >> "$GITHUB_OUTPUT"
           echo "publish_npm=${PUBLISH_NPM}" >> "$GITHUB_OUTPUT"
           echo "attach_assets=${ATTACH_ASSETS}" >> "$GITHUB_OUTPUT"
-          {
-            echo 'platform_matrix<<EOF'
-            cat <<'JSON'
-          {"include":[
-            {"platform_id":"darwin-x64","runner":"macos-15-intel","arch":"x64","binary_artifact":"gc-darwin-x64"},
-            {"platform_id":"darwin-arm64","runner":"macos-15","arch":"arm64","binary_artifact":"gc-darwin-arm64"}
-          ]}
-          JSON
-            echo EOF
-          } >> "$GITHUB_OUTPUT"
+          echo "platform_matrix=${PLATFORM_MATRIX}" >> "$GITHUB_OUTPUT"
 
   preflight:
     name: Preflight
@@ -153,25 +145,19 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Download macOS x64 binary
+      - name: Download binary artifacts
         uses: actions/download-artifact@v4
         with:
-          name: gc-darwin-x64
+          pattern: gc-*
           path: dist/release-inputs
-
-      - name: Download macOS arm64 binary
-        uses: actions/download-artifact@v4
-        with:
-          name: gc-darwin-arm64
-          path: dist/release-inputs
+          merge-multiple: true
 
       - name: Prepare staged npm packages
         run: |
           node ./scripts/prepare-mac-binary-npm.mjs \
             --output-dir dist/npm-release \
             --version "${{ needs.meta.outputs.version }}" \
-            --darwin-x64-binary dist/release-inputs/gc-darwin-x64 \
-            --darwin-arm64-binary dist/release-inputs/gc-darwin-arm64
+            --binary-input-dir dist/release-inputs
 
       - name: Pack staged npm packages
         run: |
@@ -184,8 +170,7 @@ jobs:
           node ./scripts/prepare-mac-release-assets.mjs \
             --output-dir release-assets \
             --version "${{ needs.meta.outputs.version }}" \
-            --darwin-x64-binary dist/release-inputs/gc-darwin-x64 \
-            --darwin-arm64-binary dist/release-inputs/gc-darwin-arm64
+            --binary-input-dir dist/release-inputs
 
       - name: Upload staged npm packages
         uses: actions/upload-artifact@v4
@@ -309,12 +294,10 @@ jobs:
 
       - name: Publish macOS architecture packages
         run: |
-          npm publish --access public --tag "${{ needs.meta.outputs.npm_tag }}" \
-            "dist/npm-tarballs/gclm-code-darwin-x64-${{ needs.meta.outputs.version }}.tgz"
-          npm publish --access public --tag "${{ needs.meta.outputs.npm_tag }}" \
-            "dist/npm-tarballs/gclm-code-darwin-arm64-${{ needs.meta.outputs.version }}.tgz"
-          npm publish --access public --tag "${{ needs.meta.outputs.npm_tag }}" \
-            "dist/npm-tarballs/gclm-code-${{ needs.meta.outputs.version }}.tgz"
+          node ./scripts/publish-binary-npm-tarballs.mjs \
+            --tarballs-dir dist/npm-tarballs \
+            --version "${{ needs.meta.outputs.version }}" \
+            --npm-tag "${{ needs.meta.outputs.npm_tag }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

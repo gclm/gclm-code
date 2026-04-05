@@ -20,6 +20,7 @@
 
 - 仓库根 `package.json` 当前仅用于 workspace 开发，已显式设为 `private: true`
 - 对外可发布的根包 manifest 由 `prepare-mac-binary-npm.mjs` 在 staging 目录中生成
+- 当前平台清单、runner 映射、子包名与发布顺序统一维护在 `scripts/lib/release-platforms.mjs`
 
 ## 1. 发布前准备
 

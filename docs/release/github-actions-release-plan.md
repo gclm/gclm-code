@@ -36,6 +36,7 @@ GitHub Release 资产：
 
 - 需要真实双架构 runner 产出对应 Bun compile 二进制
 - 不使用 `macos-latest`，避免后续 runner 漂移导致发布链路不稳定
+- 当前 runner、artifact 名、npm 子包名都统一收口在 `scripts/lib/release-platforms.mjs`
 
 ## 4. job 拆分
 
@@ -67,6 +68,7 @@ GitHub Release 资产：
 说明：
 
 - `meta` 会输出统一 `platform_matrix`，供 `build-binary`、`smoke-tarball`、`smoke-registry` 复用
+- `platform_matrix` 由 `scripts/release-platform-matrix.mjs` 生成，避免 workflow 内联平台清单继续膨胀
 - `smoke-tarball` 是第一层消费者安装验证；`smoke-registry` 会在它全部通过后再展开第二层 Verdaccio 验证
 - 当前仍保留 `package-mac-npm` 作为单一汇总点，避免三包组装逻辑在多个 job 中重复散开
 
@@ -87,12 +89,16 @@ workflow 主要依赖以下脚本：
 - `scripts/prepare-mac-binary-npm.mjs`
 - `scripts/pack-mac-binary-npm.mjs`
 - `scripts/prepare-mac-release-assets.mjs`
+- `scripts/release-platform-matrix.mjs`
+- `scripts/publish-binary-npm-tarballs.mjs`
 - `scripts/smoke-mac-binary-npm-install.mjs`
 - `scripts/smoke-mac-binary-npm-registry.mjs`
+- `scripts/lib/release-platforms.mjs`
 
 说明：
 
 - `scripts/smoke-mac-binary-npm.mjs` 继续作为本地 staging/launcher 演练脚本保留
+- `scripts/lib/release-platforms.mjs` 现在是当前发布平台元数据、runner 映射、artifact 命名、发布顺序的单一事实源
 - 当前 workflow 中实际执行的是 `matrix tarball install smoke + matrix private registry smoke` 两层、更接近 npm 消费者安装路径的验证
 
 ## 7. Secrets 与输入
