@@ -1,19 +1,12 @@
-import {
-  chmodSync,
-  cpSync,
-  existsSync,
-  mkdtempSync,
-  mkdirSync,
-  rmSync,
-} from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { spawnSync } from 'node:child_process'
 import {
   currentMacArch,
-  getMacPackageDirectoryNames,
   getRepoRoot,
   MAC_ARCH_PACKAGES,
+  npmPackFileName,
   readRootPackage,
   ROOT_PACKAGE_NAME,
 } from './lib/mac-binary-npm.mjs'
@@ -22,26 +15,32 @@ const rootDir = getRepoRoot(import.meta.url)
 const currentArch = currentMacArch()
 
 if (!currentArch) {
-  process.stderr.write('SKIP mac-binary-npm-smoke - 当前仅在 macOS x64/arm64 环境下执行\n')
+  process.stderr.write('SKIP mac-binary-npm-install-smoke - 当前仅在 macOS x64/arm64 环境下执行\n')
   process.exit(0)
 }
 
 function parseArgs(argv) {
   const rootPkg = readRootPackage(rootDir)
   const options = {
-    stagingDir: resolve(rootDir, 'dist', 'npm-smoke'),
+    stagingDir: resolve(rootDir, 'dist', 'npm-install-smoke'),
+    tarballsDir: resolve(rootDir, 'dist', 'npm-install-smoke-tarballs'),
     version: rootPkg.version,
     binaries: {
       x64: resolve(rootDir, 'gc'),
       arm64: resolve(rootDir, 'gc'),
     },
-    skipPrepare: false,
+    skipPack: false,
   }
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
     if (arg === '--staging-dir' && argv[i + 1]) {
       options.stagingDir = resolve(rootDir, argv[i + 1])
+      i += 1
+      continue
+    }
+    if (arg === '--tarballs-dir' && argv[i + 1]) {
+      options.tarballsDir = resolve(rootDir, argv[i + 1])
       i += 1
       continue
     }
@@ -60,8 +59,8 @@ function parseArgs(argv) {
       i += 1
       continue
     }
-    if (arg === '--skip-prepare') {
-      options.skipPrepare = true
+    if (arg === '--skip-pack') {
+      options.skipPack = true
       continue
     }
     throw new Error(`Unknown argument: ${arg}`)
@@ -87,14 +86,11 @@ function run(command, args, options = {}) {
 }
 
 const options = parseArgs(process.argv.slice(2))
-const tempDir = mkdtempSync(join(tmpdir(), 'gclm-mac-binary-npm-'))
+const tempDir = mkdtempSync(join(tmpdir(), 'gclm-mac-binary-npm-install-'))
 const npmCacheDir = join(tempDir, '.npm-cache')
 
 try {
-  if (!options.skipPrepare) {
-    process.stdout.write(
-      `NOTE mac-binary-npm-smoke - 当前仅校验 ${currentArch} 启动链路；未显式传入双架构二进制时会复用本机 ./gc 作为 staging 占位产物\n`,
-    )
+  if (!options.skipPack) {
     run('node', [
       './scripts/prepare-mac-binary-npm.mjs',
       '--output-dir',
@@ -106,54 +102,70 @@ try {
       '--darwin-arm64-binary',
       options.binaries.arm64,
     ])
+
+    run('node', [
+      './scripts/pack-mac-binary-npm.mjs',
+      '--staging-dir',
+      options.stagingDir,
+      '--output-dir',
+      options.tarballsDir,
+    ])
   }
 
-  const packageDirs = getMacPackageDirectoryNames()
-  for (const dirName of packageDirs) {
-    run('npm', ['pack', '--silent', `--cache=${npmCacheDir}`], {
-      cwd: join(options.stagingDir, dirName),
-    })
-  }
+  const tempProjectDir = join(tempDir, 'project')
+  mkdirSync(tempProjectDir, { recursive: true })
+  mkdirSync(npmCacheDir, { recursive: true })
 
-  const installedNodeModules = join(tempDir, 'node_modules')
-  const installedRootDir = join(installedNodeModules, ROOT_PACKAGE_NAME)
-  const installedRootPkg = join(installedRootDir, 'package.json')
-  mkdirSync(installedNodeModules, { recursive: true })
-  cpSync(join(options.stagingDir, ROOT_PACKAGE_NAME), installedRootDir, {
-    recursive: true,
-  })
+  run('npm', ['init', '-y'], { cwd: tempProjectDir })
 
-  if (!existsSync(installedRootPkg)) {
-    throw new Error(`installed root package missing: ${installedRootPkg}`)
-  }
-
-  const nestedNodeModules = join(installedRootDir, 'node_modules')
-  mkdirSync(nestedNodeModules, { recursive: true })
   const childPackageName = MAC_ARCH_PACKAGES[currentArch].packageName
-  cpSync(
-    join(options.stagingDir, childPackageName),
-    join(nestedNodeModules, childPackageName),
-    { recursive: true },
+  const childTarball = join(
+    options.tarballsDir,
+    npmPackFileName(childPackageName, options.version),
+  )
+  const rootTarball = join(
+    options.tarballsDir,
+    npmPackFileName(ROOT_PACKAGE_NAME, options.version),
   )
 
-  const expectedChildPkg = join(nestedNodeModules, childPackageName, 'bin', 'gc')
-  if (!existsSync(expectedChildPkg)) {
-    throw new Error(`installed arch binary missing: ${expectedChildPkg}`)
-  }
-  chmodSync(expectedChildPkg, 0o755)
+  run(
+    'npm',
+    [
+      'install',
+      '--cache',
+      npmCacheDir,
+      '--no-package-lock',
+      childTarball,
+    ],
+    { cwd: tempProjectDir },
+  )
+
+  run(
+    'npm',
+    [
+      'install',
+      '--offline',
+      '--cache',
+      npmCacheDir,
+      '--no-package-lock',
+      rootTarball,
+    ],
+    { cwd: tempProjectDir },
+  )
 
   const versionResult = run(
-    'node',
-    [join(installedRootDir, 'bin', 'gc.js'), '--version'],
-    { cwd: tempDir },
+    join(tempProjectDir, 'node_modules', '.bin', 'gc'),
+    ['--version'],
+    { cwd: tempProjectDir },
   )
+
   const output = (versionResult.stdout ?? '').trim()
   if (!output.includes(options.version)) {
     throw new Error(`unexpected gc version output: ${output}`)
   }
 
   process.stdout.write(
-    `PASS mac-binary-npm-smoke - arch=${currentArch} version=${output}\n`,
+    `PASS mac-binary-npm-install-smoke - arch=${currentArch} version=${output}\n`,
   )
 } finally {
   rmSync(tempDir, { recursive: true, force: true })

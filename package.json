@@ -32,7 +32,8 @@
     "prepare:mac-binary-npm": "node ./scripts/prepare-mac-binary-npm.mjs",
     "pack:mac-binary-npm": "node ./scripts/pack-mac-binary-npm.mjs",
     "release-assets:mac-binary-npm": "node ./scripts/prepare-mac-release-assets.mjs",
-    "smoke:mac-binary-npm": "bun run ./scripts/smoke-mac-binary-npm.mjs"
+    "smoke:mac-binary-npm": "bun run ./scripts/smoke-mac-binary-npm.mjs",
+    "smoke:mac-binary-npm:install": "node ./scripts/smoke-mac-binary-npm-install.mjs"
   },
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.3.0",

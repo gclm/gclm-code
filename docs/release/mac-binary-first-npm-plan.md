@@ -29,11 +29,18 @@
 - `bun run smoke:mac-binary-npm`
   - 校验 3 个生成包都可执行 `npm pack`
   - 校验根包 launcher 在模拟安装布局下能找到当前架构子包并启动二进制
+- `node ./scripts/smoke-mac-binary-npm-install.mjs`
+  - 校验当前架构子包 tarball + 根包 tarball 可在临时项目中离线安装并跑通 `node_modules/.bin/gc`
 - `.github/workflows/release-npm.yml`
   - 已接入 `macos-15-intel` + `macos-15` 双 runner
   - 已接入双架构 smoke 与 npm 顺序发布
 
-当前 smoke 没有直接依赖“本地目录 `npm install` + `optionalDependencies`”做最终断言，原因是 npm 对本地目录安装会优先走 symlink 路径，这与未来 registry 安装行为不完全一致。
+当前验证分成两层：
+
+- `smoke:mac-binary-npm` 负责 staging 目录与 launcher 主链校验
+- `smoke-mac-binary-npm-install.mjs` 负责 tarball 安装后的当前架构消费者路径校验
+
+之所以不直接用“仓库目录 `npm install`”做最终断言，是因为 npm 对本地目录安装会优先走 symlink 路径，这与未来 registry 安装行为不完全一致。
 
 ## 2. 为什么选这条路
 

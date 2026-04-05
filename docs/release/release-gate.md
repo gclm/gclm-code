@@ -25,7 +25,7 @@
 - 两个 mac runner 都能产出并执行自己的 `gc --version`
 - 三包 staging 目录可生成
 - 三个生成包都可执行 `npm pack`
-- 根包 launcher 在 `x64` 与 `arm64` 上都能找到匹配子包并成功启动
+- 根包 launcher 在 `x64` 与 `arm64` 上都能通过 tarball 安装后的 `node_modules/.bin/gc` 成功启动
 
 ## 2. 本地演练命令
 
@@ -47,11 +47,15 @@ node ./scripts/prepare-mac-release-assets.mjs \
 node ./scripts/smoke-mac-binary-npm.mjs \
   --skip-prepare \
   --staging-dir dist/npm-check
+node ./scripts/smoke-mac-binary-npm-install.mjs \
+  --skip-pack \
+  --tarballs-dir dist/npm-tarballs-check
 ```
 
 说明：
 
-- 最后一条 smoke 只覆盖“当前机器架构”
+- `smoke-mac-binary-npm` 只验证 staging 目录与当前机器架构启动链路
+- `smoke-mac-binary-npm-install` 会进一步验证 tarball 安装后的当前架构消费者路径
 - `x64` 与 `arm64` 双路径必须分别在对应机器或 CI runner 上补齐
 
 ## 3. GitHub Actions 输入与 Secrets

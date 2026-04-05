@@ -231,17 +231,17 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Download staged npm packages
+      - name: Download packed npm tarballs
         uses: actions/download-artifact@v4
         with:
-          name: mac-npm-staging
-          path: dist/npm-release
+          name: mac-npm-tarballs
+          path: dist/npm-tarballs
 
-      - name: Smoke staged npm packages on macOS x64
+      - name: Smoke tarball install on macOS x64
         run: |
-          node ./scripts/smoke-mac-binary-npm.mjs \
-            --skip-prepare \
-            --staging-dir dist/npm-release \
+          node ./scripts/smoke-mac-binary-npm-install.mjs \
+            --skip-pack \
+            --tarballs-dir dist/npm-tarballs \
             --version "${{ needs.meta.outputs.version }}"
 
   smoke-darwin-arm64:
@@ -256,17 +256,17 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Download staged npm packages
+      - name: Download packed npm tarballs
         uses: actions/download-artifact@v4
         with:
-          name: mac-npm-staging
-          path: dist/npm-release
+          name: mac-npm-tarballs
+          path: dist/npm-tarballs
 
-      - name: Smoke staged npm packages on macOS arm64
+      - name: Smoke tarball install on macOS arm64
         run: |
-          node ./scripts/smoke-mac-binary-npm.mjs \
-            --skip-prepare \
-            --staging-dir dist/npm-release \
+          node ./scripts/smoke-mac-binary-npm-install.mjs \
+            --skip-pack \
+            --tarballs-dir dist/npm-tarballs \
             --version "${{ needs.meta.outputs.version }}"
 
   publish-release-assets:

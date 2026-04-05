@@ -33,6 +33,8 @@
 - `release-npm` workflow 已切换为 `mac binary-first` 主链：在 `macos-15-intel` 与 `macos-15` 分别构建二进制，随后统一执行三包组装、双架构 smoke、npm 顺序发布与 GitHub Release 资产上传。
 - 已按当前决策删除 legacy workspace 发布兼容链，不再维护 `prepack/postpack` manifest 重写与 `smoke:npm-install`。
 - 仓库根 `package.json` 已改为 `private: true`，避免误把开发工作区 manifest 当作对外交付入口。
+- 已删除 `prepare-mac-binary-npm.mjs` 中遗留的 `--local-links` 路径，不再保留任何 `file:` 型发布兼容入口。
+- 已新增 `smoke-mac-binary-npm-install.mjs`：通过“当前架构子包 tarball -> 根包 tarball -> 离线安装”验证更接近 npm 消费者的安装路径。
 - 已完成本地验证：
   - 三个生成包均可执行 `npm pack`
   - `pack-mac-binary-npm` 已验证可输出 `gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三个 tarball

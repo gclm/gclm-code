@@ -247,4 +247,5 @@
   - 本地已验证模拟安装布局下 `darwin-x64` launcher 执行 `gc --version` 成功
 - 当前已识别的实现细节：
   - 本地目录 `npm install` 会优先走 symlink 路径，不足以代表未来 registry 安装对 `optionalDependencies` 的最终行为
-  - 因此现阶段 smoke 采用 `npm pack + 模拟 installed layout` 组合验证，真实 registry/install 闭环留待 CI 阶段补齐
+  - 已新增 tarball 安装 smoke：先装当前架构子包，再离线装根包，验证 `node_modules/.bin/gc` 消费者路径
+  - 因此现阶段 smoke 已从“只看 staging 布局”提升为“staging + tarball install”双层验证；真实 registry 闭环仍留待后续最终补齐

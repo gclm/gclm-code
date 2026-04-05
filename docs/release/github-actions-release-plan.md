@@ -6,7 +6,7 @@
 
 1. `push tag v*` 时自动执行 mac 双架构构建
 2. 自动组装 `根包 + 架构子包` 三个 npm 包
-3. 自动在 `darwin-x64` 与 `darwin-arm64` 上分别 smoke
+3. 自动在 `darwin-x64` 与 `darwin-arm64` 上分别执行 tarball 安装 smoke
 4. 通过后按顺序发布到 npm，并可同步上传 GitHub Release 资产
 
 ## 2. 发布物结构
@@ -53,7 +53,8 @@ GitHub Release 资产：
    - 生成 npm tarball
    - 生成 GitHub Release 资产与校验和
 6. `smoke-darwin-x64` / `smoke-darwin-arm64`
-   - 分别在两种 mac 架构上验证 launcher 转发成功
+   - 分别在两种 mac 架构上执行“当前架构子包 tarball -> 根包 tarball”的离线安装 smoke
+   - 验证 `node_modules/.bin/gc` 可成功启动 launcher 并转发到真实二进制
 7. `publish-release-assets` / `publish-npm` / `tag-stable`
    - 上传 release asset
    - 发布 npm 三包
@@ -77,6 +78,7 @@ workflow 主要依赖以下脚本：
 - `scripts/pack-mac-binary-npm.mjs`
 - `scripts/prepare-mac-release-assets.mjs`
 - `scripts/smoke-mac-binary-npm.mjs`
+- `scripts/smoke-mac-binary-npm-install.mjs`
 
 ## 7. Secrets 与输入
 
@@ -97,5 +99,5 @@ workflow 主要依赖以下脚本：
 
 - codesign
 - notarization
-- 真实 registry 安装后的双架构闭环验证
+- 发布到真实 registry 之后的最终消费者闭环验证
 - Linux / Windows 子包扩展

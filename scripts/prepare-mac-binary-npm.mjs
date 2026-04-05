@@ -22,7 +22,6 @@ function parseArgs(argv) {
   const options = {
     outputDir: resolve(rootDir, 'dist', 'npm'),
     version: rootPkg.version,
-    localLinks: false,
     binaries: {
       x64: null,
       arm64: null,
@@ -49,10 +48,6 @@ function parseArgs(argv) {
     if (arg === '--darwin-arm64-binary' && argv[i + 1]) {
       options.binaries.arm64 = resolve(rootDir, argv[i + 1])
       i += 1
-      continue
-    }
-    if (arg === '--local-links') {
-      options.localLinks = true
       continue
     }
     throw new Error(`Unknown argument: ${arg}`)
@@ -87,10 +82,8 @@ function ensureDir(path) {
 
 function rootOptionalDependencies(options) {
   const specs = {}
-  for (const [arch, meta] of Object.entries(MAC_ARCH_PACKAGES)) {
-    specs[meta.packageName] = options.localLinks
-      ? `file:../${meta.packageName}`
-      : options.version
+  for (const meta of Object.values(MAC_ARCH_PACKAGES)) {
+    specs[meta.packageName] = options.version
   }
   return specs
 }
