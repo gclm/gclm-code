@@ -1,12 +1,13 @@
 # 项目状态
 
-更新时间：2026-04-05（R1 已完成，进入 R2）
+更新时间：2026-04-05（R2 已完成，进入 R3）
 
 ## 当前阶段
 
-- Active phase：`R2 - 平台 runtime 落盘到 vendor/runtime/（进行中）`
+- Active phase：`R3 - workspace 运行时物化到 vendor/modules/（进行中）`
 - 当前 focus：
-  - 实现安装期 runtime 下载、sha 校验与 `vendor/runtime/` 落盘
+  - 识别运行时必需的 workspace 产物并收敛到 `vendor/modules/`
+  - 让发布态 CLI 逐步摆脱对 `packages/*` 原始布局的依赖
   - 保持发布态运行时边界为 `bin/ + vendor/`
   - 保留现行 `mac binary-first + 三包` 作为回退链路
   - 功能侧维持持续维护，不新增 release 之外的大改造
@@ -93,20 +94,26 @@
 
 ## 进行中
 
-- 功能侧已进入持续维护模式；发布侧已进入 `R2 - 平台 runtime 落盘到 vendor/runtime/`
+- 功能侧已进入持续维护模式；发布侧已进入 `R3 - workspace 运行时物化到 vendor/modules/`
 - 已更新 release 迁移提案：当前推荐方向为 `单消费者包 + vendor 运行时 + D-lite 发布边界收敛`，发布态运行时只保留 `bin/ + vendor/`，`dist/` 明确降级为构建中间层；同时保留 `packages/*` 作为内部 workspace，并让 `C + D-lite` 并行推进
-- 已新增实施任务单：`docs/release/single-package-implementation-plan.md`，当前 active phase 已推进到 `R2 - 平台 runtime 落盘到 vendor/runtime/`
+- 已新增实施任务单：`docs/release/single-package-implementation-plan.md`，当前 active phase 已推进到 `R3 - workspace 运行时物化到 vendor/modules/`
 - `R1` 已完成：
   - 已新增 `scripts/prepare-single-package-npm.mjs`
   - 已新增 `scripts/lib/single-package-npm.mjs`
   - 已新增发布态 `bin/gc.js`
   - 已新增 `scripts/smoke-single-package-npm.mjs`
   - 已验证单包 staging 可生成、`vendor/manifest.json` 可读取、`npm pack` 与最小 launcher smoke 通过
+- `R2` 已完成：
+  - 已新增 `scripts/install-runtime.mjs`
+  - 已为单包 staging manifest 接入 `postinstall -> node ./bin/install-runtime.js`
+  - 已支持从 `runtime.baseUrl` / `GCLM_BINARY_BASE_URL` 下载 release 资产并校验 `sha256`
+  - 已新增 `scripts/smoke-single-package-runtime-install.mjs`
+  - 已验证真实 `npm install` 后 runtime 可落到 `vendor/runtime/`，且 `gc --version` 可直接运行
 
 ## 已知未完成项
 
-- `R2` 尚未完成：安装期 runtime 下载、sha 校验、`vendor/runtime/` 落盘脚本仍未实现
-- `R3` 尚未开始：workspace 运行时物化仍停留在任务分解阶段
+- `R3` 尚未完成：workspace 运行时物化仍停留在盘点与实现阶段
+- `R4` 尚未开始：单包 smoke / CI / release 切换仍未落地
 - `docs` 历史文档中可能仍有 codex 文案残留（不影响运行时）；后续可按文档清理批次处理
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否进一步去品牌化或去历史产品语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
@@ -115,13 +122,13 @@
 ## 执行边界
 
 - 当前 must-fix：
-  - `R2` 安装期 runtime 下载、sha 校验与 `vendor/runtime/` 落盘
+  - `R3` workspace 运行时物化与发布态去 workspace 依赖
 - same-batch can-include：
-  - `npm rebuild gclm-code` 路径、release 资产来源模板、错误语义收敛
+  - 运行时 package 清单、`vendor/modules/` manifest 扩展、最小发布态加载链收敛
 - follow-up：
-  - `R3` workspace 运行时物化
   - `R4` 单包 smoke / CI / release 切换
   - `R5` 默认发布切换与旧三包清理
+  - mirror-like registry 的正式回归验证
 
 ## 当前发布迁移执行顺序
 

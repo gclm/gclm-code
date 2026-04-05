@@ -85,6 +85,9 @@ export function createSinglePackageManifest({
       gc: './bin/gc.js',
       claude: './bin/gc.js',
     },
+    scripts: {
+      postinstall: 'node ./bin/install-runtime.js',
+    },
     files: ['bin', 'vendor', 'README.md'],
   }
 }
@@ -95,4 +98,8 @@ export function renderSinglePackageReadme(version) {
 
 export function copyVendorLauncher({ rootDir, targetPath }) {
   copyFileSync(resolve(rootDir, 'bin', 'gc.js'), targetPath)
+}
+
+export function copyRuntimeInstaller({ rootDir, targetPath }) {
+  copyFileSync(resolve(rootDir, 'scripts', 'install-runtime.mjs'), targetPath)
 }

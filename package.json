@@ -31,6 +31,7 @@
     "smoke:login-gateway:matrix": "bun run ./scripts/smoke-login-gateway-matrix.mjs",
     "prepare:single-package-npm": "node ./scripts/prepare-single-package-npm.mjs",
     "smoke:single-package-npm": "node ./scripts/smoke-single-package-npm.mjs",
+    "smoke:single-package-runtime": "node ./scripts/smoke-single-package-runtime-install.mjs",
     "prepare:mac-binary-npm": "node ./scripts/prepare-mac-binary-npm.mjs",
     "pack:mac-binary-npm": "node ./scripts/pack-mac-binary-npm.mjs",
     "release-assets:mac-binary-npm": "node ./scripts/prepare-mac-release-assets.mjs",

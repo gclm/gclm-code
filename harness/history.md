@@ -28,6 +28,7 @@
 - 已更新 `docs/release/single-package-migration-proposal.md`：把 release 方向进一步收敛为“保留 workspace、将运行时产物 vendor 化到根包、让发布态 CLI 只认 `bin/ + vendor/` 边界”，并明确 `dist/` 仅作为构建中间层、`C + D-lite` 应并行推进，而不是先做全仓库结构重排
 - 已新增 `docs/release/single-package-implementation-plan.md`：把冻结后的 release 方案拆成 `R1-R5` 实施任务单，明确 `C` 为关键路径、`D-lite` 只做发布边界收敛，并同步刷新 roadmap / state 到“待进入 build”状态
 - 已完成 `R1 - 单包发布骨架与 vendor manifest`：新增单包 staging 组装脚本、`vendor/manifest.json` schema、发布态 `bin/gc.js` 与最小 `npm pack` smoke，确认单包消费者边界可生成并可独立校验
+- 已完成 `R2 - 平台 runtime 落盘到 vendor/runtime/`：新增安装期 runtime 安装脚本、单包 `postinstall` wiring、`sha256` 校验与真实 `npm install` smoke，确认当前平台安装后可直接通过 `gc` 启动 runtime
 - 已调整 Logo V2 默认欢迎文案：无用户名或用户名过长时，从 `How are you` 改为 `Are You Ok?`
 - 基于已确认的 `mac binary-first + npm 根包/架构子包` 方向，新增首批可执行骨架。
 - 新增 `scripts/prepare-mac-binary-npm.mjs`：可生成 `dist/npm/gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三包目录。

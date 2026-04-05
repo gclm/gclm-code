@@ -1,6 +1,7 @@
 import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import {
+  copyRuntimeInstaller,
   copyVendorLauncher,
   createSinglePackageManifest,
   createVendorManifest,
@@ -76,6 +77,12 @@ copyVendorLauncher({
 })
 chmodSync(join(binDir, 'gc.js'), 0o755)
 
+copyRuntimeInstaller({
+  rootDir,
+  targetPath: join(binDir, 'install-runtime.js'),
+})
+chmodSync(join(binDir, 'install-runtime.js'), 0o755)
+
 writeJson(
   join(vendorDir, 'manifest.json'),
   createVendorManifest({
@@ -95,6 +102,7 @@ process.stdout.write(
     `Prepared single-package npm staging at ${packageDir}`,
     '- package.json',
     '- bin/gc.js',
+    '- bin/install-runtime.js',
     '- vendor/manifest.json',
   ].join('\n') + '\n',
 )
