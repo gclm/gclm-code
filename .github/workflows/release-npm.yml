@@ -317,7 +317,7 @@ jobs:
 
   publish-npm:
     runs-on: ubuntu-latest
-    needs: [meta, package-single-npm, smoke-tarball, smoke-registry]
+    needs: [meta, package-single-npm, smoke-tarball, smoke-registry, publish-release-assets]
     if: ${{ needs.meta.outputs.publish_npm == 'true' }}
     steps:
       - name: Checkout

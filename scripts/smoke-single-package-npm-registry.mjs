@@ -176,6 +176,44 @@ function createVerdaccioConfig(path, upstreamRegistry) {
   writeFileSync(path, lines.filter(Boolean).join('\n'))
 }
 
+function writeNpmUserConfig(path, { registry, authToken = null }) {
+  const registryUrl = registry.endsWith('/') ? registry : `${registry}/`
+  const registryHost = new URL(registryUrl).host
+  const lines = [
+    `registry=${registryUrl}`,
+    'ignore-scripts=false',
+    'audit=false',
+    'fund=false',
+    'progress=false',
+  ]
+
+  if (authToken) {
+    lines.push(`//${registryHost}/:_authToken=${authToken}`)
+  }
+
+  lines.push('')
+  writeFileSync(path, lines.join('\n'))
+}
+
+function createNpmEnv({ cacheDir, registry, userConfigPath, extraEnv = {} }) {
+  return {
+    ...process.env,
+    npm_config_cache: cacheDir,
+    NPM_CONFIG_CACHE: cacheDir,
+    npm_config_registry: registry,
+    NPM_CONFIG_REGISTRY: registry,
+    npm_config_userconfig: userConfigPath,
+    NPM_CONFIG_USERCONFIG: userConfigPath,
+    npm_config_ignore_scripts: 'false',
+    NPM_CONFIG_IGNORE_SCRIPTS: 'false',
+    npm_config_audit: 'false',
+    NPM_CONFIG_AUDIT: 'false',
+    npm_config_fund: 'false',
+    NPM_CONFIG_FUND: 'false',
+    ...extraEnv,
+  }
+}
+
 async function resolvePort(host) {
   return await new Promise((resolvePromise, rejectPromise) => {
     const server = createServer()
@@ -200,6 +238,7 @@ async function resolvePort(host) {
 
 function startVerdaccio(options) {
   const logs = []
+  const bootstrapRegistry = options.upstreamRegistry || 'https://registry.npmjs.org/'
   const child = spawn(
     'npx',
     [
@@ -213,11 +252,11 @@ function startVerdaccio(options) {
     {
       cwd: rootDir,
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        npm_config_cache: options.npmCacheDir,
-        NPM_CONFIG_CACHE: options.npmCacheDir,
-      },
+      env: createNpmEnv({
+        cacheDir: options.npmCacheDir,
+        registry: bootstrapRegistry,
+        userConfigPath: options.userConfigPath,
+      }),
     },
   )
 
@@ -229,7 +268,7 @@ function startVerdaccio(options) {
 
 async function waitForVerdaccio(registryUrl, child, logs) {
   const pingUrl = `${registryUrl}/-/ping`
-  const deadline = Date.now() + 90_000
+  const deadline = Date.now() + 180_000
 
   while (Date.now() < deadline) {
     if (child.exitCode !== null) {
@@ -311,32 +350,22 @@ async function loginToVerdaccio(registryUrl, userConfigPath) {
     throw new Error(`Verdaccio login did not return a token: ${JSON.stringify(payload)}`)
   }
 
-  const registryHost = new URL(registryUrl).host
-  writeFileSync(
-    userConfigPath,
-    [
-      `registry=${registryUrl}/`,
-      `//${registryHost}/:_authToken=${payload.token}`,
-      '',
-    ].join('\n'),
-  )
+  writeNpmUserConfig(userConfigPath, {
+    registry: registryUrl,
+    authToken: payload.token,
+  })
 }
 
 const options = parseArgs(process.argv.slice(2))
 const tempDir = mkdtempSync(join(tmpdir(), 'gclm-single-package-registry-'))
 const npmCacheDir = join(tempDir, '.npm-cache')
+const bootstrapUserConfigPath = join(tempDir, '.npm-bootstraprc')
 const userConfigPath = join(tempDir, '.npmrc')
 const verdaccioDir = join(tempDir, 'verdaccio')
 const verdaccioConfigPath = join(verdaccioDir, 'config.yaml')
 const tempProjectDir = join(tempDir, 'project')
 const registryPort = options.registryPort ?? (await resolvePort(options.registryHost))
 const registryUrl = `http://${options.registryHost}:${registryPort}`
-const npmEnv = {
-  ...process.env,
-  npm_config_cache: npmCacheDir,
-  NPM_CONFIG_CACHE: npmCacheDir,
-  GCLM_BINARY_BASE_URL: options.releaseAssetsDir,
-}
 
 let verdaccioProcess = null
 
@@ -378,6 +407,9 @@ try {
   mkdirSync(npmCacheDir, { recursive: true })
   mkdirSync(verdaccioDir, { recursive: true })
   mkdirSync(tempProjectDir, { recursive: true })
+  writeNpmUserConfig(bootstrapUserConfigPath, {
+    registry: options.upstreamRegistry || 'https://registry.npmjs.org/',
+  })
   createVerdaccioConfig(verdaccioConfigPath, options.upstreamRegistry)
 
   const verdaccioState = startVerdaccio({
@@ -386,11 +418,22 @@ try {
     registryPort,
     verdaccioPackageSpec: options.verdaccioPackageSpec,
     npmCacheDir,
+    upstreamRegistry: options.upstreamRegistry,
+    userConfigPath: bootstrapUserConfigPath,
   })
   verdaccioProcess = verdaccioState.child
 
   await waitForVerdaccio(registryUrl, verdaccioProcess, verdaccioState.logs)
   await loginToVerdaccio(registryUrl, userConfigPath)
+
+  const npmEnv = createNpmEnv({
+    cacheDir: npmCacheDir,
+    registry: registryUrl,
+    userConfigPath,
+    extraEnv: {
+      GCLM_BINARY_BASE_URL: options.releaseAssetsDir,
+    },
+  })
 
   run(
     'npm',
@@ -410,7 +453,7 @@ try {
     },
   )
 
-  run('npm', ['init', '-y'], {
+  run('npm', ['init', '-y', '--userconfig', userConfigPath], {
     cwd: tempProjectDir,
     env: npmEnv,
   })

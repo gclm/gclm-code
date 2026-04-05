@@ -1,6 +1,6 @@
 {
   "name": "gclm-code",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Customized Bun CLI workspace for the Gclm Code build.",
   "type": "module",

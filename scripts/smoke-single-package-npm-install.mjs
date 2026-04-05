@@ -1,4 +1,4 @@
-import { lstatSync, mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { lstatSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -86,9 +86,43 @@ function run(command, args, options = {}) {
   return result
 }
 
+function writeNpmUserConfig(path, registry) {
+  writeFileSync(
+    path,
+    [
+      `registry=${registry}`,
+      'ignore-scripts=false',
+      'audit=false',
+      'fund=false',
+      'progress=false',
+      '',
+    ].join('\n'),
+  )
+}
+
+function createNpmEnv({ cacheDir, registry, userConfigPath, extraEnv = {} }) {
+  return {
+    ...process.env,
+    npm_config_cache: cacheDir,
+    NPM_CONFIG_CACHE: cacheDir,
+    npm_config_registry: registry,
+    NPM_CONFIG_REGISTRY: registry,
+    npm_config_userconfig: userConfigPath,
+    NPM_CONFIG_USERCONFIG: userConfigPath,
+    npm_config_ignore_scripts: 'false',
+    NPM_CONFIG_IGNORE_SCRIPTS: 'false',
+    npm_config_audit: 'false',
+    NPM_CONFIG_AUDIT: 'false',
+    npm_config_fund: 'false',
+    NPM_CONFIG_FUND: 'false',
+    ...extraEnv,
+  }
+}
+
 const options = parseArgs(process.argv.slice(2))
 const tempDir = mkdtempSync(join(tmpdir(), 'gclm-single-package-npm-install-'))
 const npmCacheDir = join(tempDir, '.npm-cache')
+const userConfigPath = join(tempDir, '.npmrc')
 
 try {
   if (!options.skipPack) {
@@ -124,9 +158,20 @@ try {
   const tempProjectDir = join(tempDir, 'project')
   mkdirSync(npmCacheDir, { recursive: true })
   mkdirSync(tempProjectDir, { recursive: true })
+  writeNpmUserConfig(userConfigPath, options.registry)
 
-  run('npm', ['init', '-y'], {
+  const npmEnv = createNpmEnv({
+    cacheDir: npmCacheDir,
+    registry: options.registry,
+    userConfigPath,
+    extraEnv: {
+      GCLM_BINARY_BASE_URL: options.releaseAssetsDir,
+    },
+  })
+
+  run('npm', ['init', '-y', '--userconfig', userConfigPath], {
     cwd: tempProjectDir,
+    env: npmEnv,
   })
 
   run(
@@ -135,18 +180,15 @@ try {
       'install',
       '--registry',
       options.registry,
+      '--userconfig',
+      userConfigPath,
       '--no-package-lock',
       `--cache=${npmCacheDir}`,
       tarballPath,
     ],
     {
       cwd: tempProjectDir,
-      env: {
-        ...process.env,
-        npm_config_cache: npmCacheDir,
-        NPM_CONFIG_CACHE: npmCacheDir,
-        GCLM_BINARY_BASE_URL: options.releaseAssetsDir,
-      },
+      env: npmEnv,
     },
   )
 
@@ -164,10 +206,7 @@ try {
 
   const versionResult = run(join(tempProjectDir, 'node_modules', '.bin', 'gc'), ['--version'], {
     cwd: tempProjectDir,
-    env: {
-      ...process.env,
-      GCLM_BINARY_BASE_URL: options.releaseAssetsDir,
-    },
+    env: npmEnv,
   })
 
   const runtimeNodeModulesPath = join(

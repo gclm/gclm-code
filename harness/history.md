@@ -54,9 +54,9 @@
 - 已触发真实 `v1.0.0` 发布：run `23998582683` 中构建、`Tarball smoke`、`Registry smoke` 与 GitHub Release 资产上传全部成功，但 `publish-npm` 因缺少 `actions/checkout` 导致 `./scripts/publish-binary-npm-tarballs.mjs` 不存在而失败。
 - 已修复 `publish-npm` job：补回 `Checkout` 步骤，确保正式发布时可读取仓库内发布脚本，随后可通过 `workflow_dispatch` 补跑 `v1.0.0` 的 npm 发布。
 - 已完成 `v1.0.0` 正式补发：workflow_dispatch run `23998704055` 全绿，`publish-npm`、`tag-stable` 均成功；npm registry 已可见 `gclm-code@1.0.0`、`gclm-code-darwin-x64@1.0.0`、`gclm-code-darwin-arm64@1.0.0`，且 `latest/stable` 均指向 `1.0.0`。
-- 已完成一轮真实本机安装验证：在本机保留原有 `Claude Code 2.1.76` 的前提下，全局安装 `gclm-code@1.0.0` 后新增 `gc` 命令入口，但因本机 npm registry 指向 `https://registry.npmmirror.com`，根包的 `optionalDependencies` 未落地，首次 `gc --version` 失败。
+- 已完成一轮真实本机安装验证：在本机保留原有旧上游 CLI `2.1.76` 的前提下，全局安装 `gclm-code@1.0.0` 后新增 `gc` 命令入口，但因本机 npm registry 指向 `https://registry.npmmirror.com`，根包的 `optionalDependencies` 未落地，首次 `gc --version` 失败。
 - 已在本机通过官方 npm registry 补装 `gclm-code-darwin-x64@1.0.0` 修复该问题；随后 `gc --version` 成功输出 `1.0.0 (Gclm Code)`，而 `claude` 仍继续指向原有 `/Users/gclm/.local/bin/claude`，未被新包覆盖。
-- 已完成一轮本机卸载/重装复验：删除旧 `Claude Code 2.1.76` 程序文件并保留 `/Users/gclm/.claude` 后，重新全局安装 `gclm-code@1.0.0`；当前 `claude --version` 与 `gc --version` 均输出 `1.0.0 (Gclm Code)`，说明在旧本体移除后两者都已映射到新包，而 `gclm` 仍未生成。
+- 已完成一轮本机卸载/重装复验：删除旧上游 CLI `2.1.76` 程序文件并保留 `/Users/gclm/.claude` 后，重新全局安装 `gclm-code@1.0.0`；当前 `claude --version` 与 `gc --version` 均输出 `1.0.0 (Gclm Code)`，说明在旧本体移除后两者都已映射到新包，而 `gclm` 仍未生成。
 - 已确认当前 npm 包元数据只声明 `gc` 与 `claude` 两个 bin，未声明 `gclm`；因此本机全局 bin 也仅生成这两个入口，不会自动得到 `gclm` 命令。
 - 已补做 registry/fresh-install 交叉验证：`npm view gclm-code-darwin-x64@1.0.0 dist.tarball --registry=https://registry.npmmirror.com` 已可返回 tarball 地址，但这只能证明镜像元数据可查；进一步在全新 `prefix + cache` 下执行隔离安装时，`npmmirror` 无论普通安装还是 `npm install -g --prefix ...` 都只会安装根包，`gc --version` 继续报“未找到匹配架构包”，而官方 npm 在同条件下会安装出 `gclm-code + gclm-code-darwin-x64` 两包并正常运行。
 - 已完成本地验证：
@@ -71,3 +71,5 @@
 - 已完成 `R5` 本地验证：`bun run build`、`node ./scripts/smoke-single-package-npm.mjs`、`node ./scripts/smoke-single-package-runtime-install.mjs`、`node ./scripts/smoke-single-package-npm-install.mjs`、`node ./scripts/smoke-single-package-npm-registry.mjs`、`node ./scripts/smoke-single-package-vendor-modules.mjs` 全部通过。
 - 已继续收敛脚本层入口：删除独立 `prepare:vendor-runtime` 与 `smoke-single-package-runtime-install` 顶层入口，新增 `smoke-single-package-all.mjs` 与 `bun run smoke:single-package` 作为默认本地单包回归入口；其中 vendor 物化继续内聚在 `prepare-single-package-npm.mjs` 内部，registry smoke 仍保持独立边界。
 - 已完成脚本层收敛后的本地验证：`bun run build`、`bun run smoke:single-package` 与 `bun run smoke:single-package -- --with-registry` 全部通过，确认新的默认本地回归入口与可选 registry 分支都可用。
+- 已完成一轮 release hardening：`publish-npm` 现已显式等待 `publish-release-assets`，避免 npm 包先于 runtime 资产对外可见；同时为 `smoke-single-package-npm-install` 与 `smoke-single-package-npm-registry` 加入临时 `.npmrc / --userconfig / 显式 npm env` 隔离，减少宿主用户级 npm 配置对 smoke 结论的污染；另外把 Verdaccio bootstrap 等待窗口放宽到 180 秒，以适配强制走 `npmjs upstream` 后更慢的首次拉起。
+- 已完成 `1.0.1` 发版前本地 dry-run：先修正 history 中触发 `brand:guard` 的旧品牌历史文案，再执行 `bun run verify` 与 `bun run smoke:single-package -- --with-registry`；当前 tarball 安装、vendor modules 与 Verdaccio registry 安装三段均通过，`gc --version` 全链路已对齐到 `1.0.1 (Gclm Code)`。

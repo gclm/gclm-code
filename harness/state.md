@@ -61,6 +61,10 @@
   - `docs/release/mac-binary-first-npm-plan.md` 已删除，旧三包只保留在 history 中
   - `smoke-single-package-npm-install` 已提升为真实 `npm install <tarball>` 验证
   - `smoke-single-package-npm-registry` 已提升为 Verdaccio + npmjs upstream 的真实 registry 安装验证
+- 已完成 release hardening 收口：
+  - `publish-npm` 已显式依赖 `publish-release-assets`，消除 npm 包先于 GitHub Release runtime 资产发布的窗口期
+  - `smoke-single-package-npm-install` 已切到临时 `.npmrc + --userconfig + 显式 env`，隔离宿主用户级 npm 配置
+  - `smoke-single-package-npm-registry` 已为 Verdaccio bootstrap 增加独立 upstream registry 配置与更宽松的启动等待窗口
 
 ## 进行中
 
@@ -107,12 +111,15 @@
 - 运行环境：Bun 1.3.11 项目
 - 当前统一验收门槛：`bun run verify`
 - 当前策略已调整为“不保留兼容层，直接修复断点”
+- 当前目标发版版本：`1.0.1`（本地 dry-run 已通过，待 checkpoint / 发版）
 - 最新正式 npm 发布版本：`1.0.0`
   - 说明：该版本是迁移前的历史三包正式版，不代表当前仓库的默认发布结构
   - 当前仓库下一次正式发版将默认走单包主链
 - 当前最强本地证据级别：`scripted-flow`
 - 最新单包验证结果（2026-04-05）：
+  - `bun run verify`，通过
   - `bun run build`，通过
   - `bun run smoke:single-package`，通过
   - `bun run smoke:single-package -- --with-registry`，通过
+  - `node ./scripts/smoke-single-package-npm-registry.mjs`，通过
 - 备注：真实公网 npm 发布后的最终消费者闭环仍需在下一次正式单包版本发布时补齐
