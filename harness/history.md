@@ -44,6 +44,8 @@
 - 已继续推进 Option C 的平台目录抽象：新增 `scripts/lib/release-platforms.mjs` 作为发布平台单一事实源，并让 workflow matrix、artifact 下载、tarball 发布顺序与打包脚本统一消费该目录。
 - 已为 `Release NPM` 增加 `run_registry_smoke` 手动开关：允许在 `publish_to_npm=false` 且 `attach_release_assets=false` 时，单独补跑 Verdaccio 私有 registry 安装验证。
 - 已完成线上 dry-run 验证：GitHub Actions `Release NPM` run `23998338010` 在 `publish_to_npm=false`、`attach_release_assets=false`、`run_registry_smoke=true` 下全绿，`Tarball smoke` 与 `Registry smoke` 双矩阵均实际执行成功，`publish-npm`、`publish-release-assets`、`tag-stable` 均保持 `skipped`，证明可在无发布副作用前提下单独补跑私有 registry 安装验证。
+- 已触发真实 `v1.0.0` 发布：run `23998582683` 中构建、`Tarball smoke`、`Registry smoke` 与 GitHub Release 资产上传全部成功，但 `publish-npm` 因缺少 `actions/checkout` 导致 `./scripts/publish-binary-npm-tarballs.mjs` 不存在而失败。
+- 已修复 `publish-npm` job：补回 `Checkout` 步骤，确保正式发布时可读取仓库内发布脚本，随后可通过 `workflow_dispatch` 补跑 `v1.0.0` 的 npm 发布。
 - 已完成本地验证：
   - 三个生成包均可执行 `npm pack`
   - `pack-mac-binary-npm` 已验证可输出 `gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三个 tarball

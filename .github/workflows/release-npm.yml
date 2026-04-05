@@ -295,6 +295,9 @@ jobs:
     needs: [meta, package-mac-npm, smoke-tarball, smoke-registry]
     if: ${{ needs.meta.outputs.publish_npm == 'true' }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup Node (npm)
         uses: actions/setup-node@v4
         with:
