@@ -7,7 +7,8 @@
 1. `push tag v*` 时自动执行 mac 双架构构建
 2. 自动组装 `根包 + 架构子包` 三个 npm 包
 3. 自动在 `darwin-x64` 与 `darwin-arm64` 上分别执行 tarball 安装 smoke
-4. 通过后按顺序发布到 npm，并可同步上传 GitHub Release 资产
+4. 自动在临时私有 registry 中发布三包，并从 registry 安装根包做真实安装验证
+5. 通过后按顺序发布到 npm，并可同步上传 GitHub Release 资产
 
 ## 2. 发布物结构
 
@@ -38,7 +39,7 @@ GitHub Release 资产：
 
 ## 4. job 拆分
 
-当前发布链路拆成 7 类 job：
+当前发布链路拆成 8 类 job：
 
 1. `meta`
    - 解析版本、tag、npm dist-tag、是否发 npm、是否附加 release asset
@@ -55,7 +56,11 @@ GitHub Release 资产：
 6. `smoke-darwin-x64` / `smoke-darwin-arm64`
    - 分别在两种 mac 架构上执行“当前架构子包 tarball -> 根包 tarball”的离线安装 smoke
    - 验证 `node_modules/.bin/gc` 可成功启动 launcher 并转发到真实二进制
-7. `publish-release-assets` / `publish-npm` / `tag-stable`
+7. `registry-smoke-darwin-x64` / `registry-smoke-darwin-arm64`
+   - 分别在两种 mac 架构上启动临时 Verdaccio 私有 registry
+   - 按真实顺序发布两个子包与根包
+   - 在临时项目里从 registry 安装 `gclm-code` 并验证 `node_modules/.bin/gc`
+8. `publish-release-assets` / `publish-npm` / `tag-stable`
    - 上传 release asset
    - 发布 npm 三包
    - 可选补 `stable` dist-tag
@@ -79,6 +84,7 @@ workflow 主要依赖以下脚本：
 - `scripts/prepare-mac-release-assets.mjs`
 - `scripts/smoke-mac-binary-npm.mjs`
 - `scripts/smoke-mac-binary-npm-install.mjs`
+- `scripts/smoke-mac-binary-npm-registry.mjs`
 
 ## 7. Secrets 与输入
 
@@ -99,5 +105,5 @@ workflow 主要依赖以下脚本：
 
 - codesign
 - notarization
-- 发布到真实 registry 之后的最终消费者闭环验证
+- 公网 npm 发布后的最终消费者闭环验证
 - Linux / Windows 子包扩展

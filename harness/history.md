@@ -35,6 +35,7 @@
 - 仓库根 `package.json` 已改为 `private: true`，避免误把开发工作区 manifest 当作对外交付入口。
 - 已删除 `prepare-mac-binary-npm.mjs` 中遗留的 `--local-links` 路径，不再保留任何 `file:` 型发布兼容入口。
 - 已新增 `smoke-mac-binary-npm-install.mjs`：通过“当前架构子包 tarball -> 根包 tarball -> 离线安装”验证更接近 npm 消费者的安装路径。
+- 已新增 `smoke-mac-binary-npm-registry.mjs`：通过 Verdaccio 私有 registry 按顺序发布三包，再从 registry 安装根包验证真实安装链路。
 - 已完成本地验证：
   - 三个生成包均可执行 `npm pack`
   - `pack-mac-binary-npm` 已验证可输出 `gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三个 tarball

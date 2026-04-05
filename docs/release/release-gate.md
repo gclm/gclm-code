@@ -18,6 +18,8 @@
 4. `package-mac-npm`
 5. `smoke-darwin-x64`
 6. `smoke-darwin-arm64`
+7. `registry-smoke-darwin-x64`
+8. `registry-smoke-darwin-arm64`
 
 判定标准：
 
@@ -26,6 +28,7 @@
 - 三包 staging 目录可生成
 - 三个生成包都可执行 `npm pack`
 - 根包 launcher 在 `x64` 与 `arm64` 上都能通过 tarball 安装后的 `node_modules/.bin/gc` 成功启动
+- 根包在临时私有 registry 中发布后，能在 `x64` 与 `arm64` 上从 registry 安装并成功启动
 
 ## 2. 本地演练命令
 
@@ -50,12 +53,16 @@ node ./scripts/smoke-mac-binary-npm.mjs \
 node ./scripts/smoke-mac-binary-npm-install.mjs \
   --skip-pack \
   --tarballs-dir dist/npm-tarballs-check
+node ./scripts/smoke-mac-binary-npm-registry.mjs \
+  --skip-pack \
+  --tarballs-dir dist/npm-tarballs-check
 ```
 
 说明：
 
 - `smoke-mac-binary-npm` 只验证 staging 目录与当前机器架构启动链路
 - `smoke-mac-binary-npm-install` 会进一步验证 tarball 安装后的当前架构消费者路径
+- `smoke-mac-binary-npm-registry` 会进一步验证“发布到临时私有 registry -> 从 registry 安装根包”的当前架构消费者路径
 - `x64` 与 `arm64` 双路径必须分别在对应机器或 CI runner 上补齐
 
 ## 3. GitHub Actions 输入与 Secrets
@@ -100,4 +107,5 @@ node ./scripts/smoke-mac-binary-npm-install.mjs \
 - `build-darwin-x64` / `build-darwin-arm64` 失败：先定位当前 runner 上的 Bun compile 或宿主依赖问题
 - `package-mac-npm` 失败：优先检查传入的二进制路径、staging 目录内容、tarball 生成脚本
 - `smoke-darwin-x64` / `smoke-darwin-arm64` 失败：优先检查根包 launcher 是否选中了正确子包，以及下载后的二进制权限是否正常
+- `registry-smoke-darwin-x64` / `registry-smoke-darwin-arm64` 失败：优先检查 Verdaccio 是否启动成功、登录/发布顺序是否正确、registry 安装时是否拉到了当前架构子包
 - `publish-npm` 失败：优先确认 tarball 名称、发布顺序、`NPM_TOKEN` 权限与目标版本是否已占用

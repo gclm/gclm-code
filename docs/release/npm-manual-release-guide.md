@@ -105,6 +105,9 @@ node ./scripts/smoke-mac-binary-npm.mjs \
 node ./scripts/smoke-mac-binary-npm-install.mjs \
   --skip-pack \
   --tarballs-dir dist/npm-manual-tarballs
+node ./scripts/smoke-mac-binary-npm-registry.mjs \
+  --skip-pack \
+  --tarballs-dir dist/npm-manual-tarballs
 ```
 
 说明：
@@ -112,6 +115,7 @@ node ./scripts/smoke-mac-binary-npm-install.mjs \
 - 该 smoke 会验证三包目录可以 `npm pack`
 - 会验证根包 launcher 能在“模拟安装布局”中选择当前架构子包并执行 `gc --version`
 - 会进一步验证“当前架构子包 tarball + 根包 tarball”可在临时项目中离线安装并跑通 `node_modules/.bin/gc --version`
+- 会进一步验证“临时私有 registry 发布 -> 从 registry 安装根包”可跑通 `node_modules/.bin/gc --version`
 - `x64` 与 `arm64` 两条路径需要分别在对应 runner 或机器上验证；正式发布建议交给 CI workflow 自动完成
 
 ## 6. 发布到 npm

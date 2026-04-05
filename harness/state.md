@@ -239,6 +239,8 @@
   - `package-mac-npm`
   - `smoke-darwin-x64`
   - `smoke-darwin-arm64`
+  - `registry-smoke-darwin-x64`
+  - `registry-smoke-darwin-arm64`
 - 当前骨架能力：
   - 可生成 `dist/npm/gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64`
   - 可生成三包 npm tarball 与双架构 GitHub Release 资产
@@ -248,4 +250,5 @@
 - 当前已识别的实现细节：
   - 本地目录 `npm install` 会优先走 symlink 路径，不足以代表未来 registry 安装对 `optionalDependencies` 的最终行为
   - 已新增 tarball 安装 smoke：先装当前架构子包，再离线装根包，验证 `node_modules/.bin/gc` 消费者路径
-  - 因此现阶段 smoke 已从“只看 staging 布局”提升为“staging + tarball install”双层验证；真实 registry 闭环仍留待后续最终补齐
+  - 已新增 Verdaccio 私有 registry smoke：按顺序发布三包后，再从 registry 安装根包验证消费者路径
+  - 因此现阶段 smoke 已从“只看 staging 布局”提升为“staging + tarball install + private registry install”三层验证；公网 npm registry 闭环仍留待后续最终补齐
