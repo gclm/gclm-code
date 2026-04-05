@@ -11,8 +11,12 @@ import {
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { currentMacArch, getRepoRoot, readRootPackage } from './lib/mac-binary-npm.mjs'
 import { copyInstalledDependencyTree } from './lib/vendor-runtime-modules.mjs'
+import {
+  currentMacArch,
+  getRepoRoot,
+  readRootPackage,
+} from './lib/single-package-npm.mjs'
 
 const rootDir = getRepoRoot(import.meta.url)
 const rootPkg = readRootPackage(rootDir)

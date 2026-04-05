@@ -1,5 +1,9 @@
-import { currentMacArch, getRepoRoot, readRootPackage } from './lib/mac-binary-npm.mjs'
 import { copyInstalledDependencyTree } from './lib/vendor-runtime-modules.mjs'
+import {
+  currentMacArch,
+  getRepoRoot,
+  readRootPackage,
+} from './lib/single-package-npm.mjs'
 import { lstatSync, mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'

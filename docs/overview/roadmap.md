@@ -193,7 +193,7 @@
   - `smoke:login-gateway`
 - 已补充运维文档：`docs/release/gateway-smoke-and-login.md`
 - `R4` 已完成：
-  - `release-npm` workflow 已切到单包主链：`package-single-package-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-release-assets -> publish-npm`
+  - `release-npm` workflow 已切到单包主链：`package-single-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-release-assets -> publish-npm`
   - 当前 npm 默认只发布一个 `gclm-code`，GitHub Release 继续提供双架构 runtime 资产
   - 已新增单包 `pack / publish / tarball install / registry install` 脚本
   - 已让 `CI Verify` 增补单包 staging smoke 与 macOS single-package install/vendor smoke

@@ -19,9 +19,10 @@ npm i -g gclm-code
 
 说明：
 
-- 当前 npm 对外交付已切到 `mac binary-first`
+- 当前 npm 对外交付已切到 `single-package + vendor runtime`
 - 首批仅支持 `darwin-x64` 与 `darwin-arm64`
 - Linux / Windows 暂未纳入当前 npm 发布范围
+- 首次安装会通过包内 `postinstall` 拉取当前平台 runtime 到 `vendor/runtime/`
 
 安装后可用命令：
 
@@ -80,6 +81,12 @@ bun run verify
 # 分层包回归（core/gui/gateway）
 bun run smoke:packages
 
+# 单包发布链路回归
+node ./scripts/smoke-single-package-npm.mjs
+node ./scripts/smoke-single-package-npm-install.mjs
+node ./scripts/smoke-single-package-npm-registry.mjs --upstream-registry https://registry.npmjs.org/
+node ./scripts/smoke-single-package-vendor-modules.mjs
+
 # 登录网关路径回归矩阵
 SMOKE_GATEWAY_BASE_URL="http://localhost:8086/v1" \
 SMOKE_GATEWAY_API_KEY="<your-key>" \
@@ -94,7 +101,7 @@ bun run smoke:login-gateway:matrix
 
 当前仓库根 `package.json` 仅用于开发工作区，不作为对外直发入口。
 
-本项目当前以手动发布为主，PR 不是发布前置条件。
+本项目当前以 GitHub Actions + npm 单包发布为主，PR 不是发布前置条件。
 
 ## 文档索引
 

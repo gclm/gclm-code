@@ -2,12 +2,15 @@ import { lstatSync, mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { currentMacArch, getRepoRoot, readRootPackage } from './lib/mac-binary-npm.mjs'
 import {
   ROOT_PACKAGE_NAME,
   singlePackageTarballName,
 } from './lib/single-package-npm.mjs'
-import { copyInstalledDependencyTree } from './lib/vendor-runtime-modules.mjs'
+import {
+  currentMacArch,
+  getRepoRoot,
+  readRootPackage,
+} from './lib/single-package-npm.mjs'
 
 const rootDir = getRepoRoot(import.meta.url)
 const rootPkg = readRootPackage(rootDir)
@@ -26,6 +29,7 @@ function parseArgs(argv) {
     tarballsDir: resolve(rootDir, 'dist', 'single-package-install-tarballs'),
     releaseAssetsDir: resolve(rootDir, 'dist', 'single-package-install-assets'),
     version: rootPkg.version,
+    registry: 'https://registry.npmjs.org/',
     skipPack: false,
   }
 
@@ -48,6 +52,11 @@ function parseArgs(argv) {
     }
     if (arg === '--version' && argv[i + 1]) {
       options.version = argv[i + 1]
+      i += 1
+      continue
+    }
+    if (arg === '--registry' && argv[i + 1]) {
+      options.registry = argv[i + 1]
       i += 1
       continue
     }
@@ -79,6 +88,7 @@ function run(command, args, options = {}) {
 
 const options = parseArgs(process.argv.slice(2))
 const tempDir = mkdtempSync(join(tmpdir(), 'gclm-single-package-npm-install-'))
+const npmCacheDir = join(tempDir, '.npm-cache')
 
 try {
   if (!options.skipPack) {
@@ -111,31 +121,53 @@ try {
     options.tarballsDir,
     singlePackageTarballName(options.version, ROOT_PACKAGE_NAME),
   )
-  const extractDir = join(tempDir, 'install')
-  mkdirSync(extractDir, { recursive: true })
-  run('tar', ['-xzf', tarballPath, '-C', extractDir])
+  const tempProjectDir = join(tempDir, 'project')
+  mkdirSync(npmCacheDir, { recursive: true })
+  mkdirSync(tempProjectDir, { recursive: true })
 
-  const installedPackageDir = join(extractDir, 'package')
+  run('npm', ['init', '-y'], {
+    cwd: tempProjectDir,
+  })
+
+  run(
+    'npm',
+    [
+      'install',
+      '--registry',
+      options.registry,
+      '--no-package-lock',
+      `--cache=${npmCacheDir}`,
+      tarballPath,
+    ],
+    {
+      cwd: tempProjectDir,
+      env: {
+        ...process.env,
+        npm_config_cache: npmCacheDir,
+        NPM_CONFIG_CACHE: npmCacheDir,
+        GCLM_BINARY_BASE_URL: options.releaseAssetsDir,
+      },
+    },
+  )
+
+  const installedPackageDir = join(
+    tempProjectDir,
+    'node_modules',
+    ROOT_PACKAGE_NAME,
+  )
   const installedPackageManifest = JSON.parse(
     readFileSync(join(installedPackageDir, 'package.json'), 'utf8'),
   )
+  if (installedPackageManifest.name !== ROOT_PACKAGE_NAME) {
+    throw new Error(`unexpected installed package name: ${installedPackageManifest.name}`)
+  }
 
-  copyInstalledDependencyTree({
-    rootDir,
-    targetNodeModulesDir: join(installedPackageDir, 'node_modules'),
-    dependencyNames: Object.keys(installedPackageManifest.dependencies ?? {}),
-  })
-
-  run('node', ['bin/install-runtime.js', '--package-dir', installedPackageDir], {
-    cwd: installedPackageDir,
+  const versionResult = run(join(tempProjectDir, 'node_modules', '.bin', 'gc'), ['--version'], {
+    cwd: tempProjectDir,
     env: {
       ...process.env,
       GCLM_BINARY_BASE_URL: options.releaseAssetsDir,
     },
-  })
-
-  const versionResult = run('node', ['bin/gc.js', '--version'], {
-    cwd: installedPackageDir,
   })
 
   const runtimeNodeModulesPath = join(

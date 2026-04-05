@@ -21,15 +21,15 @@
 - `docs/release/single-package-implementation-plan.md`
   - 单包 + Vendor 运行时实施任务单（`C` 主线 + `D-lite` 并行子任务）
 - `docs/release/npm-manual-release-guide.md`
-  - mac binary-first 手动发布流程（根包 + 架构子包）
+  - single-package 手动发布流程（单 tarball + GitHub Release runtime 资产）
 - `docs/release/github-actions-release-plan.md`
-  - GitHub Actions 自动发布设计（双 mac runner + 三包顺序发布）
+  - GitHub Actions 自动发布设计（双 mac runner + 单包发布）
 - `docs/release/mac-binary-first-npm-plan.md`
-  - mac binary-first + npm 分发设计（根包 + 架构子包）
+  - 三包时代的历史设计记录（待清理）
 - `docs/release/gateway-smoke-and-login.md`
   - 网关 smoke 与登录验收
 - `docs/release/release-gate.md`
-  - 当前发布门禁说明（mac binary-first）
+  - 当前发布门禁说明（single-package + vendor runtime）
 - `docs/release/FEATURES.en.md`
   - 功能开关审计（英文）
 - `docs/release/FEATURES.zh-CN.md`
@@ -38,7 +38,7 @@
 ## 4. overview（阶段路线）
 
 - `docs/overview/roadmap.md`
-  - 当前阶段状态与后续动作（功能侧 M1-M4 已完成，发布侧进入单包迁移）
+  - 当前阶段状态与后续动作（功能侧 M1-M4 已完成，发布侧进入单包默认切换与旧链清理）
 
 ## 5. 过期文档处理说明
 

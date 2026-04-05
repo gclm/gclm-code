@@ -13,12 +13,15 @@ import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
-import { currentMacArch, getRepoRoot, readRootPackage } from './lib/mac-binary-npm.mjs'
 import {
   ROOT_PACKAGE_NAME,
   singlePackageTarballName,
 } from './lib/single-package-npm.mjs'
-import { copyInstalledDependencyTree } from './lib/vendor-runtime-modules.mjs'
+import {
+  currentMacArch,
+  getRepoRoot,
+  readRootPackage,
+} from './lib/single-package-npm.mjs'
 
 const rootDir = getRepoRoot(import.meta.url)
 const rootPkg = readRootPackage(rootDir)
@@ -40,7 +43,7 @@ function parseArgs(argv) {
     registryHost: '127.0.0.1',
     registryPort: null,
     verdaccioPackageSpec: 'verdaccio@6',
-    upstreamRegistry: null,
+    upstreamRegistry: 'https://registry.npmjs.org/',
     skipPack: false,
   }
 
@@ -319,13 +322,6 @@ async function loginToVerdaccio(registryUrl, userConfigPath) {
   )
 }
 
-function readPackageManifestFromTarball(tarballPath, tempDir) {
-  const extractDir = join(tempDir, 'tarball')
-  mkdirSync(extractDir, { recursive: true })
-  run('tar', ['-xzf', tarballPath, '-C', extractDir])
-  return JSON.parse(readFileSync(join(extractDir, 'package', 'package.json'), 'utf8'))
-}
-
 const options = parseArgs(process.argv.slice(2))
 const tempDir = mkdtempSync(join(tmpdir(), 'gclm-single-package-registry-'))
 const npmCacheDir = join(tempDir, '.npm-cache')
@@ -379,8 +375,6 @@ try {
     throw new Error(`Missing tarball: ${tarballPath}`)
   }
 
-  const packageManifest = readPackageManifestFromTarball(tarballPath, tempDir)
-
   mkdirSync(npmCacheDir, { recursive: true })
   mkdirSync(verdaccioDir, { recursive: true })
   mkdirSync(tempProjectDir, { recursive: true })
@@ -419,12 +413,6 @@ try {
   run('npm', ['init', '-y'], {
     cwd: tempProjectDir,
     env: npmEnv,
-  })
-
-  copyInstalledDependencyTree({
-    rootDir,
-    targetNodeModulesDir: join(tempProjectDir, 'node_modules'),
-    dependencyNames: Object.keys(packageManifest.dependencies ?? {}),
   })
 
   run(

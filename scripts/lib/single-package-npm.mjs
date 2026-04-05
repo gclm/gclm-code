@@ -20,6 +20,18 @@ export function readRootPackage(rootDir) {
   return JSON.parse(readFileSync(resolve(rootDir, 'package.json'), 'utf8'))
 }
 
+export function currentMacArch() {
+  if (process.platform !== 'darwin') {
+    return null
+  }
+
+  if (process.arch === 'x64' || process.arch === 'arm64') {
+    return process.arch
+  }
+
+  return null
+}
+
 export function singlePackageAssetName(version, platform) {
   return `${ROOT_PACKAGE_NAME}-${version}-${platform.releaseLabel}.tar.gz`
 }

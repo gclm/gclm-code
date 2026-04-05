@@ -26,12 +26,12 @@
 
 ## 2. Scope Refresh 记录
 
-### 当前仍在线上的方案
+### 迁移前的线上方案（现已降级为历史链路）
 
-- `release-npm` 当前主链仍是 `mac binary-first + 三包`
+- `release-npm` 旧主链是 `mac binary-first + 三包`
 - npm 入口依赖：`gclm-code` + `gclm-code-darwin-x64` + `gclm-code-darwin-arm64`
 - 根包通过 `optionalDependencies` 选择架构子包
-- 当前链路在官方 npm registry 可用，在 `npmmirror` fresh install 场景会失败
+- 该链路在官方 npm registry 可用，但在 `npmmirror` fresh install 场景会失败
 
 ### 本次明确放弃的替代方案
 

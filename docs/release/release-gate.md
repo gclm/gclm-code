@@ -5,9 +5,8 @@
 目标：
 
 - 保证双 mac 架构 runtime 资产都已产出
-- 保证单包 staging、tarball 与 registry 安装链路都可验证
-- 保证消费者只依赖 `bin/ + vendor/` 运行时边界
-- 保证 GitHub Release 资产先于 npm 包发布，避免 postinstall 无法下载 runtime
+- 保证单包 staging 可生成、可打包、可安装 runtime
+- 保证 tarball 与 registry 两条消费者路径都能跑通 `bin/ + vendor/`
 
 ## 1. 必过门禁
 
@@ -15,23 +14,18 @@
 
 1. `preflight`
 2. `build-binary` 矩阵中的全部平台实例
-3. `package-single-package-npm`
+3. `package-single-npm`
 4. `smoke-tarball` 矩阵中的全部平台实例
 5. `smoke-registry` 矩阵中的全部平台实例
-6. 若 `publish_to_npm=true`，还需 `publish-release-assets` 成功后再进入 `publish-npm`
 
 判定标准：
 
 - `preflight` 通过，锁文件与基础仓库门禁通过
 - 两个 mac runner 都能产出并执行自己的 `gc --version`
-- 单包 staging 目录可生成
-- 单包 tarball 可执行 `npm pack`
-- 在 `x64` 与 `arm64` 上都能通过 tarball 安装后的 `node_modules/.bin/gc` 成功启动
-- 根包在临时私有 registry 中发布后，能在 `x64` 与 `arm64` 上从 registry 安装并成功启动
-- 安装后的发布物内同时存在：
-  - `vendor/runtime/<platform>/gc`
-  - `vendor/runtime/<platform>/node_modules -> vendor/modules/node_modules`
-  - `vendor/manifest.json`
+- 单包 staging 目录可生成，并包含 `bin/`、`vendor/manifest.json`、`vendor/modules/`
+- 单包 tarball 可从真实打包产物解包、安装 runtime、再执行 `gc --version`
+- 单包发布到临时私有 registry 后，能从 registry 安装根包并成功完成 runtime 安装
+- `vendor/runtime/<platform>/node_modules -> ../../../modules/node_modules` 软链存在，发布态可加载 vendored workspace modules
 
 ## 2. 本地演练命令
 
@@ -39,41 +33,41 @@
 
 ```bash
 bun run verify
-node ./scripts/prepare-single-package-npm.mjs \
-  --output-dir dist/single-package-check \
-  --release-tag v<version> \
-  --runtime-base-url https://github.com/<owner>/<repo>/releases/download/v<version>/
-node ./scripts/pack-single-package-npm.mjs \
-  --staging-dir dist/single-package-check \
-  --output-dir dist/single-package-tarballs-check
 node ./scripts/prepare-mac-release-assets.mjs \
   --output-dir release-assets-check \
   --darwin-x64-binary /path/to/gc-darwin-x64 \
   --darwin-arm64-binary /path/to/gc-darwin-arm64
+node ./scripts/prepare-single-package-npm.mjs \
+  --output-dir dist/npm-check \
+  --version <version> \
+  --release-tag v<version> \
+  --runtime-base-url https://github.com/<owner>/<repo>/releases/download/v<version>/
+node ./scripts/pack-single-package-npm.mjs \
+  --staging-dir dist/npm-check \
+  --output-dir dist/npm-tarballs-check
 node ./scripts/smoke-single-package-npm.mjs \
   --skip-prepare \
-  --staging-dir dist/single-package-check \
-  --pack-dir dist/single-package-tarballs-check
+  --staging-dir dist/npm-check \
+  --pack-dir dist/npm-tarballs-check
 node ./scripts/smoke-single-package-npm-install.mjs \
-  --skip-prepare \
   --skip-pack \
-  --tarballs-dir dist/single-package-tarballs-check \
+  --tarballs-dir dist/npm-tarballs-check \
   --release-assets-dir release-assets-check
 node ./scripts/smoke-single-package-npm-registry.mjs \
-  --skip-prepare \
   --skip-pack \
-  --tarballs-dir dist/single-package-tarballs-check \
-  --release-assets-dir release-assets-check
+  --tarballs-dir dist/npm-tarballs-check \
+  --release-assets-dir release-assets-check \
+  --upstream-registry https://registry.npmjs.org/
 node ./scripts/smoke-single-package-vendor-modules.mjs
 ```
 
 说明：
 
-- `smoke-single-package-npm` 只验证 staging 目录、manifest 与 tarball 内容
-- `smoke-single-package-npm-install` 验证真实 `npm install <tarball>` 消费者路径
-- `smoke-single-package-npm-registry` 验证“发布到临时私有 registry -> 从 registry 安装根包”的真实消费者路径
-- `smoke-single-package-vendor-modules` 验证 vendored workspace 包与 sidecar 文件已随发布物落地
-- `x64` 与 `arm64` 双路径必须分别在对应机器或 CI runner 上补齐
+- `smoke-single-package-npm` 负责检查 staging 目录、manifest、tarball 内容边界
+- `smoke-single-package-npm-install` 从真实 tarball 解包开始，模拟依赖树与 runtime 安装，验证安装后可直接执行 `gc --version`
+- `smoke-single-package-npm-registry` 负责“发布到临时私有 registry -> 从 registry 安装根包”的消费者路径回归
+- `smoke-single-package-vendor-modules` 进一步验证 vendored workspace packages 与 sidecar 文件在 runtime 下可实际加载
+- `x64` 与 `arm64` 双路径仍应分别在对应机器或 CI runner 上补齐
 
 ## 3. GitHub Actions 输入与 Secrets
 
@@ -97,17 +91,17 @@ node ./scripts/smoke-single-package-vendor-modules.mjs
   - `publish_to_npm=false`
   - `attach_release_assets=false`
   - `run_registry_smoke=true`
-- 若 `publish_to_npm=true`，必须同时开启 `attach_release_assets=true`
+- 若 `publish_to_npm=true`，则必须同时 `attach_release_assets=true`，否则消费者无法拿到默认 runtime 下载源
 
 ## 4. 发布顺序
 
-当前正式顺序为：
+发布顺序已收敛为：
 
-1. 上传 GitHub Release 资产
-2. 发布 `gclm-code` 单包 tarball
-3. 若 `npm_tag=latest`，再补 `stable`
+1. 上传 GitHub Release 双架构 runtime 资产
+2. 发布 `gclm-code` 单包
+3. 如需要，再补 `stable` dist-tag
 
-这样可以避免 npm 消费者先拿到根包、但 GitHub Release runtime 资产尚未可下载的窗口期问题。
+当前不再存在“根包必须晚于架构子包”的约束；消费者 runtime 通过 GitHub Release 资产与 `vendor/manifest.json` 协同完成安装。
 
 ## 5. GitHub Release 资产要求
 
@@ -121,8 +115,7 @@ node ./scripts/smoke-single-package-vendor-modules.mjs
 ## 6. 失败处置
 
 - `build-binary` 某个平台实例失败：先定位对应 runner 上的 Bun compile 或宿主依赖问题
-- `package-single-package-npm` 失败：优先检查 `vendor/manifest.json`、vendored modules、tarball 生成脚本与 release base URL
-- `smoke-tarball` 某个平台实例失败：优先检查 `postinstall` 是否正确下载 runtime、`GCLM_BINARY_BASE_URL` 是否生效、runtime/node_modules 软链是否存在
-- `smoke-registry` 某个平台实例失败：优先检查 Verdaccio 是否启动成功、根包是否错误代理到上游、registry 安装时三方依赖是否可回源 npmjs
-- `publish-release-assets` 失败：优先确认 release assets 目录、tag、GitHub Release 权限与重复发布状态
-- `publish-npm` 失败：优先确认 tarball 名称、`NPM_TOKEN` 权限、目标版本是否已占用，以及 release 资产是否已先发布
+- `package-single-npm` 失败：优先检查 runtime 资产输入目录、single-package staging 内容、tarball 生成脚本
+- `smoke-tarball` 某个平台实例失败：优先检查 tarball 内容、`vendor/manifest.json`、runtime 安装器和本地 asset override 是否一致
+- `smoke-registry` 某个平台实例失败：优先检查 Verdaccio 启动/登录、根包本地发布规则、第三方依赖代理以及 runtime 资产覆盖地址
+- `publish-npm` 失败：优先确认单 tarball 名称、`NPM_TOKEN` 权限与目标版本是否已占用

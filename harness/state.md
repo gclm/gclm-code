@@ -40,7 +40,7 @@
 - Logo V2 默认欢迎文案已从 `How are you` 调整为 `Are You Ok?`
 - `scripts/build.ts` 已优化为统一产物命名：默认输出 `gc`、dev 输出 `gc-dev`，并联动更新 smoke/install/release 引用
 - release 产物结构已调整为 `bin/gc`（默认可执行）+ `bin/claude -> gc` 软链，并通过 tar 包对外分发
-- `release-npm` workflow 已切换为单包主链，并保持 fan-out / matrix 流水线：`meta -> preflight -> build-binary(matrix) -> package-single-package-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-*`
+- `release-npm` workflow 已切换为单包主链，并保持 fan-out / matrix 流水线：`meta -> preflight -> build-binary(matrix) -> package-single-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-*`
 - `scripts/lib/release-platforms.mjs` 已成为当前发布平台单一事实源：统一维护 `platform_matrix`、runner 映射、artifact 命名、子包名与发布顺序
 - `Release NPM` 已新增 `run_registry_smoke` 手动开关：dry-run 场景下可单独补 Verdaccio 私有 registry 验证，而不必真的发布 npm 或上传 release 资产
 - 已完成 `R4 - 单包 smoke / CI / release 切换`：

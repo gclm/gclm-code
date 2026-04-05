@@ -17,7 +17,7 @@ import {
   getBinaryNpmReleasePlatforms,
   resolvePlatformBinaryPaths,
 } from './lib/release-platforms.mjs'
-import { getRepoRoot, readRootPackage } from './lib/mac-binary-npm.mjs'
+import { getRepoRoot, readRootPackage } from './lib/single-package-npm.mjs'
 
 const rootDir = getRepoRoot(import.meta.url)
 const rootPkg = readRootPackage(rootDir)
