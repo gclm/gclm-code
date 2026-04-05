@@ -25,6 +25,7 @@
 
 ## 2026-04-05
 
+- 已调整 Logo V2 默认欢迎文案：无用户名或用户名过长时，从 `How are you` 改为 `Are You Ok?`
 - 基于已确认的 `mac binary-first + npm 根包/架构子包` 方向，新增首批可执行骨架。
 - 新增 `scripts/prepare-mac-binary-npm.mjs`：可生成 `dist/npm/gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三包目录。
 - 新增 `scripts/lib/mac-binary-npm.mjs`：统一维护包名、架构映射与根包 launcher 模板。

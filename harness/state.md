@@ -40,6 +40,7 @@
 
 ## 已完成
 
+- Logo V2 默认欢迎文案已从 `How are you` 调整为 `Are You Ok?`
 - `scripts/build.ts` 已优化为统一产物命名：默认输出 `gc`、dev 输出 `gc-dev`，并联动更新 smoke/install/release 引用
 - release 产物结构已调整为 `bin/gc`（默认可执行）+ `bin/claude -> gc` 软链，并通过 tar 包对外分发
 - `release-npm` workflow 已切换为 `mac binary-first` 主链，并已升级为 fan-out / matrix 流水线：`meta -> preflight -> build-binary(matrix) -> package-mac-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-*`
