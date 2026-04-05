@@ -1,161 +1,96 @@
 # 项目状态
 
-更新时间：2026-04-05（R4 已完成，进入 R5）
+更新时间：2026-04-05（`R5` 已完成）
 
 ## 当前阶段
 
-- Active phase：`R5 - 默认发布切换与旧三包清理（进行中）`
+- Active phase：`release scope-refresh 已收口，进入 ship / release-check`
 - 当前 focus：
-  - 将单包链路正式收敛为默认发布主路径
-  - 清理旧三包脚本、workflow 命名与历史文档耦合
+  - 维持 `single-package + vendor runtime` 作为默认发布主链
   - 保持发布态运行时边界为 `bin/ + vendor/`
-  - 保持 GitHub Release 继续产出双架构 mac runtime 资产
+  - 继续让 GitHub Release 产出双架构 mac runtime 资产
   - 功能侧维持持续维护，不新增 release 之外的大改造
 
 ## 当前判断
 
-- 这是一次 release 方向的 `scope-refresh`，不是新的产品规划。
-- 功能侧 `M1-M4` 已完成，当前重点从“provider / gateway 收口”切到“发布主链收敛”。
-- 当前 release 主链已切到 `单消费者包 + vendor 运行时`：
-  - npm 渠道默认只发布一个 `gclm-code`
-  - GitHub Release 继续同步产出双架构 mac runtime 资产与 `sha256`
-  - 旧 `mac binary-first + 三包` 已降级为待清理历史链路，不再作为推荐结构继续增强
-- 已冻结的新方向是 `单消费者包 + vendor 运行时`：
+- 这是一次 release 方向的 `scope-refresh` 收口，不是新的产品规划。
+- 功能侧 `M1-M4` 已完成，当前重点从“发布方案选择”切到“单包主链落地后的放行与维护”。
+- 当前默认发布模型已经冻结为：
+  - npm 渠道只发布一个 `gclm-code`
+  - GitHub Release 继续提供 `darwin-x64` / `darwin-arm64` runtime 资产与 `sha256`
   - 发布态运行时只认 `bin/ + vendor/`
-  - `vendor/manifest.json` 作为运行时单一事实源
+  - `vendor/manifest.json` 是运行时单一事实源
   - `dist/` 仅保留为构建期 staging
-  - `packages/*` 继续作为内部 workspace，不进入全仓库结构重排
-- 当前实施模式为 `staged hybrid`：
-  - `C` 是关键路径，负责消除 `optionalDependencies` 主程序缺失问题
-  - `D-lite` 同批并行，但只收敛发布边界，不触发 `src/` / `packages/` 大搬迁
-- 单包方案仍采用“轻资产发布期物化 + 重型 runtime 安装期落盘”的混合模型：
+  - `packages/*` 继续作为内部 workspace，不做 `references/cli` 式全仓库重排
+- 当前单包方案采用“轻资产发布期物化 + 重型 runtime 安装期落盘”的混合模型：
   - `vendor/modules/` 收敛 workspace 运行时产物
   - `vendor/runtime/` 收敛平台 runtime 与 sidecar
-  - 目标是同时解决 `npmmirror` 安装缺子包问题与 fat tarball 体积问题
-- 不推荐直接复用 `references/cli` 作为发布蓝本：
-  - 更适合借鉴的是消费者边界组织方式，而不是整仓结构复制
+  - 安装期通过 `postinstall` + GitHub Release 资产完成当前平台 runtime 落盘
 
 ## 已完成
 
 - Logo V2 默认欢迎文案已从 `How are you` 调整为 `Are You Ok?`
-- `scripts/build.ts` 已优化为统一产物命名：默认输出 `gc`、dev 输出 `gc-dev`，并联动更新 smoke/install/release 引用
-- release 产物结构已调整为 `bin/gc`（默认可执行）+ `bin/claude -> gc` 软链，并通过 tar 包对外分发
-- `release-npm` workflow 已切换为单包主链，并保持 fan-out / matrix 流水线：`meta -> preflight -> build-binary(matrix) -> package-single-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-*`
-- `scripts/lib/release-platforms.mjs` 已成为当前发布平台单一事实源：统一维护 `platform_matrix`、runner 映射、artifact 命名、子包名与发布顺序
-- `Release NPM` 已新增 `run_registry_smoke` 手动开关：dry-run 场景下可单独补 Verdaccio 私有 registry 验证，而不必真的发布 npm 或上传 release 资产
+- `scripts/build.ts` 已优化为统一产物命名：默认输出 `gc`、dev 输出 `gc-dev`，并联动更新 smoke / install / release 引用
+- 发布 runtime 资产结构已调整为 `bin/gc` + `bin/claude -> gc` 软链，并通过 tar 包对外分发
+- 已完成 `R1 - 单包发布骨架与 vendor manifest`：
+  - 新增 `scripts/prepare-single-package-npm.mjs`
+  - 新增 `scripts/lib/single-package-npm.mjs`
+  - 新增发布态 `bin/gc.js`
+  - 新增 `scripts/smoke-single-package-npm.mjs`
+- 已完成 `R2 - 平台 runtime 落盘到 vendor/runtime/`：
+  - 新增 `scripts/install-runtime.mjs`
+  - 单包 staging 已接入 `postinstall -> node ./bin/install-runtime.js`
+  - 已支持从 `runtime.baseUrl` / `GCLM_BINARY_BASE_URL` 下载 release 资产并校验 `sha256`
+  - 新增 `scripts/smoke-single-package-runtime-install.mjs`
+- 已完成 `R3 - workspace 运行时物化到 vendor/modules/`：
+  - 新增 `scripts/lib/vendor-runtime-modules.mjs` 与 `scripts/prepare-vendor-runtime.mjs`
+  - 已将 8 个 runtime workspace 包物化到 `vendor/modules/node_modules/`
+  - 已让单包 staging `package.json` 自动注入最小 runtime 依赖清单，并将 modules 边界回写到 `vendor/manifest.json`
+  - 已新增 `scripts/smoke-single-package-vendor-modules.mjs`
 - 已完成 `R4 - 单包 smoke / CI / release 切换`：
-  - 已新增 `scripts/pack-single-package-npm.mjs`
-  - 已新增 `scripts/publish-single-package-npm-tarball.mjs`
-  - 已新增 `scripts/smoke-single-package-npm-install.mjs`
-  - 已新增 `scripts/smoke-single-package-npm-registry.mjs`
-  - `Release NPM` 已切到单包 staging / tarball / registry / publish 主链
-  - `CI Verify` 已补单包 staging smoke 与 macOS single-package install/vendor smoke
-  - 已新增“发布 npm 必须同时上传 release assets”的 workflow 门禁，避免 postinstall 指向空 runtime 源
-- `Release NPM` 的线上 dry-run 已验证该开关生效：run `23998338010` 在不发布 npm / 不上传 release assets 的前提下，仍成功执行 `smoke-tarball(matrix)` 与 `smoke-registry(matrix)`，且 `publish-*` / `tag-stable` 均按预期跳过
-- `v1.0.0` 已完成正式发布：首次 tag run `23998582683` 成功上传 GitHub Release 资产，随后通过补丁提交 `edf2304` 修复 `publish-npm` 缺少 checkout 的 workflow 问题，并通过 workflow_dispatch run `23998704055` 完成 npm 发布与 `stable` 打标收尾
-- 已完成本机真实安装验证：保留原有 `Claude Code 2.1.76` 不卸载的前提下，全局安装 `gclm-code@1.0.0` 后 `gc` 命令已可用；`claude` 仍优先指向 `/Users/gclm/.local/bin/claude`，未覆盖现有本机安装
-- 已完成本机卸载/重装复验：删除旧 `/Users/gclm/.local/bin/claude` 与 `/Users/gclm/.local/share/claude/versions/2.1.76` 程序文件、保留 `/Users/gclm/.claude` 后重新全局安装 `gclm-code@1.0.0`；当前 `claude --version` 与 `gc --version` 均输出 `1.0.0 (Gclm Code)`，且 npm 全局 bin 仅落地 `claude` / `gc` 两个入口，未提供 `gclm`
-- 已完成隔离 fresh install 对照验证：在全新 `prefix + cache` 下，`npm install -g gclm-code@1.0.0 --registry=https://registry.npmjs.org` 可安装出 `gclm-code + gclm-code-darwin-x64` 两包并正常执行；同条件下切到 `https://registry.npmmirror.com` 仍只会安装根包，`gc --version` 会报“未找到匹配架构包”
-- npm 包名已从 `@gclm/gclm-code` 调整为 `gclm-code`，并同步 CLI 默认 PACKAGE_URL、发布 workflow 与相关文档
-- 已为 npm 发布增加 `files` 白名单（`gc`、`README.md`、`install.sh`、`packages`），`npm pack --dry-run` 已验证发布内容收敛为 42 个文件
-- README 已重写为“参考 free-code 项目实践”表述，并同步网关优先策略、验收入口与发布门禁说明
-- npm 包基础发布配置已落地：`gclm-code`
-- 已补充 `.gitignore`：忽略根目录 npm tarball、本地 `release-assets-check/` 目录与 `packages/*/node_modules/`，减少发布调试时的工作区噪音
-- CI 验收工作流已落地，并已升级为 fan-out 结构：`preflight + build + smoke-packages(matrix)`
-- npm tag 发布工作流已落地
-- 第二批 telemetry 清理已有明显进展：
-  - `feedbackSurvey*` 相关残留已不在主代码中
-  - `IssueFlagBanner` 相关残留已删除
-  - 多个 inert analytics sink / telemetry 壳模块已删除
-- `analytics -> runtimeConfig` 语义迁移已完成：
-  - 已新增 `src/services/runtimeConfig/` 中性边界
-  - 已删除 `src/services/analytics/config.ts`
-  - 已删除 `src/services/analytics/growthbook.ts`
-  - 已删除 `src/services/analytics/sinkKillswitch.ts`
-  - 当前策略为“不保留兼容层，直接修复断点”
-- provider 诊断命名清理已完成：
-  - `ForStatsig` 历史 helper 已迁移为中性命名
-  - 对应调用点已完成收口并通过验证
-- 工具日志边界清理已完成：
-  - `src/services/analytics/metadata.ts` 已迁移为 `src/services/toolLogging/metadata.ts`
-  - `SafeLogValue` 已替代旧的超长历史类型名
-  - `src/utils/telemetry/bigqueryExporter.ts` 已删除
-- `analytics/index.ts` 类型边界已完成中性化：
-  - `AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS` -> `SafeEventValue`
-  - `AnalyticsMetadata_I_VERIFIED_THIS_IS_PII_TAGGED` -> `PiiEventValue`
-- 登录流/网关配置本轮落地：
-- 第二刀净化（codex 全量移除）已完成：
-  - 已删除 `src/services/oauth/codex-client.ts`
-  - 已删除 `src/services/api/codex-fetch-adapter.ts`
-  - 已删除 `src/constants/codex-oauth.ts`
-  - 已删除 `src/utils/codex-fetch-adapter.ts`
-  - 已移除 `auth/config/model/providers/oauth` 中全部 codex/openai-codex 相关定义
-  - `ConsoleOAuthFlow` 已移除 `OpenAI Codex account` 选项与登录分支
-  - 旧“3rd-party platform”说明页改为可交互网关配置：依次输入 `ANTHROPIC_BASE_URL`、`ANTHROPIC_API_KEY`
-  - 输入后自动保存到 `GlobalConfig.env`，并同步当前 `process.env`
-  - 保存后清理显式 provider flag：`CLAUDE_CODE_USE_BEDROCK/VERTEX/FOUNDRY/OPENAI`
-  - 保存后立即触发 `refreshProviderModelOptions(true)`，执行 `/models` 自动发现
-  - 同批清理关键路径 codex 引用：
-    - `src/services/api/client.ts` 移除 codex fetch adapter 分支
-    - `src/cli/handlers/auth.ts` 移除 codex token 存储分支
-    - `src/hooks/useApiKeyVerification.ts` 移除 codex subscriber 判定依赖
+  - 新增单包 `pack / publish / tarball install / registry install` 脚本
+  - `Release NPM` 已切到 `package-single-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-release-assets -> publish-npm` 主链
+  - `CI Verify` 已补齐 single-package staging 与 macOS install/vendor smoke
+- 已完成 `R5 - 默认发布切换与旧三包清理`：
+  - 已删除旧三包脚本：`prepare-mac-binary-npm.mjs`、`pack-mac-binary-npm.mjs`、`publish-binary-npm-tarballs.mjs`、`smoke-mac-binary-npm*.mjs`
+  - 已删除旧 helper：`scripts/lib/mac-binary-npm.mjs`
+  - `scripts/lib/release-platforms.mjs` 已收敛为单包发布平台目录，不再维护三包发布顺序与子包名映射
+  - `package.json` 已移除旧三包脚本入口，并新增中性的 `prepare:release-assets`
+  - README / docs / roadmap / harness 已统一切到单包口径
+  - `docs/release/mac-binary-first-npm-plan.md` 已删除，旧三包只保留在 history 中
+  - `smoke-single-package-npm-install` 已提升为真实 `npm install <tarball>` 验证
+  - `smoke-single-package-npm-registry` 已提升为 Verdaccio + npmjs upstream 的真实 registry 安装验证
 
 ## 进行中
 
-- 功能侧已进入持续维护模式；发布侧已进入 `R5 - 默认发布切换与旧三包清理`
-- 已更新 release 迁移提案：当前推荐方向为 `单消费者包 + vendor 运行时 + D-lite 发布边界收敛`，发布态运行时只保留 `bin/ + vendor/`，`dist/` 明确降级为构建中间层；同时保留 `packages/*` 作为内部 workspace，并让 `C + D-lite` 并行推进
-- 已新增实施任务单：`docs/release/single-package-implementation-plan.md`，当前 active phase 已推进到 `R5 - 默认发布切换与旧三包清理`
-- `R1` 已完成：
-  - 已新增 `scripts/prepare-single-package-npm.mjs`
-  - 已新增 `scripts/lib/single-package-npm.mjs`
-  - 已新增发布态 `bin/gc.js`
-  - 已新增 `scripts/smoke-single-package-npm.mjs`
-  - 已验证单包 staging 可生成、`vendor/manifest.json` 可读取、`npm pack` 与最小 launcher smoke 通过
-- `R2` 已完成：
-  - 已新增 `scripts/install-runtime.mjs`
-  - 已为单包 staging manifest 接入 `postinstall -> node ./bin/install-runtime.js`
-  - 已支持从 `runtime.baseUrl` / `GCLM_BINARY_BASE_URL` 下载 release 资产并校验 `sha256`
-  - 已新增 `scripts/smoke-single-package-runtime-install.mjs`
-  - 已验证离线解包 + 本地依赖树补齐后，runtime 可落到 `vendor/runtime/`，且 `gc --version` 可直接运行
-- `R3` 已完成：
-  - 已新增 `scripts/lib/vendor-runtime-modules.mjs` 与 `scripts/prepare-vendor-runtime.mjs`
-  - 已将 8 个 runtime workspace 包物化到 `vendor/modules/node_modules/`
-  - 已让单包 staging `package.json` 自动注入最小 runtime 依赖清单，并将 modules 边界回写到 `vendor/manifest.json`
-  - 已让 launcher 为 runtime 注入 `NODE_PATH`，并在安装期为 `vendor/runtime/<platform>/node_modules` 建立到 `vendor/modules/node_modules` 的软链
-  - 已新增 `scripts/smoke-single-package-vendor-modules.mjs`
-  - 已验证安装后目录可在脱离仓库 `packages/*` 布局的条件下加载 vendor modules，并保持 `gc --version` 正常
-- `R4` 已完成：
-  - 已新增单包 pack / publish / tarball install / registry install 脚本
-  - 已让 `Release NPM` 统一产出单包 staging、单包 tarball 与双架构 release assets
-  - 已让 tarball / registry smoke 直接验证真实 `npm install` 路径，而不是继续依赖三包 `optionalDependencies`
-  - 已让 `CI Verify` 增补 single-package staging + runtime/install/vendor smoke
-  - 已验证单包 tarball 安装、单包 registry 安装与 vendored modules 回归全部通过
+- 功能侧处于持续维护模式
+- 发布侧当前进入 `ship / release-check`：等待下一次正式发版时验证单包主链的公网发布闭环
 
 ## 已知未完成项
 
-- `R5` 进行中：旧三包脚本、旧 workflow 命名与历史文档仍需清理
-- `docs` 历史文档中可能仍有 codex 文案残留（不影响运行时）；后续可按文档清理批次处理
-- `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否进一步去品牌化或去历史产品语义
+- Linux / Windows runtime 资产仍未纳入本轮 npm 发布范围
+- 通过真实公网 npm 发布后的“fresh install 闭环”仍要等下一次正式单包版本发版时再补最终证据
+- `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否继续去历史语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
-- 通过安装后的 `gc` 本体显式触发 vendored workspace 懒加载功能的 feature smoke 仍偏弱，后续可补一条更贴近真实功能入口的验证
-- 当前全量 typecheck 在仓库基线上有大量既有错误，无法作为本轮单改动通过标准
+- 当前全量 typecheck 在仓库基线上仍有大量既有错误，无法作为本轮唯一阻断标准
 
 ## 执行边界
 
 - 当前 must-fix：
-  - `R5` 默认发布切换与旧三包清理
+  - 无新的 release 结构 must-fix；主线已收口
 - same-batch can-include：
-  - 旧三包脚本、旧 docs 与旧 workflow 名称收口
+  - 下一次正式单包发版前的 release-check 与 dry-run 演练
 - follow-up：
-  - 更贴近真实功能入口的 vendored workspace lazy-load smoke
+  - 公网 npm 发布后的最终消费者闭环验证
+  - Linux / Windows runtime 扩展
 
 ## 当前发布迁移执行顺序
 
-1. `R1`：单包发布骨架 + `vendor/manifest.json`
-2. `R2`：平台 runtime 落盘到 `vendor/runtime/`
-3. `R3`：workspace 运行时物化到 `vendor/modules/`
-4. `R4`：单包 smoke / CI / release 切换
-5. `R5`：默认发布切换与旧三包清理
+1. `R1`：单包发布骨架 + `vendor/manifest.json`（已完成）
+2. `R2`：平台 runtime 落盘到 `vendor/runtime/`（已完成）
+3. `R3`：workspace 运行时物化到 `vendor/modules/`（已完成）
+4. `R4`：单包 smoke / CI / release 切换（已完成）
+5. `R5`：默认发布切换与旧三包清理（已完成）
 
 ## OAuth 策略结论
 
@@ -163,149 +98,23 @@
 - 客户端维持已有 token 链路，网关负责上游认证与路由编排
 - 触发 OAuth 重设计的条件：
   - 同一会话需要并发多 provider token 编排
-  - 现有 token lifecycle 无法覆盖新 provider 的刷新/吊销语义
+  - 现有 token lifecycle 无法覆盖新 provider 的刷新 / 吊销语义
   - 现有 auth status 无法表达 provider 维度状态
-
-## Phase 3 - Step 1 结论
-
-- 已完成入口收敛，建议下一刀采用“最小可落地切口”：
-  - 新增一个不依赖 `getSettings()` 的 first-party auth header helper（用于避免循环依赖）
-  - 先在 `remoteManagedSettings` 与 `policyLimits` 两个重复度最高模块落地
-  - `bootstrap` 暂可保持内联，作为第二批再迁移，降低回归面
-- 该切口价值：
-  - 直接减少认证 header 分叉逻辑
-  - 不触碰 provider 选择主链（`getAPIProvider()`）
-  - 风险可控，便于单批验证
 
 ## 环境与验收
 
 - 运行环境：Bun 1.3.11 项目
 - 当前统一验收门槛：`bun run verify`
 - 当前策略已调整为“不保留兼容层，直接修复断点”
-- 最新发布链修复验证：2026-04-05 已执行 `bun install --frozen-lockfile`，通过
-- 最新发布链修复验证：2026-04-05 已执行 `bun run verify`，通过
-- 最新单包 staging 验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-npm.mjs`，通过
-- 最新单包 runtime 安装验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-runtime-install.mjs`，通过
-- 最新单包 tarball 安装验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-npm-install.mjs`，通过
-- 最新单包 registry 安装验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-npm-registry.mjs`，通过
-- 最新单包 vendor modules 验证：2026-04-05 已执行 `node ./scripts/smoke-single-package-vendor-modules.mjs`，通过
-- 最新发布链真实安装验证：2026-04-05 GitHub Actions `Release NPM` run `23998338010` 已通过，证明 `run_registry_smoke=true` 可在 dry-run 场景独立触发 Verdaccio 私有 registry 安装链路，而不会误触发 `publish-npm`、`publish-release-assets`、`tag-stable`
-- 最新真实发版验证：2026-04-05 GitHub Actions `Release NPM` run `23998582683` 中 `build-binary(matrix)`、`package-mac-npm`、`smoke-tarball(matrix)`、`smoke-registry(matrix)` 与 `publish-release-assets` 均通过；唯一失败点是 `publish-npm` 缺少 checkout，属于 workflow 编排问题而非包内容或消费者安装链路问题
-- 最新正式发布结果：2026-04-05 GitHub Actions `Release NPM` run `23998704055` 已通过，`publish-npm` 与 `tag-stable` 成功；npm registry 已确认 `gclm-code@1.0.0`、`gclm-code-darwin-x64@1.0.0`、`gclm-code-darwin-arm64@1.0.0` 可见，且 `latest/stable` 均指向 `1.0.0`
-- 最新本机安装验证：2026-04-05 在本机以 `npm install -g gclm-code@1.0.0` 安装时，默认 registry 为 `https://registry.npmmirror.com`，根包 `optionalDependencies` 未落地，首次 `gc --version` 报“未找到匹配架构包”；随后改用官方 npm registry 补装 `gclm-code-darwin-x64@1.0.0` 后恢复正常
-- 最新本机卸载重装验证：2026-04-05 本机先删除旧 `Claude Code 2.1.76` 程序文件、保留 `/Users/gclm/.claude`，再执行全局卸载/重装；结果 `command -v claude` 与 `command -v gc` 均已命中 `gclm-code` 提供的入口，`claude --version` / `gc --version` 均输出 `1.0.0 (Gclm Code)`，`gclm` 仍不存在；当前已确认根包内 `node_modules/gclm-code-darwin-x64` 实际落地
-- 最新 registry 交叉验证：2026-04-05 通过 `npm view gclm-code-darwin-x64@1.0.0 dist.tarball --registry=https://registry.npmmirror.com` 已可返回 tarball 地址，但这只能证明镜像元数据可查；进一步在全新 `prefix + cache` 下执行隔离 fresh install 时，`npmmirror` 仍只安装根包而未落地 `gclm-code-darwin-x64`，`gc --version` 继续报“未找到匹配架构包”，而官方 npm 在同条件下可正常安装两包并运行
-- 最新验证结果：2026-04-04 已执行 `bun run build`，构建通过（含第二刀 codex 全量移除）
-- smoke 脚本已新增：`bun run smoke`、`bun run smoke:gui`
-- 已修复网关模型发现回归：清空 provider flag 后仍可基于 `ANTHROPIC_BASE_URL` 刷新 `/models`
-- 备注：全量 `bun run typecheck` 当前受仓库既有错误影响，不作为本轮唯一阻断
-- 已按网关 URL 规则收敛模型发现端点：
-  - `ANTHROPIC_BASE_URL=http://host` -> `http://host/v1/models`
-  - `ANTHROPIC_BASE_URL=http://host/vN` -> `http://host/vN/models`
-- 回归验证：
-  - `http://localhost:8086` 场景通过，命中 `/v1/models`
-  - `http://localhost:8086/v1` 场景通过，命中 `/v1/models`（由 base `/v1` + `/models` 组成）
-  - `http://localhost:8086/v2` 场景失败（网关该版本路径无模型列表，属环境能力差异）
-- 新增逐包接入回归脚本：`bun run smoke:packages`
-- `smoke:packages` 已覆盖并验证 8 个本地 package 的主流程可加载能力：
-  - `audio-capture-napi`
-  - `image-processor-napi`
-  - `modifiers-napi`
-  - `url-handler-napi`
-  - `@ant/claude-for-chrome-mcp`
-  - `@ant/computer-use-input`
-  - `@ant/computer-use-mcp`
-  - `@ant/computer-use-swift`
-- 端到端回归结果：
-  - `bun run smoke:packages` 通过
-  - `SMOKE_GATEWAY_BASE_URL=http://localhost:8086 ... bun run smoke` 通过（models=9）
-  - `bun run smoke:gui` 通过
-- smoke 包回归已升级为分层模式（core/gui/gateway/all）
-- 新增脚本：
-  - `bun run smoke:packages:core`
-  - `bun run smoke:packages:gui`
-  - `bun run smoke:packages:gateway`
-  - `bun run smoke:packages`（all）
-- 分层验收结果（2026-04-04）：
-  - core 通过
-  - gui 通过
-  - gateway 通过（`http://localhost:8086/v1/models`, models=9）
-  - all 通过
-- CI `preflight + build + smoke-packages(matrix)` 已补充分层 smoke：
-  - `smoke:packages:core`
-  - `smoke:packages:gateway`
-  - gateway 依赖 Secrets：`SMOKE_GATEWAY_BASE_URL`、`SMOKE_GATEWAY_API_KEY`
-- 新增运维文档：`docs/release/gateway-smoke-and-login.md`
-- 新增登录等效验收脚本：`bun run smoke:login-gateway`
-  - 脚本对齐 `/login` 平台路径核心逻辑：保存 `ANTHROPIC_BASE_URL/KEY` + 清理 provider flags + 强制刷新模型
-  - 本地验收通过：`http://localhost:8086` 场景发现 9 个模型并写入缓存
-- 已修复 brand-guard 阻断：清理 `packages/computer-use-mcp` 中一处 legacy 品牌注释
-- 最新验证：`bun run verify` 通过
-- 已检查新拷贝 packages 中 legacy 品牌文案用途：
-  - 对外可见提示文案已替换为 `Gclm Code`
-  - 协议/工具标识（如 `mcp__Claude_in_Chrome__*`）保持不变以避免兼容性风险
-- 已替换位置（用户可见）：
-  - `packages/computer-use-mcp/src/mcpServer.ts`
-  - `packages/computer-use-mcp/src/toolCalls.ts`
-  - `packages/computer-use-mcp/src/tools.ts`
-- 验证结果：
-  - `bun run brand:guard` 通过
-  - `bun run smoke:packages:gui` 通过
-- 已完成 docs 下一步 1+2 开发：
-  - 1) `docs/overview/roadmap.md` 已将 M2 收口为“已完成”，并同步 M1/M3 当前状态
-  - 2) 新增 `docs/release/release-gate.md`（手动发版前必过清单）
-- `docs/README.md` 已补充新文档索引（gateway 验收 + release gate + overview）
-- 校验结果：
-  - `bun run verify` 通过
-  - `bun run smoke:packages:gateway` 通过（无 env 时按预期 skip）
-  - `SMOKE_GATEWAY_* bun run smoke:login-gateway` 通过（discovered=9）
-- M3-1 已开始并落地首批改造（错误语义统一）：
-- M3-2 已完成（模型发现可观测性补强）：
-- M3-3 已完成（回归矩阵加固）：
-- M3-4 已完成（文档收口与 release gate 对齐）：
-  - `release-gate` 已升级为标准命令集（verify + smoke:packages + smoke:login-gateway:matrix）
-  - `roadmap` 已更新为 M3 完成、当前推荐动作切换到 M4
-  - `docs/README` 已标注 release gate 包含 matrix 回归入口
-  - 新增 `bun run smoke:login-gateway:matrix`，统一执行登录网关成功路径 + 404 错误语义用例
-  - 支持可选扩展 env：`SMOKE_GATEWAY_EXPECT_401_KEY`、`SMOKE_GATEWAY_EXPECT_429_BASE_URL`、`SMOKE_GATEWAY_EXPECT_5XX_BASE_URL`
-  - 文档已补充 matrix 用法与可选场景，便于发版前固定回归
-  - 新增 `GlobalConfig.providerModelDiscoveryLastStatus` 持久化最近一次 discovery 诊断
-  - 成功记录：状态/端点/模型数；失败记录：错误类型/状态码/端点/压缩错误文案
-  - `/status` 的 API provider 区域新增 Model discovery 诊断展示（success/error + message）
-  - `refreshProviderModelOptions` 新增 `interactive` 模式，供 `/login` 平台配置路径直出可操作错误
-  - 网关模型发现新增结构化错误分类：`auth/not_found/rate_limit/gateway_unavailable/empty_models/invalid_payload/unknown`
-  - 401/403、404、429、5xx、网络超时/连接失败均映射为明确提示文案
-  - `/login` 平台保存后刷新改为 `refreshProviderModelOptions({ force: true, interactive: true })`
-  - `smoke:login-gateway` 新增 `SMOKE_GATEWAY_EXPECT_ERROR` 断言能力，可回归错误语义稳定性
-- 已移除 legacy workspace 发布兼容链：
-  - 不再维护 `prepack/postpack` 的 `workspace:* -> file:` 重写
-  - 不再维护 `smoke:npm-install`
-  - 仓库根 `package.json` 已改为 `private: true`，防止误走根目录直发
-  - 对外交付只保留 `mac binary-first` 主路径
-- 已新增 mac binary-first 组装与发布脚手架：
-  - `node ./scripts/prepare-mac-binary-npm.mjs`
-  - `node ./scripts/pack-mac-binary-npm.mjs`
-  - `node ./scripts/prepare-mac-release-assets.mjs`
-  - `bun run smoke:mac-binary-npm`
-- `release-npm` 当前门禁已切换为：
-  - `preflight`
-  - `build-binary`（matrix）
-  - `package-mac-npm`
-  - `smoke-tarball`（matrix）
-  - `smoke-registry`（matrix）
-- 当前骨架能力：
-  - 可生成 `dist/npm/gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64`
-  - 可生成三包 npm tarball 与双架构 GitHub Release 资产
-  - 根包 launcher 已能按 `process.arch` 选择架构子包并转发到真实二进制
-  - 本地已验证三包 `npm pack` 成功
-  - 本地已验证模拟安装布局下 `darwin-x64` launcher 执行 `gc --version` 成功
-- 当前已识别的实现细节：
-  - 本地目录 `npm install` 会优先走 symlink 路径，不足以代表未来 registry 安装对 `optionalDependencies` 的最终行为
-  - 已新增 tarball 安装 smoke：先装当前架构子包，再离线装根包，验证 `node_modules/.bin/gc` 消费者路径
-  - 已新增 Verdaccio 私有 registry smoke：按顺序发布三包后，再从 registry 安装根包验证消费者路径
-  - 当前整体验证已提升为“staging + tarball install + private registry install”三层；其中 CI 固定覆盖后两层，staging smoke 保留为本地演练入口；公网 npm registry 闭环仍留待后续最终补齐
-  - 已定位并修复 2026-04-05 两次 Actions 失败（`23992808000`、`23992815249`）的共同根因：`bun.lock` 仍保留旧的 `file:` workspace 解析结果，导致 GitHub Actions 上的 `bun install --frozen-lockfile` 报 `lockfile had changes, but lockfile is frozen`
-  - 已按 Option C 升级 workflow：平台列表由 `meta` 输出统一 `platform_matrix`，供 `build-binary`、`smoke-tarball`、`smoke-registry` 复用，便于后续追加 Linux / Windows 平台
-  - 已收紧门禁层次：`CI Verify` 中 `smoke-packages(matrix)` 依赖 `build`；`Release NPM` 中 `smoke-registry(matrix)` 依赖 `smoke-tarball(matrix)`，避免基础构建或轻量安装失败后继续展开重型 smoke
-  - 已继续抽象平台元数据：workflow 改为调用 `scripts/release-platform-matrix.mjs` 生成矩阵，`package-mac-npm` 改为按 `gc-*` artifact 模式下载二进制，`publish-npm` 改为调用统一脚本按平台目录顺序发布 tarball
-  - 已新增 `run_registry_smoke` 输入：可在 `workflow_dispatch` 的“只做 dry-run”场景中，显式要求执行 `smoke-registry(matrix)`，补齐更接近真实消费者安装链路的验证
+- 最新正式 npm 发布版本：`1.0.0`
+  - 说明：该版本是迁移前的历史三包正式版，不代表当前仓库的默认发布结构
+  - 当前仓库下一次正式发版将默认走单包主链
+- 当前最强本地证据级别：`scripted-flow`
+- 最新单包验证结果（2026-04-05）：
+  - `bun run build`，通过
+  - `node ./scripts/smoke-single-package-npm.mjs`，通过
+  - `node ./scripts/smoke-single-package-runtime-install.mjs`，通过
+  - `node ./scripts/smoke-single-package-npm-install.mjs`，通过
+  - `node ./scripts/smoke-single-package-npm-registry.mjs`，通过
+  - `node ./scripts/smoke-single-package-vendor-modules.mjs`，通过
+- 备注：真实公网 npm 发布后的最终消费者闭环仍需在下一次正式单包版本发布时补齐

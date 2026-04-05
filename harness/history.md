@@ -65,3 +65,7 @@
   - `prepare-mac-release-assets` 已验证可输出双架构 `tar.gz + sha256`
   - 模拟安装布局下，根包 launcher 可在 `darwin-x64` 环境成功选择架构子包并执行 `gc --version`
 - 记录实现细节：本地目录 `npm install` 会优先走 symlink 布局，不能完整代表后续 registry 安装时 `optionalDependencies` 的真实行为；后续需在 CI 或私有 registry 场景补真实 install 验证。
+- 已完成 `R5 - 默认发布切换与旧三包清理`：删除 `prepare-mac-binary-npm.mjs`、`pack-mac-binary-npm.mjs`、`publish-binary-npm-tarballs.mjs`、`smoke-mac-binary-npm*.mjs` 与 `scripts/lib/mac-binary-npm.mjs`，并把 `scripts/lib/release-platforms.mjs` 收敛为单包平台目录，默认发布链只保留 single-package 实现。
+- 已提升单包消费者验证强度：`smoke-single-package-npm-install.mjs` 改为真实 `npm install <tarball>` 验证，`smoke-single-package-npm-registry.mjs` 改为 Verdaccio + npmjs upstream 的真实 registry 安装验证，不再预拷贝依赖树伪造消费者环境。
+- 已完成 `R5` 文档与状态回写：README、release gate、手动发布指南、GitHub Actions 发布说明、roadmap、harness 状态已统一切到 single-package + vendor runtime；`docs/release/mac-binary-first-npm-plan.md` 已删除，旧三包只保留为 history 记录。
+- 已完成 `R5` 本地验证：`bun run build`、`node ./scripts/smoke-single-package-npm.mjs`、`node ./scripts/smoke-single-package-runtime-install.mjs`、`node ./scripts/smoke-single-package-npm-install.mjs`、`node ./scripts/smoke-single-package-npm-registry.mjs`、`node ./scripts/smoke-single-package-vendor-modules.mjs` 全部通过。

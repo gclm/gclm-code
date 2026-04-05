@@ -7,6 +7,7 @@
 - 保证双 mac 架构 runtime 资产都已产出
 - 保证单包 staging 可生成、可打包、可安装 runtime
 - 保证 tarball 与 registry 两条消费者路径都能跑通 `bin/ + vendor/`
+- 保证发布态运行时只依赖包内 `vendor/manifest.json` 与 GitHub Release 资产
 
 ## 1. 必过门禁
 
@@ -17,13 +18,14 @@
 3. `package-single-npm`
 4. `smoke-tarball` 矩阵中的全部平台实例
 5. `smoke-registry` 矩阵中的全部平台实例
+6. 若 `publish_to_npm=true`，还需 `publish-release-assets` 成功后再进入 `publish-npm`
 
 判定标准：
 
 - `preflight` 通过，锁文件与基础仓库门禁通过
 - 两个 mac runner 都能产出并执行自己的 `gc --version`
 - 单包 staging 目录可生成，并包含 `bin/`、`vendor/manifest.json`、`vendor/modules/`
-- 单包 tarball 可从真实打包产物解包、安装 runtime、再执行 `gc --version`
+- 单包 tarball 可通过真实 `npm install <tarball>` 路径安装，并成功执行 `gc --version`
 - 单包发布到临时私有 registry 后，能从 registry 安装根包并成功完成 runtime 安装
 - `vendor/runtime/<platform>/node_modules -> ../../../modules/node_modules` 软链存在，发布态可加载 vendored workspace modules
 
@@ -52,7 +54,8 @@ node ./scripts/smoke-single-package-npm.mjs \
 node ./scripts/smoke-single-package-npm-install.mjs \
   --skip-pack \
   --tarballs-dir dist/npm-tarballs-check \
-  --release-assets-dir release-assets-check
+  --release-assets-dir release-assets-check \
+  --registry https://registry.npmjs.org/
 node ./scripts/smoke-single-package-npm-registry.mjs \
   --skip-pack \
   --tarballs-dir dist/npm-tarballs-check \
@@ -64,8 +67,8 @@ node ./scripts/smoke-single-package-vendor-modules.mjs
 说明：
 
 - `smoke-single-package-npm` 负责检查 staging 目录、manifest、tarball 内容边界
-- `smoke-single-package-npm-install` 从真实 tarball 解包开始，模拟依赖树与 runtime 安装，验证安装后可直接执行 `gc --version`
-- `smoke-single-package-npm-registry` 负责“发布到临时私有 registry -> 从 registry 安装根包”的消费者路径回归
+- `smoke-single-package-npm-install` 负责真实 `npm install <tarball>` 消费者路径验证，并用本地 release assets 覆盖 runtime 来源
+- `smoke-single-package-npm-registry` 负责“发布到临时私有 registry -> 从 registry 安装根包”的真实消费者路径回归
 - `smoke-single-package-vendor-modules` 进一步验证 vendored workspace packages 与 sidecar 文件在 runtime 下可实际加载
 - `x64` 与 `arm64` 双路径仍应分别在对应机器或 CI runner 上补齐
 
@@ -116,6 +119,7 @@ node ./scripts/smoke-single-package-vendor-modules.mjs
 
 - `build-binary` 某个平台实例失败：先定位对应 runner 上的 Bun compile 或宿主依赖问题
 - `package-single-npm` 失败：优先检查 runtime 资产输入目录、single-package staging 内容、tarball 生成脚本
-- `smoke-tarball` 某个平台实例失败：优先检查 tarball 内容、`vendor/manifest.json`、runtime 安装器和本地 asset override 是否一致
+- `smoke-tarball` 某个平台实例失败：优先检查 tarball 内容、第三方依赖安装、`vendor/manifest.json`、runtime 安装器和本地 asset override 是否一致
 - `smoke-registry` 某个平台实例失败：优先检查 Verdaccio 启动/登录、根包本地发布规则、第三方依赖代理以及 runtime 资产覆盖地址
+- `publish-release-assets` 失败：优先确认 release assets 目录、tag、GitHub Release 权限与重复发布状态
 - `publish-npm` 失败：优先确认单 tarball 名称、`NPM_TOKEN` 权限与目标版本是否已占用

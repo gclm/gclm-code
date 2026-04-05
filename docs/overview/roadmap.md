@@ -25,9 +25,9 @@
 
 ## Release Scope Refresh：单包 + Vendor 运行时
 
-状态：`R4 已完成，进入 R5 build`
+状态：`R5 已完成，进入 ship / release-check`
 
-目标：把当前发布默认路径稳定在“单消费者包 + vendor 运行时”，并清理旧三包遗留耦合。
+目标：把当前发布默认路径稳定在“单消费者包 + vendor 运行时”，并完成旧三包遗留耦合收口。
 
 范围：
 
@@ -45,8 +45,8 @@
 
 当前推荐动作：
 
-- 进入 `R5` build：清理旧三包脚本、旧 workflow 命名与历史文档耦合
-- 详细任务单见 `docs/release/single-package-implementation-plan.md`
+- 进入 `ship / release-check`：围绕下一次正式发版继续做发布演练与上线观察
+- 详细任务单与落地结果见 `docs/release/single-package-implementation-plan.md`
 
 ## Phase 0：已完成的基础收口
 
@@ -192,16 +192,16 @@
   - `smoke:packages:{core,gui,gateway,all}`
   - `smoke:login-gateway`
 - 已补充运维文档：`docs/release/gateway-smoke-and-login.md`
-- `R4` 已完成：
-  - `release-npm` workflow 已切到单包主链：`package-single-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-release-assets -> publish-npm`
-  - 当前 npm 默认只发布一个 `gclm-code`，GitHub Release 继续提供双架构 runtime 资产
-  - 已新增单包 `pack / publish / tarball install / registry install` 脚本
-  - 已让 `CI Verify` 增补单包 staging smoke 与 macOS single-package install/vendor smoke
-  - 已在本机完成单包 tarball 安装、单包 registry 安装与 vendored modules 回归验证
+- `R5` 已完成：
+  - 旧三包脚本、旧 helper、旧文档入口已删除，默认发布链只保留单包实现
+  - `release-npm` workflow 当前主链为 `package-single-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-release-assets -> publish-npm`
+  - `smoke-single-package-npm-install` 已提升为真实 `npm install <tarball>` 验证
+  - `smoke-single-package-npm-registry` 已提升为 Verdaccio + npmjs upstream 的真实 registry 安装验证
+  - README / docs / roadmap / harness 已与单包主链对齐
 
 ## 当前推荐动作
 
-- 推荐下一步：进入 `R5` build，清理旧三包脚本、旧文档与历史 workflow 名称
-- 重点关注：在不动 `src/` / `packages/` 主结构的前提下，彻底收口发布层面的旧三包耦合
-- 当前线上 release 主链已切到 `单包 + vendor runtime`，旧三包只保留为历史实现与待删除资产
+- 推荐下一步：进入 `ship / release-check`，围绕下一次正式单包发版做最后一轮放行确认
+- 重点关注：在不动 `src/` / `packages/` 主结构的前提下，持续维护发布层 `bin/ + vendor/` 边界
+- 当前线上 release 主链已切到 `单包 + vendor runtime`，旧三包只保留为历史记录
 - 仓库根 `package.json` 继续作为开发态 workspace manifest；消费者 manifest 在迁移窗口内允许先由 staging package 生成

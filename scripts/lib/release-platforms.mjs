@@ -10,10 +10,8 @@ const PLATFORM_CATALOG = Object.freeze({
     arch: 'x64',
     runner: 'macos-15-intel',
     binaryArtifact: 'gc-darwin-x64',
-    packageName: 'gclm-code-darwin-x64',
     description: 'macOS x64 binary package for Gclm Code.',
     releaseLabel: 'darwin-x64',
-    publishOrder: 10,
   }),
   'darwin-arm64': Object.freeze({
     platformId: 'darwin-arm64',
@@ -21,10 +19,8 @@ const PLATFORM_CATALOG = Object.freeze({
     arch: 'arm64',
     runner: 'macos-15',
     binaryArtifact: 'gc-darwin-arm64',
-    packageName: 'gclm-code-darwin-arm64',
     description: 'macOS arm64 binary package for Gclm Code.',
     releaseLabel: 'darwin-arm64',
-    publishOrder: 20,
   }),
 })
 
@@ -57,44 +53,9 @@ export function getReleasePlatformMatrix(
       arch: platform.arch,
       runner: platform.runner,
       binary_artifact: platform.binaryArtifact,
-      package_name: platform.packageName,
       release_label: platform.releaseLabel,
     })),
   }
-}
-
-export function getBinaryPackageDirectoryNames(
-  platformIds = ACTIVE_BINARY_NPM_PLATFORM_IDS,
-) {
-  return [
-    ROOT_PACKAGE_NAME,
-    ...getBinaryNpmReleasePlatforms(platformIds).map(platform => platform.packageName),
-  ]
-}
-
-export function getBinaryPackagePublishOrder(
-  platformIds = ACTIVE_BINARY_NPM_PLATFORM_IDS,
-) {
-  return [
-    ...getBinaryNpmReleasePlatforms(platformIds)
-      .slice()
-      .sort((left, right) => left.publishOrder - right.publishOrder)
-      .map(platform => platform.packageName),
-    ROOT_PACKAGE_NAME,
-  ]
-}
-
-export function getLauncherPackageMap(
-  platformIds = ACTIVE_BINARY_NPM_PLATFORM_IDS,
-) {
-  const packageMap = {}
-
-  for (const platform of getBinaryNpmReleasePlatforms(platformIds)) {
-    packageMap[platform.os] ??= {}
-    packageMap[platform.os][platform.arch] = platform.packageName
-  }
-
-  return packageMap
 }
 
 export function createBinaryPathOverrides(

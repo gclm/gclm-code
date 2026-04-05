@@ -25,9 +25,9 @@
 
 当前用户痛点主要来自发布模型，而不是源码目录长相。
 
-仓库现状是：
+迁移前仓库现状是：
 
-- 当前 staging 发布脚本会生成 `gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三包
+- 当时的 staging 发布脚本会生成 `gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三包
 - 根包通过 `optionalDependencies` 引入两个架构子包
 - 根包启动器在运行时再去解析匹配的架构子包并转发执行
 
@@ -403,7 +403,7 @@
 
 ### Phase 7：清理旧三包路径
 
-- 删除 `prepare-mac-binary-npm.mjs` 等旧三包组装脚本
+- 删除 `prepare-mac-binary-npm.mjs` 等旧三包组装脚本（已在 `R5` 完成）
 - 删除子包发布顺序逻辑
 - 删除与三包模型绑定的 smoke / workflow 残留
 

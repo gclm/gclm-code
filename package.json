@@ -30,6 +30,7 @@
     "smoke:login-gateway": "bun run ./scripts/smoke-login-gateway.mjs",
     "smoke:login-gateway:matrix": "bun run ./scripts/smoke-login-gateway-matrix.mjs",
     "prepare:vendor-runtime": "node ./scripts/prepare-vendor-runtime.mjs",
+    "prepare:release-assets": "node ./scripts/prepare-mac-release-assets.mjs",
     "prepare:single-package-npm": "node ./scripts/prepare-single-package-npm.mjs",
     "pack:single-package-npm": "node ./scripts/pack-single-package-npm.mjs",
     "publish:single-package-npm": "node ./scripts/publish-single-package-npm-tarball.mjs",
@@ -37,13 +38,7 @@
     "smoke:single-package-install": "node ./scripts/smoke-single-package-npm-install.mjs",
     "smoke:single-package-registry": "node ./scripts/smoke-single-package-npm-registry.mjs",
     "smoke:single-package-runtime": "node ./scripts/smoke-single-package-runtime-install.mjs",
-    "smoke:single-package-vendor": "node ./scripts/smoke-single-package-vendor-modules.mjs",
-    "prepare:mac-binary-npm": "node ./scripts/prepare-mac-binary-npm.mjs",
-    "pack:mac-binary-npm": "node ./scripts/pack-mac-binary-npm.mjs",
-    "release-assets:mac-binary-npm": "node ./scripts/prepare-mac-release-assets.mjs",
-    "smoke:mac-binary-npm": "bun run ./scripts/smoke-mac-binary-npm.mjs",
-    "smoke:mac-binary-npm:install": "node ./scripts/smoke-mac-binary-npm-install.mjs",
-    "smoke:mac-binary-npm:registry": "node ./scripts/smoke-mac-binary-npm-registry.mjs"
+    "smoke:single-package-vendor": "node ./scripts/smoke-single-package-vendor-modules.mjs"
   },
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.3.0",

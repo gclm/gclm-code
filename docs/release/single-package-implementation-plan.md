@@ -9,8 +9,8 @@
 - 主线：`C` 从当前 `根包 + 架构子包 + optionalDependencies` 迁到 `单消费者包`
 - 并行子线：`D-lite` 只收敛发布边界，不做全仓库结构重排
 - 冻结边界：发布态运行时只认 `bin/ + vendor/`，`dist/` 只允许作为构建期 staging
-- 当前 active phase：`R5 - 默认发布切换与旧三包清理`
-- 推荐下一步：`build`
+- 当前 active phase：`R5 - 默认发布切换与旧三包清理（已完成）`
+- 推荐下一步：`ship`
 
 一句话结论：
 
@@ -22,7 +22,7 @@
 - `R2` 已完成：安装期 runtime 下载、sha 校验、`vendor/runtime/` 落盘与真实安装 smoke 已落地
 - `R3` 已完成：8 个 runtime workspace 包已物化到 `vendor/modules/node_modules/`，modules 清单已回写 `vendor/manifest.json`，并已补齐安装后目录 smoke
 - `R4` 已完成：单包 smoke、CI 与 release workflow 已切到 `bin/ + vendor/` 主链，并已补齐 tarball / registry 安装验证
-- 下一阶段进入 `R5`：默认发布切换与旧三包清理
+- `R5` 已完成：默认发布已切到单包主链，旧三包脚本与文档入口已清理
 
 ## 2. Scope Refresh 记录
 
@@ -89,7 +89,7 @@
 | `R2` | 平台 runtime 落盘到 `vendor/runtime/` | `C` | 当前平台安装后可直接启动 |
 | `R3` | workspace 运行时物化到 `vendor/modules/` | `C` | 发布态不再依赖 `packages/*` 原始布局 |
 | `R4` | 单包 smoke / CI / release 切换 | `C + D-lite` | 单包链路通过 tarball + registry 验证 |
-| `R5` | 默认发布切换与旧三包清理 | `C` 收口 | 旧三包仅保留历史记录，不再是主链 |
+| `R5` | 默认发布切换与旧三包清理 | `C` 收口 | 已完成：旧三包仅保留历史记录，不再是主链 |
 
 ## 6. 详细任务单
 
@@ -180,14 +180,14 @@
 - verify：本地与 CI 都能覆盖官方 registry / mirror-like registry / tarball 三条消费者路径
 - dependencies / blockers：依赖 `C3` 与 `C5` 已具备最小可运行链路
 - required sync surfaces：`package.json` scripts、`docs/release/release-gate.md`、`docs/release/github-actions-release-plan.md`
-- scope note：旧三包 smoke 保留到单包 smoke 稳定为止
+- scope note：旧三包 smoke 已在 `R5` 删除，后续只维护单包 smoke
 
 #### `D4` 调整 workflow 与门禁顺序
 
 - what changes：把 `release-npm.yml` 从“三包组装 -> 三包 smoke -> 三包发布”切到“单包组装 -> 单包 smoke -> 单包发布”；GitHub Release 资产仍可保留双架构二进制
-- likely files：`.github/workflows/release-npm.yml`、`.github/workflows/ci-verify.yml`、`scripts/publish-binary-npm-tarballs.mjs` 或后继发布脚本
+- likely files：`.github/workflows/release-npm.yml`、`.github/workflows/ci-verify.yml`、`scripts/publish-single-package-npm-tarball.mjs`
 - verify：workflow dry-run 可通过；`publish_to_npm=false` 时仍能独立补跑 registry smoke
-- dependencies / blockers：依赖单包 smoke 已成形；需要保留旧链路作为 fallback 开关
+- dependencies / blockers：依赖单包 smoke 已成形；切换完成后不再保留旧链路 fallback
 - required sync surfaces：release gate、手动发布指南、history/state
 - scope note：切换 job 编排，不同时触发 repo 结构大改
 
@@ -195,20 +195,20 @@
 
 #### `C7` 切换默认发布主链
 
-- what changes：将单包链路设为默认发布路径，旧三包链路降级为回退或历史脚本
+- what changes：将单包链路设为默认发布路径，旧三包链路降级为历史记录
 - likely files：`.github/workflows/release-npm.yml`、`docs/release/release-gate.md`、`docs/release/npm-manual-release-guide.md`
 - verify：正式发布后，fresh install 不再依赖架构子包；`npm view gclm-code` 与真实全局安装均正常
 - dependencies / blockers：依赖 `R4` 全部 smoke 稳定
 - required sync surfaces：README、docs、roadmap、harness
-- scope note：切换前必须保留一个回退窗口
+- scope note：当前已完成切换；后续只保留 history 级别记录
 
 #### `C8` 清理旧三包耦合
 
 - what changes：删除 `optionalDependencies` 运行时耦合、三包专属 smoke、三包发布顺序逻辑；保留必要的历史文档或迁移说明
-- likely files：`scripts/prepare-mac-binary-npm.mjs`、`scripts/pack-mac-binary-npm.mjs`、`scripts/smoke-mac-binary-npm*.mjs`、`package.json`、发布文档
+- likely files：`scripts/prepare-mac-binary-npm.mjs`、`scripts/pack-mac-binary-npm.mjs`、`scripts/smoke-mac-binary-npm*.mjs`、`scripts/lib/mac-binary-npm.mjs`、`package.json`、发布文档
 - verify：仓库内不再存在“根包运行时依赖子包”主链；文档与 workflow 全部指向单包模型
 - dependencies / blockers：依赖 `C7` 已稳定一段时间
-- required sync surfaces：`docs/release/mac-binary-first-npm-plan.md`、`docs/release/github-actions-release-plan.md`、`harness/history.md`
+- required sync surfaces：`docs/release/github-actions-release-plan.md`、`harness/history.md`、`harness/state.md`
 - scope note：这是收口任务，不在前几个 phase 提前做
 
 ## 7. 推荐实施顺序
@@ -217,7 +217,7 @@
 2. 再做 `R2`：把当前平台 runtime 真正落到 `vendor/runtime/`
 3. 再做 `R3`：把 workspace 运行时产物折叠进 `vendor/modules/`
 4. 再做 `R4`：补单包 smoke，并让 CI / release workflow 可并行验证新旧两条链
-5. 最后做 `R5`：切换默认发布并清理旧三包链路
+5. 最后做 `R5`：切换默认发布并清理旧三包链路（已完成）
 
 ## 8. 每个 Phase 的完成定义
 
@@ -249,7 +249,7 @@
 ### `R5` 完成定义
 
 - 单包成为默认发布主链
-- 三包路径只保留历史文档或回退说明
+- 三包路径只保留 history 级记录
 - `package.json` / docs / workflow / harness 口径完全一致
 
 ## 9. 进入 Build 前的首选起手式
