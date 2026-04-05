@@ -44,7 +44,7 @@
 - `smoke-mac-binary-npm-registry.mjs` 负责私有 registry 发布后的当前架构消费者路径校验
 
 其中 CI 当前固定覆盖后两层；第一层 staging smoke 继续保留为本地演练与脚本自检入口。
-当前 `Release NPM` 已切到 fan-out 结构：`preflight -> build-binary(matrix) -> package-mac-npm -> smoke-tarball(matrix) + smoke-registry(matrix) -> publish`。
+当前 `Release NPM` 已切到 fan-out 结构：`preflight -> build-binary(matrix) -> package-mac-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish`。
 
 之所以不直接用“仓库目录 `npm install`”做最终断言，是因为 npm 对本地目录安装会优先走 symlink 路径，这与未来 registry 安装行为不完全一致。
 

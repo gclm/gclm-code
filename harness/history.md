@@ -40,6 +40,7 @@
 - 已修复 GitHub Actions 的冻结锁文件阻断：更新 `bun.lock` 中 workspace 依赖解析记录，解决 `CI Verify` 与 `Release NPM` 在 `bun install --frozen-lockfile` 阶段报 `lockfile had changes, but lockfile is frozen` 的问题。
 - 已补充仓库忽略规则：忽略根目录 npm 打包产物、`release-assets-check/` 与 `packages/*/node_modules/`，避免本地发布演练污染工作区状态。
 - 已按 Option C 重构 CI / release workflow：`CI Verify` 拆为 `preflight + build + smoke-packages(matrix)`，`Release NPM` 改为 `meta` 输出统一 `platform_matrix`，驱动 `build-binary(matrix)`、`smoke-tarball(matrix)` 与 `smoke-registry(matrix)`，为后续多平台扩展预留统一入口。
+- 已根据 review 收紧矩阵门禁顺序：`CI Verify` 的 `smoke-packages(matrix)` 改为依赖 `build`；`Release NPM` 的 `smoke-registry(matrix)` 改为依赖 `smoke-tarball(matrix)`，避免在已知前置失败后继续消耗重型 smoke 资源。
 - 已完成本地验证：
   - 三个生成包均可执行 `npm pack`
   - `pack-mac-binary-npm` 已验证可输出 `gclm-code`、`gclm-code-darwin-x64`、`gclm-code-darwin-arm64` 三个 tarball

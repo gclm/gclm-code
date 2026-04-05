@@ -42,7 +42,7 @@
 
 - `scripts/build.ts` 已优化为统一产物命名：默认输出 `gc`、dev 输出 `gc-dev`，并联动更新 smoke/install/release 引用
 - release 产物结构已调整为 `bin/gc`（默认可执行）+ `bin/claude -> gc` 软链，并通过 tar 包对外分发
-- `release-npm` workflow 已切换为 `mac binary-first` 主链，并已升级为 fan-out / matrix 流水线：`meta -> preflight -> build-binary(matrix) -> package-mac-npm -> smoke-tarball(matrix) + smoke-registry(matrix) -> publish-*`
+- `release-npm` workflow 已切换为 `mac binary-first` 主链，并已升级为 fan-out / matrix 流水线：`meta -> preflight -> build-binary(matrix) -> package-mac-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-*`
 - npm 包名已从 `@gclm/gclm-code` 调整为 `gclm-code`，并同步 CLI 默认 PACKAGE_URL、发布 workflow 与相关文档
 - 已为 npm 发布增加 `files` 白名单（`gc`、`README.md`、`install.sh`、`packages`），`npm pack --dry-run` 已验证发布内容收敛为 42 个文件
 - README 已重写为“参考 free-code 项目实践”表述，并同步网关优先策略、验收入口与发布门禁说明
@@ -179,7 +179,7 @@
   - gui 通过
   - gateway 通过（`http://localhost:8086/v1/models`, models=9）
   - all 通过
-- CI `verify` 已补充分层 smoke：
+- CI `preflight + build + smoke-packages(matrix)` 已补充分层 smoke：
   - `smoke:packages:core`
   - `smoke:packages:gateway`
   - gateway 依赖 Secrets：`SMOKE_GATEWAY_BASE_URL`、`SMOKE_GATEWAY_API_KEY`
@@ -254,3 +254,4 @@
   - 当前整体验证已提升为“staging + tarball install + private registry install”三层；其中 CI 固定覆盖后两层，staging smoke 保留为本地演练入口；公网 npm registry 闭环仍留待后续最终补齐
   - 已定位并修复 2026-04-05 两次 Actions 失败（`23992808000`、`23992815249`）的共同根因：`bun.lock` 仍保留旧的 `file:` workspace 解析结果，导致 GitHub Actions 上的 `bun install --frozen-lockfile` 报 `lockfile had changes, but lockfile is frozen`
   - 已按 Option C 升级 workflow：平台列表由 `meta` 输出统一 `platform_matrix`，供 `build-binary`、`smoke-tarball`、`smoke-registry` 复用，便于后续追加 Linux / Windows 平台
+  - 已收紧门禁层次：`CI Verify` 中 `smoke-packages(matrix)` 依赖 `build`；`Release NPM` 中 `smoke-registry(matrix)` 依赖 `smoke-tarball(matrix)`，避免基础构建或轻量安装失败后继续展开重型 smoke

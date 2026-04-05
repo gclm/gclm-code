@@ -67,7 +67,7 @@ GitHub Release 资产：
 说明：
 
 - `meta` 会输出统一 `platform_matrix`，供 `build-binary`、`smoke-tarball`、`smoke-registry` 复用
-- `smoke-tarball` 与 `smoke-registry` 现在都直接依赖 `package-mac-npm`，在同一批平台矩阵上并行展开
+- `smoke-tarball` 是第一层消费者安装验证；`smoke-registry` 会在它全部通过后再展开第二层 Verdaccio 验证
 - 当前仍保留 `package-mac-npm` 作为单一汇总点，避免三包组装逻辑在多个 job 中重复散开
 
 ## 5. 发布顺序

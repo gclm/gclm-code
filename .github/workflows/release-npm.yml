@@ -240,7 +240,7 @@ jobs:
   smoke-registry:
     name: Registry smoke (${{ matrix.platform_id }})
     runs-on: ${{ matrix.runner }}
-    needs: [meta, package-mac-npm]
+    needs: [meta, package-mac-npm, smoke-tarball]
     if: ${{ needs.meta.outputs.publish_npm == 'true' || needs.meta.outputs.attach_assets == 'true' }}
     strategy:
       fail-fast: false
