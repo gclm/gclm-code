@@ -108,3 +108,7 @@ bun run smoke:login-gateway:matrix
 
 `install.sh` 仍保留为源码安装路径的辅助脚本。
 面向终端用户的默认安装方式仍建议使用 npm 全局安装。
+
+## 🤝 致谢
+
+- [https://github.com/paoloanzn/free-code](https://github.com/paoloanzn/free-code) — 修复内部依赖的可运行版本
