@@ -25,6 +25,11 @@ on:
         required: true
         default: true
         type: boolean
+      run_registry_smoke:
+        description: 'Run private registry smoke even when publish/assets are disabled'
+        required: true
+        default: false
+        type: boolean
 
 concurrency:
   group: release-npm-${{ github.ref }}
@@ -39,6 +44,7 @@ jobs:
       npm_tag: ${{ steps.meta.outputs.npm_tag }}
       publish_npm: ${{ steps.meta.outputs.publish_npm }}
       attach_assets: ${{ steps.meta.outputs.attach_assets }}
+      registry_smoke_enabled: ${{ steps.meta.outputs.registry_smoke_enabled }}
       platform_matrix: ${{ steps.meta.outputs.platform_matrix }}
     steps:
       - name: Checkout
@@ -54,6 +60,7 @@ jobs:
             NPM_TAG="latest"
             PUBLISH_NPM="true"
             ATTACH_ASSETS="true"
+            RUN_REGISTRY_SMOKE="true"
             if [ "$TAG" != "v${VERSION}" ]; then
               echo "Tag ${TAG} does not match package.json version v${VERSION}" >&2
               exit 1
@@ -68,6 +75,13 @@ jobs:
             NPM_TAG="${{ inputs.npm_tag }}"
             PUBLISH_NPM="${{ inputs.publish_to_npm }}"
             ATTACH_ASSETS="${{ inputs.attach_release_assets }}"
+            RUN_REGISTRY_SMOKE="${{ inputs.run_registry_smoke }}"
+          fi
+
+          if [ "${PUBLISH_NPM}" = "true" ] || [ "${ATTACH_ASSETS}" = "true" ]; then
+            REGISTRY_SMOKE_ENABLED="true"
+          else
+            REGISTRY_SMOKE_ENABLED="${RUN_REGISTRY_SMOKE}"
           fi
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
@@ -75,6 +89,7 @@ jobs:
           echo "npm_tag=${NPM_TAG}" >> "$GITHUB_OUTPUT"
           echo "publish_npm=${PUBLISH_NPM}" >> "$GITHUB_OUTPUT"
           echo "attach_assets=${ATTACH_ASSETS}" >> "$GITHUB_OUTPUT"
+          echo "registry_smoke_enabled=${REGISTRY_SMOKE_ENABLED}" >> "$GITHUB_OUTPUT"
           echo "platform_matrix=${PLATFORM_MATRIX}" >> "$GITHUB_OUTPUT"
 
   preflight:
@@ -226,7 +241,7 @@ jobs:
     name: Registry smoke (${{ matrix.platform_id }})
     runs-on: ${{ matrix.runner }}
     needs: [meta, package-mac-npm, smoke-tarball]
-    if: ${{ needs.meta.outputs.publish_npm == 'true' || needs.meta.outputs.attach_assets == 'true' }}
+    if: ${{ needs.meta.outputs.registry_smoke_enabled == 'true' }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.meta.outputs.platform_matrix) }}

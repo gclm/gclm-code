@@ -70,6 +70,7 @@ node ./scripts/smoke-mac-binary-npm-registry.mjs \
 - `publish_to_npm`
 - `npm_tag`
 - `attach_release_assets`
+- `run_registry_smoke`
 
 必需 Secrets：
 
@@ -79,6 +80,10 @@ node ./scripts/smoke-mac-binary-npm-registry.mjs \
 
 - `push tag v*` 时默认直接发布到 npm `latest`
 - `workflow_dispatch` 可只做构建/打包/烟测，不必真的发布到 npm
+- 若只想补跑私有 registry 验证，可设置：
+  - `publish_to_npm=false`
+  - `attach_release_assets=false`
+  - `run_registry_smoke=true`
 
 ## 4. 发布顺序
 

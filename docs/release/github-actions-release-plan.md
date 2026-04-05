@@ -9,6 +9,7 @@
 3. 自动在 `darwin-x64` 与 `darwin-arm64` 上分别执行 tarball 安装 smoke
 4. 自动在临时私有 registry 中发布三包，并从 registry 安装根包做真实安装验证
 5. 通过后按顺序发布到 npm，并可同步上传 GitHub Release 资产
+6. `workflow_dispatch` 可单独打开 `run_registry_smoke`，把 Verdaccio 安装验证当成一次无副作用 dry-run
 
 ## 2. 发布物结构
 
@@ -113,6 +114,12 @@ workflow 主要依赖以下脚本：
 - `publish_to_npm`
 - `npm_tag`
 - `attach_release_assets`
+- `run_registry_smoke`
+
+说明：
+
+- tag 发布时，`run_registry_smoke` 会被隐式视为开启，不需要人工额外设置
+- 手动 dry-run 时，如果 `publish_to_npm=false` 且 `attach_release_assets=false`，可额外设置 `run_registry_smoke=true`，只执行到 Verdaccio 验证层
 
 ## 8. 后续可扩展项
 

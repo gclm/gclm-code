@@ -44,6 +44,7 @@
 - release 产物结构已调整为 `bin/gc`（默认可执行）+ `bin/claude -> gc` 软链，并通过 tar 包对外分发
 - `release-npm` workflow 已切换为 `mac binary-first` 主链，并已升级为 fan-out / matrix 流水线：`meta -> preflight -> build-binary(matrix) -> package-mac-npm -> smoke-tarball(matrix) -> smoke-registry(matrix) -> publish-*`
 - `scripts/lib/release-platforms.mjs` 已成为当前发布平台单一事实源：统一维护 `platform_matrix`、runner 映射、artifact 命名、子包名与发布顺序
+- `Release NPM` 已新增 `run_registry_smoke` 手动开关：dry-run 场景下可单独补 Verdaccio 私有 registry 验证，而不必真的发布 npm 或上传 release 资产
 - npm 包名已从 `@gclm/gclm-code` 调整为 `gclm-code`，并同步 CLI 默认 PACKAGE_URL、发布 workflow 与相关文档
 - 已为 npm 发布增加 `files` 白名单（`gc`、`README.md`、`install.sh`、`packages`），`npm pack --dry-run` 已验证发布内容收敛为 42 个文件
 - README 已重写为“参考 free-code 项目实践”表述，并同步网关优先策略、验收入口与发布门禁说明
@@ -257,3 +258,4 @@
   - 已按 Option C 升级 workflow：平台列表由 `meta` 输出统一 `platform_matrix`，供 `build-binary`、`smoke-tarball`、`smoke-registry` 复用，便于后续追加 Linux / Windows 平台
   - 已收紧门禁层次：`CI Verify` 中 `smoke-packages(matrix)` 依赖 `build`；`Release NPM` 中 `smoke-registry(matrix)` 依赖 `smoke-tarball(matrix)`，避免基础构建或轻量安装失败后继续展开重型 smoke
   - 已继续抽象平台元数据：workflow 改为调用 `scripts/release-platform-matrix.mjs` 生成矩阵，`package-mac-npm` 改为按 `gc-*` artifact 模式下载二进制，`publish-npm` 改为调用统一脚本按平台目录顺序发布 tarball
+  - 已新增 `run_registry_smoke` 输入：可在 `workflow_dispatch` 的“只做 dry-run”场景中，显式要求执行 `smoke-registry(matrix)`，补齐更接近真实消费者安装链路的验证
