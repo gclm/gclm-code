@@ -153,10 +153,10 @@
 - required sync surfaces：实施任务单、后续 smoke 覆盖清单
 - scope note：这是发布边界盘点，不是 package 内部重写
 
-#### `C5` 新增 `scripts/prepare-vendor-runtime.mjs`
+#### `C5` 新增 vendor runtime 物化步骤
 
 - what changes：把运行时需要的 workspace 产物复制或编译到 `vendor/modules/`，并回写 `vendor/manifest.json`
-- likely files：`scripts/prepare-vendor-runtime.mjs`、`scripts/build.ts`、可能的 package-specific build helpers
+- likely files：`scripts/lib/vendor-runtime-modules.mjs`、`scripts/prepare-single-package-npm.mjs`、`scripts/build.ts`、可能的 package-specific build helpers
 - verify：删除 staging 包内的 `packages/` 目录后，CLI 发布态仍能启动目标路径
 - dependencies / blockers：依赖 `C4` 的依赖盘点结果
 - required sync surfaces：`ci-verify.yml`、smoke 脚本、手动发布文档

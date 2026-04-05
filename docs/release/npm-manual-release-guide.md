@@ -100,6 +100,13 @@ node ./scripts/prepare-mac-release-assets.mjs \
 在当前机器对应架构上执行：
 
 ```bash
+bun run smoke:single-package
+bun run smoke:single-package -- --with-registry
+```
+
+如需复用手动发布时刚生成的 staging / tarball / release-assets 目录，继续使用下面这组展开命令：
+
+```bash
 node ./scripts/smoke-single-package-npm.mjs \
   --skip-prepare \
   --staging-dir dist/single-package-manual-release \
@@ -119,6 +126,8 @@ node ./scripts/smoke-single-package-vendor-modules.mjs
 
 说明：
 
+- `smoke:single-package` 是当前推荐的本地默认回归入口
+- `smoke:single-package -- --with-registry` 会额外追加临时 registry 安装验证
 - `smoke-single-package-npm` 验证 staging 内容、tarball 内容与 `vendor/manifest.json`
 - `smoke-single-package-npm-install` 通过真实 `npm install <tarball>` 验证消费者安装路径，并用本地 release assets 覆盖默认 runtime 下载源
 - `smoke-single-package-npm-registry` 验证“临时私有 registry 发布 -> 从 registry 安装根包”的真实消费者路径

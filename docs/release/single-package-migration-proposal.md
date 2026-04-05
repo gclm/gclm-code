@@ -314,8 +314,8 @@
 - `vendor/manifest.json`：运行时装配元数据单一事实源
 - `vendor/runtime/`：真实 runtime 边界
 - `vendor/modules/`：workspace 运行时产物边界
-- `scripts/prepare-vendor-runtime.mjs`
-  - 负责把 workspace 产物组装到 `vendor/`；若有 `dist/` staging，也在该步骤内折叠回 `vendor/`
+- `scripts/lib/vendor-runtime-modules.mjs`
+  - 负责把 workspace 产物组装到 `vendor/`；当前由 `prepare-single-package-npm.mjs` 内聚调用；若有 `dist/` staging，也在该步骤内折叠回 `vendor/`
 - `scripts/install-runtime.mjs`
   - 仅负责安装阶段需要落地的重型平台 runtime，并写入 `vendor/runtime/`
 - `scripts/smoke-single-package-*.mjs`
@@ -362,7 +362,7 @@
 ### Phase 3：Workspace 运行时物化
 
 - 识别哪些 `packages/*` 内容需要进入消费者运行时
-- 新增 `scripts/prepare-vendor-runtime.mjs`
+- 新增 vendor runtime 物化步骤（当前已由 `prepare-single-package-npm.mjs` 内部调用 `scripts/lib/vendor-runtime-modules.mjs`）
 - 把必要的 workspace 产物编译/复制到 `vendor/modules/`
 - 让 CLI 发布态改为从 `vendor/modules/` 加载
 

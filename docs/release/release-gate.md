@@ -35,6 +35,13 @@
 
 ```bash
 bun run verify
+bun run smoke:single-package
+bun run smoke:single-package -- --with-registry
+```
+
+如需指定自定义 staging / tarball / release-assets 目录，继续使用下面这组展开命令：
+
+```bash
 node ./scripts/prepare-mac-release-assets.mjs \
   --output-dir release-assets-check \
   --darwin-x64-binary /path/to/gc-darwin-x64 \
@@ -66,6 +73,8 @@ node ./scripts/smoke-single-package-vendor-modules.mjs
 
 说明：
 
+- `smoke:single-package` 是当前默认本地回归入口，覆盖 staging、真实 tarball install 与 vendor runtime 加载
+- `smoke:single-package -- --with-registry` 会在上述链路后追加临时 registry 验证
 - `smoke-single-package-npm` 负责检查 staging 目录、manifest、tarball 内容边界
 - `smoke-single-package-npm-install` 负责真实 `npm install <tarball>` 消费者路径验证，并用本地 release assets 覆盖 runtime 来源
 - `smoke-single-package-npm-registry` 负责“发布到临时私有 registry -> 从 registry 安装根包”的真实消费者路径回归

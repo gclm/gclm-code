@@ -82,11 +82,11 @@ bun run verify
 # 分层包回归（core/gui/gateway）
 bun run smoke:packages
 
-# 单包 staging / tarball / registry / vendor runtime 回归
-node ./scripts/smoke-single-package-npm.mjs
-node ./scripts/smoke-single-package-npm-install.mjs
-node ./scripts/smoke-single-package-npm-registry.mjs
-node ./scripts/smoke-single-package-vendor-modules.mjs
+# 单包本地回归（staging + tarball install + vendor runtime）
+bun run smoke:single-package
+
+# 如需把临时 registry 链路也一起带上
+bun run smoke:single-package -- --with-registry
 
 # 登录网关路径回归矩阵
 SMOKE_GATEWAY_BASE_URL="http://localhost:8086/v1" \

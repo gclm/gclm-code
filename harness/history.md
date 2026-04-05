@@ -69,3 +69,5 @@
 - 已提升单包消费者验证强度：`smoke-single-package-npm-install.mjs` 改为真实 `npm install <tarball>` 验证，`smoke-single-package-npm-registry.mjs` 改为 Verdaccio + npmjs upstream 的真实 registry 安装验证，不再预拷贝依赖树伪造消费者环境。
 - 已完成 `R5` 文档与状态回写：README、release gate、手动发布指南、GitHub Actions 发布说明、roadmap、harness 状态已统一切到 single-package + vendor runtime；`docs/release/mac-binary-first-npm-plan.md` 已删除，旧三包只保留为 history 记录。
 - 已完成 `R5` 本地验证：`bun run build`、`node ./scripts/smoke-single-package-npm.mjs`、`node ./scripts/smoke-single-package-runtime-install.mjs`、`node ./scripts/smoke-single-package-npm-install.mjs`、`node ./scripts/smoke-single-package-npm-registry.mjs`、`node ./scripts/smoke-single-package-vendor-modules.mjs` 全部通过。
+- 已继续收敛脚本层入口：删除独立 `prepare:vendor-runtime` 与 `smoke-single-package-runtime-install` 顶层入口，新增 `smoke-single-package-all.mjs` 与 `bun run smoke:single-package` 作为默认本地单包回归入口；其中 vendor 物化继续内聚在 `prepare-single-package-npm.mjs` 内部，registry smoke 仍保持独立边界。
+- 已完成脚本层收敛后的本地验证：`bun run build`、`bun run smoke:single-package` 与 `bun run smoke:single-package -- --with-registry` 全部通过，确认新的默认本地回归入口与可选 registry 分支都可用。

@@ -41,11 +41,12 @@
   - 新增 `scripts/install-runtime.mjs`
   - 单包 staging 已接入 `postinstall -> node ./bin/install-runtime.js`
   - 已支持从 `runtime.baseUrl` / `GCLM_BINARY_BASE_URL` 下载 release 资产并校验 `sha256`
-  - 新增 `scripts/smoke-single-package-runtime-install.mjs`
+  - 当前本地回归已优先收敛到更强的 `smoke-single-package-npm-install` 与 `smoke:single-package`
 - 已完成 `R3 - workspace 运行时物化到 vendor/modules/`：
-  - 新增 `scripts/lib/vendor-runtime-modules.mjs` 与 `scripts/prepare-vendor-runtime.mjs`
+  - 新增 `scripts/lib/vendor-runtime-modules.mjs`
   - 已将 8 个 runtime workspace 包物化到 `vendor/modules/node_modules/`
   - 已让单包 staging `package.json` 自动注入最小 runtime 依赖清单，并将 modules 边界回写到 `vendor/manifest.json`
+  - vendor 物化步骤已内聚到 `scripts/prepare-single-package-npm.mjs`，不再暴露独立 `prepare:vendor-runtime` 顶层入口
   - 已新增 `scripts/smoke-single-package-vendor-modules.mjs`
 - 已完成 `R4 - 单包 smoke / CI / release 切换`：
   - 新增单包 `pack / publish / tarball install / registry install` 脚本
@@ -112,9 +113,6 @@
 - 当前最强本地证据级别：`scripted-flow`
 - 最新单包验证结果（2026-04-05）：
   - `bun run build`，通过
-  - `node ./scripts/smoke-single-package-npm.mjs`，通过
-  - `node ./scripts/smoke-single-package-runtime-install.mjs`，通过
-  - `node ./scripts/smoke-single-package-npm-install.mjs`，通过
-  - `node ./scripts/smoke-single-package-npm-registry.mjs`，通过
-  - `node ./scripts/smoke-single-package-vendor-modules.mjs`，通过
+  - `bun run smoke:single-package`，通过
+  - `bun run smoke:single-package -- --with-registry`，通过
 - 备注：真实公网 npm 发布后的最终消费者闭环仍需在下一次正式单包版本发布时补齐
