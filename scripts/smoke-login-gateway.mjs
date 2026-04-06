@@ -2,6 +2,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import axios from 'axios'
+import { enableConfigs } from '../src/utils/config.ts'
 import { refreshProviderModelOptions } from '../src/services/api/providerModelDiscovery.ts'
 import { getGlobalConfig, saveGlobalConfig } from '../src/utils/config.ts'
 import {
@@ -9,14 +11,6 @@ import {
   replaceSettingsForSource,
   updateSettingsForSource,
 } from '../src/utils/settings/settings.ts'
-
-function requireEnv(name) {
-  const value = process.env[name]?.trim()
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`)
-  }
-  return value
-}
 
 function withoutGatewayEnvVars(env = {}) {
   const nextEnv = { ...env }
@@ -32,17 +26,95 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'))
 }
 
+function createAxiosError(message, options = {}) {
+  const error = new Error(message)
+  error.name = 'AxiosError'
+  error.isAxiosError = true
+  error.config = { url: options.url }
+  error.response = options.status
+    ? {
+        status: options.status,
+        data: options.data ?? {},
+      }
+    : undefined
+  error.code = options.code
+  return error
+}
+
+function installMockGatewayTransport({ apiKey, expectedError }) {
+  const originalGet = axios.get
+
+  axios.get = async (url, config = {}) => {
+    const providedApiKey = config.headers?.['x-api-key']
+    if (providedApiKey !== apiKey) {
+      throw createAxiosError('Unauthorized', {
+        status: 401,
+        url,
+      })
+    }
+
+    if (expectedError === '404') {
+      throw createAxiosError('Not Found', {
+        status: 404,
+        url,
+      })
+    }
+
+    if (expectedError === '429') {
+      throw createAxiosError('Rate limited', {
+        status: 429,
+        url,
+      })
+    }
+
+    if (expectedError === '5xx') {
+      throw createAxiosError('Gateway unavailable', {
+        status: 503,
+        url,
+      })
+    }
+
+    if (expectedError === 'ENOTFOUND') {
+      throw createAxiosError('Host not found', {
+        code: 'ENOTFOUND',
+        url,
+      })
+    }
+
+    return {
+      data: [{ id: 'mock-sonnet' }, { id: 'mock-haiku' }],
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {
+        url,
+      },
+    }
+  }
+
+  return () => {
+    axios.get = originalGet
+  }
+}
+
 async function main() {
-  const baseUrl = requireEnv('SMOKE_GATEWAY_BASE_URL')
-  const apiKey =
-    process.env.SMOKE_GATEWAY_EXPECT_401_KEY?.trim() ||
-    requireEnv('SMOKE_GATEWAY_API_KEY')
+  const envBaseUrl = process.env.SMOKE_GATEWAY_BASE_URL?.trim()
+  const envApiKey = process.env.SMOKE_GATEWAY_API_KEY?.trim()
   const expectedError = process.env.SMOKE_GATEWAY_EXPECT_ERROR?.trim()
+  const expected401Key = process.env.SMOKE_GATEWAY_EXPECT_401_KEY?.trim()
+
+  const usingExternalGateway = Boolean(envBaseUrl && envApiKey)
+  const baseUrl = envBaseUrl || 'http://mock-gateway.local'
+  const apiKey = expected401Key || envApiKey || 'mock-gateway-key'
+  const restoreAxiosGet = usingExternalGateway
+    ? null
+    : installMockGatewayTransport({ apiKey, expectedError })
 
   const tempConfigRoot = await mkdtemp(join(tmpdir(), 'gclm-gateway-smoke-'))
   process.env.CLAUDE_CONFIG_DIR = tempConfigRoot
   process.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1'
   process.env.CLAUDE_CODE_USE_BEDROCK = '1'
+  enableConfigs()
 
   try {
     const unrelatedEnv = {
@@ -146,6 +218,9 @@ async function main() {
 
     process.stdout.write(`gateway-cleanup:ok:${settingsPath}\n`)
   } finally {
+    if (restoreAxiosGet) {
+      restoreAxiosGet()
+    }
     await rm(tempConfigRoot, { recursive: true, force: true })
   }
 }

@@ -2,14 +2,6 @@ import { spawnSync } from 'node:child_process'
 
 const root = process.cwd()
 
-function requireEnv(name) {
-  const value = process.env[name]?.trim()
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`)
-  }
-  return value
-}
-
 function runCase(label, env) {
   const result = spawnSync('bun', ['scripts/smoke-login-gateway.mjs'], {
     cwd: root,
@@ -34,16 +26,18 @@ function runCase(label, env) {
   }
 }
 
-const successBaseUrl = requireEnv('SMOKE_GATEWAY_BASE_URL')
-const successApiKey = requireEnv('SMOKE_GATEWAY_API_KEY')
+const envBaseUrl = process.env.SMOKE_GATEWAY_BASE_URL?.trim()
+const envApiKey = process.env.SMOKE_GATEWAY_API_KEY?.trim()
 
 runCase('gateway-success', {
-  SMOKE_GATEWAY_BASE_URL: successBaseUrl,
-  SMOKE_GATEWAY_API_KEY: successApiKey,
+  ...(envBaseUrl ? { SMOKE_GATEWAY_BASE_URL: envBaseUrl } : {}),
+  ...(envApiKey ? { SMOKE_GATEWAY_API_KEY: envApiKey } : {}),
 })
 
 runCase('gateway-404-mapping', {
-  SMOKE_GATEWAY_BASE_URL: `${successBaseUrl.replace(/\/+$/, '')}/v1`,
-  SMOKE_GATEWAY_API_KEY: successApiKey,
+  ...(envBaseUrl
+    ? { SMOKE_GATEWAY_BASE_URL: `${envBaseUrl.replace(/\/+$/, '')}/v1` }
+    : {}),
+  ...(envApiKey ? { SMOKE_GATEWAY_API_KEY: envApiKey } : {}),
   SMOKE_GATEWAY_EXPECT_ERROR: '404',
 })

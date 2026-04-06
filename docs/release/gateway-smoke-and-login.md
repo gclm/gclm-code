@@ -6,7 +6,7 @@
 - `login -> model -> logout` 串联 smoke 如何跑
 - 常见失败如何定位
 
-## 1. 必备环境变量
+## 1. 环境要求
 
 ```bash
 export SMOKE_GATEWAY_BASE_URL="http://localhost:8086"
@@ -14,6 +14,8 @@ export SMOKE_GATEWAY_API_KEY="<your-key>"
 ```
 
 说明：
+- 默认不需要设置环境变量。`smoke:login-gateway` / `smoke:login-gateway:matrix` 会直接 mock `/models` 请求
+- 只有在你想验证真实网关时，才需要显式设置 `SMOKE_GATEWAY_BASE_URL` / `SMOKE_GATEWAY_API_KEY`
 - 如果是 `http://host`，系统会自动拼接 ` /v1/models`
 - 如果是 `http://host/vN`，系统会自动拼接 ` /models`
 - `smoke:login-gateway` / `smoke:login-gateway:matrix` 会在临时 `CLAUDE_CONFIG_DIR` 下运行，不会污染真实 `~/.claude`
@@ -56,7 +58,9 @@ bun run smoke:packages
 - `bun run smoke:packages:core`
 - `bun run smoke:packages:gateway`
 
-需要在仓库 Secrets 配置：
+如果 CI 只验证 CLI 逻辑和本地副作用，可以直接使用默认 mock，不需要 Secrets。
+
+只有在你希望 CI 命中真实网关时，才需要配置：
 - `SMOKE_GATEWAY_BASE_URL`
 - `SMOKE_GATEWAY_API_KEY`
 
@@ -126,6 +130,7 @@ bun run smoke:login-gateway:matrix
 - provider flag 会在 Gateway 模式下被清掉
 - 清理阶段会删除 `ANTHROPIC_BASE_URL` / `ANTHROPIC_API_KEY`
 - 无关 env 配置会被保留
+- 默认情况下，模型接口由脚本内 mock transport 提供
 
 `bun run smoke:login-gateway:matrix` 当前覆盖：
 - 成功路径
