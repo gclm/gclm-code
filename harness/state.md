@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-04-05（`R5` 已完成）
+更新时间：2026-04-06（`R5` 已完成）
 
 ## 当前阶段
 
@@ -122,4 +122,10 @@
   - `bun run smoke:single-package`，通过
   - `bun run smoke:single-package -- --with-registry`，通过
   - `node ./scripts/smoke-single-package-npm-registry.mjs`，通过
+  - 已新增文档 `docs/overview/nonessential-traffic-flag.md`，按代码路径盘点 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 当前影响面，明确它仍会影响 auto-update、trusted device enrollment、后台预取、错误上报与部分能力发现，不是“只关 telemetry”的无效开关
+  - 已完成 logo 样式入口排查：`WelcomeV2` 不再维护独立字符画，已改为复用共享 `Clawd`
+  - 全仓补扫后，当前未发现第二套独立 logo 图形实现；`Onboarding`、`setup-token`、主消息页均已落到 `WelcomeV2` / `LogoV2` / `CondensedLogo` -> `Clawd` 共享链路
+  - 仍可见的其余品牌入口主要是文案或小图标，例如 `IdeOnboardingDialog` 的欢迎文案与 `GuestPassesUpsell` 的 `[✻]` 装饰，不属于独立 logo 样式分叉
+  - 已继续补扫欢迎态 / 弹窗头部：`IdeOnboardingDialog` 标题前缀 `✻` 已统一改为 `startupAccent`，与欢迎页品牌 accent 一致
+  - `ResumeTask`、`HelpV2`、权限弹窗等其余页面当前未发现旧 logo 图形入口；剩余差异主要是功能文案或业务色彩，不属于 logo 样式问题
 - 备注：真实公网 npm 发布后的最终消费者闭环仍需在下一次正式单包版本发布时补齐
