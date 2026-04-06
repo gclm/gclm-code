@@ -13,6 +13,20 @@ import { gracefulShutdownSync } from '../../utils/gracefulShutdown.js';
 import { getSecureStorage } from '../../utils/secureStorage/index.js';
 import { clearToolSchemaCache } from '../../utils/toolSchemaCache.js';
 import { resetUserCache } from '../../utils/user.js';
+import { settingsChangeDetector } from '../../utils/settings/changeDetector.js';
+import { getSettingsForSource, replaceSettingsForSource } from '../../utils/settings/settings.js';
+export const LOGOUT_SUCCESS_MESSAGE = 'Successfully cleared your login and gateway configuration.';
+function withoutGatewayEnvVars(env: Record<string, string> | undefined): Record<string, string> | undefined {
+  const nextEnv = {
+    ...(env ?? {})
+  };
+  delete nextEnv.ANTHROPIC_BASE_URL;
+  delete nextEnv.ANTHROPIC_API_KEY;
+  delete nextEnv.CLAUDE_CODE_USE_BEDROCK;
+  delete nextEnv.CLAUDE_CODE_USE_VERTEX;
+  delete nextEnv.CLAUDE_CODE_USE_FOUNDRY;
+  return Object.keys(nextEnv).length > 0 ? nextEnv : undefined;
+}
 export async function performLogout({
   clearOnboarding = false
 }): Promise<void> {
@@ -27,10 +41,25 @@ export async function performLogout({
   const secureStorage = getSecureStorage();
   secureStorage.delete();
   await clearAuthRelatedCaches();
+  delete process.env.ANTHROPIC_BASE_URL;
+  delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.CLAUDE_CODE_USE_BEDROCK;
+  delete process.env.CLAUDE_CODE_USE_VERTEX;
+  delete process.env.CLAUDE_CODE_USE_FOUNDRY;
+  const currentUserSettings = getSettingsForSource('userSettings') ?? {};
+  const settingsUpdate = replaceSettingsForSource('userSettings', {
+    ...currentUserSettings,
+    env: withoutGatewayEnvVars(currentUserSettings.env)
+  });
+  if (settingsUpdate.error) {
+    throw settingsUpdate.error;
+  }
+  settingsChangeDetector.notifyChange('userSettings');
   saveGlobalConfig(current => {
     const updated = {
       ...current
     };
+    const env = withoutGatewayEnvVars(updated.env) ?? {};
     if (clearOnboarding) {
       updated.hasCompletedOnboarding = false;
       updated.subscriptionNoticeCount = 0;
@@ -42,6 +71,10 @@ export async function performLogout({
         };
       }
     }
+    updated.env = env;
+    updated.additionalModelOptionsCache = [];
+    updated.additionalModelOptionsCacheFetchedAt = undefined;
+    updated.providerModelDiscoveryLastStatus = undefined;
     updated.oauthAccount = undefined;
     return updated;
   });
@@ -73,7 +106,7 @@ export async function call(): Promise<React.ReactNode> {
   await performLogout({
     clearOnboarding: true
   });
-  const message = <Text>Successfully logged out from your Anthropic account.</Text>;
+  const message = <Text>{LOGOUT_SUCCESS_MESSAGE}</Text>;
   setTimeout(() => {
     gracefulShutdownSync(0, 'logout');
   }, 200);

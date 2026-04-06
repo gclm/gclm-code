@@ -180,6 +180,13 @@ function printResumeHint(): void {
     }
   }
 }
+
+function printResumeHintForReason(reason: ExitReason): void {
+  if (reason === 'logout') {
+    return
+  }
+  printResumeHint()
+}
 /* eslint-enable custom-rules/no-sync-fs */
 
 /**
@@ -348,7 +355,7 @@ export function gracefulShutdownSync(
     .catch(error => {
       logForDebugging(`Graceful shutdown failed: ${error}`, { level: 'error' })
       cleanupTerminalModes()
-      printResumeHint()
+      printResumeHintForReason(reason)
       forceExit(exitCode)
     })
     // Prevent unhandled rejection: forceExit re-throws in test mode,
@@ -415,7 +422,7 @@ export async function gracefulShutdown(
   failsafeTimer = setTimeout(
     code => {
       cleanupTerminalModes()
-      printResumeHint()
+      printResumeHintForReason(reason)
       forceExit(code)
     },
     Math.max(5000, sessionEndTimeoutMs + 3500),
@@ -432,7 +439,7 @@ export async function gracefulShutdown(
   // hint would only appear after cleanup functions, hooks, and analytics
   // flush — which can take several seconds.
   cleanupTerminalModes()
-  printResumeHint()
+  printResumeHintForReason(reason)
 
   // Flush session data first — this is the most critical cleanup. If the
   // terminal is dead (SIGHUP, SSH disconnect), hooks and analytics may hang

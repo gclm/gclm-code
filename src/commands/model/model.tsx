@@ -1,10 +1,11 @@
-import { c as _c } from "react/compiler-runtime";
 import chalk from 'chalk';
 import * as React from 'react';
 import type { CommandResultDisplay } from '../../commands.js';
 import { ModelPicker } from '../../components/ModelPicker.js';
 import { COMMON_HELP_ARGS, COMMON_INFO_ARGS } from '../../constants/xml.js';
+import { Text } from '../../ink.js';
 import { type SafeEventValue, logEvent } from '../../services/analytics/index.js';
+import { refreshProviderModelOptions } from '../../services/api/providerModelDiscovery.js';
 import { useAppState, useSetAppState } from '../../state/AppState.js';
 import type { LocalJSXCommandCall } from '../../types/command.js';
 import type { EffortLevel } from '../../utils/effort.js';
@@ -16,7 +17,6 @@ import { getDefaultMainLoopModelSetting, isOpus1mMergeEnabled, renderDefaultMode
 import { isModelAllowed } from '../../utils/model/modelAllowlist.js';
 import { validateModel } from '../../utils/model/validateModel.js';
 function ModelPickerWrapper(t0) {
-  const $ = _c(17);
   const {
     onDone
   } = t0;
@@ -24,93 +24,83 @@ function ModelPickerWrapper(t0) {
   const mainLoopModelForSession = useAppState(_temp2);
   const isFastMode = useAppState(_temp3);
   const setAppState = useSetAppState();
-  let t1;
-  if ($[0] !== mainLoopModel || $[1] !== onDone) {
-    t1 = function handleCancel() {
-      logEvent("tengu_model_command_menu", {
-        action: "cancel" as SafeEventValue
-      });
-      const displayModel = renderModelLabel(mainLoopModel);
-      onDone(`Kept model as ${chalk.bold(displayModel)}`, {
-        display: "system"
-      });
+  const [gatewayRefreshState, setGatewayRefreshState] = React.useState(() => process.env.ANTHROPIC_BASE_URL ? 'loading' : 'ready');
+  React.useEffect(() => {
+    if (!process.env.ANTHROPIC_BASE_URL) {
+      setGatewayRefreshState('ready');
+      return;
+    }
+    let isMounted = true;
+    void refreshProviderModelOptions({
+      force: true,
+      interactive: true
+    }).then(() => {
+      if (isMounted) {
+        setGatewayRefreshState('ready');
+      }
+    }).catch(error => {
+      if (isMounted) {
+        setGatewayRefreshState('error');
+        onDone(`Failed to refresh gateway model list: ${(error as Error).message}`, {
+          display: 'system'
+        });
+      }
+    });
+    return () => {
+      isMounted = false;
     };
-    $[0] = mainLoopModel;
-    $[1] = onDone;
-    $[2] = t1;
-  } else {
-    t1 = $[2];
+  }, [onDone]);
+  function handleCancel() {
+    logEvent("tengu_model_command_menu", {
+      action: "cancel" as SafeEventValue
+    });
+    const displayModel = renderModelLabel(mainLoopModel);
+    onDone(`Kept model as ${chalk.bold(displayModel)}`, {
+      display: "system"
+    });
   }
-  const handleCancel = t1;
-  let t2;
-  if ($[3] !== isFastMode || $[4] !== mainLoopModel || $[5] !== onDone || $[6] !== setAppState) {
-    t2 = function handleSelect(model, effort) {
-      logEvent("tengu_model_command_menu", {
-        action: model as SafeEventValue,
-        from_model: mainLoopModel as SafeEventValue,
-        to_model: model as SafeEventValue
-      });
-      setAppState(prev => ({
-        ...prev,
-        mainLoopModel: model,
-        mainLoopModelForSession: null
-      }));
-      let message = `Set model to ${chalk.bold(renderModelLabel(model))}`;
-      if (effort !== undefined) {
-        message = message + ` with ${chalk.bold(effort)} effort`;
+  function handleSelect(model, effort) {
+    logEvent("tengu_model_command_menu", {
+      action: model as SafeEventValue,
+      from_model: mainLoopModel as SafeEventValue,
+      to_model: model as SafeEventValue
+    });
+    setAppState(prev => ({
+      ...prev,
+      mainLoopModel: model,
+      mainLoopModelForSession: null
+    }));
+    let message = `Set model to ${chalk.bold(renderModelLabel(model))}`;
+    if (effort !== undefined) {
+      message = message + ` with ${chalk.bold(effort)} effort`;
+    }
+    let wasFastModeToggledOn = undefined;
+    if (isFastModeEnabled()) {
+      clearFastModeCooldown();
+      if (!isFastModeSupportedByModel(model) && isFastMode) {
+        setAppState(_temp4);
+        wasFastModeToggledOn = false;
+      } else if (isFastModeSupportedByModel(model) && isFastModeAvailable() && isFastMode) {
+        message = message + " \xB7 Fast mode ON";
+        wasFastModeToggledOn = true;
       }
-      let wasFastModeToggledOn = undefined;
-      if (isFastModeEnabled()) {
-        clearFastModeCooldown();
-        if (!isFastModeSupportedByModel(model) && isFastMode) {
-          setAppState(_temp4);
-          wasFastModeToggledOn = false;
-        } else {
-          if (isFastModeSupportedByModel(model) && isFastModeAvailable() && isFastMode) {
-            message = message + " \xB7 Fast mode ON";
-            wasFastModeToggledOn = true;
-          }
-        }
-      }
-      if (isBilledAsExtraUsage(model, wasFastModeToggledOn === true, isOpus1mMergeEnabled())) {
-        message = message + " \xB7 Billed as extra usage";
-      }
-      if (wasFastModeToggledOn === false) {
-        message = message + " \xB7 Fast mode OFF";
-      }
-      onDone(message);
-    };
-    $[3] = isFastMode;
-    $[4] = mainLoopModel;
-    $[5] = onDone;
-    $[6] = setAppState;
-    $[7] = t2;
-  } else {
-    t2 = $[7];
+    }
+    if (isBilledAsExtraUsage(model, wasFastModeToggledOn === true, isOpus1mMergeEnabled())) {
+      message = message + " \xB7 Billed as extra usage";
+    }
+    if (wasFastModeToggledOn === false) {
+      message = message + " \xB7 Fast mode OFF";
+    }
+    onDone(message);
   }
-  const handleSelect = t2;
-  let t3;
-  if ($[8] !== isFastMode || $[9] !== mainLoopModel) {
-    t3 = isFastModeEnabled() && isFastMode && isFastModeSupportedByModel(mainLoopModel) && isFastModeAvailable();
-    $[8] = isFastMode;
-    $[9] = mainLoopModel;
-    $[10] = t3;
-  } else {
-    t3 = $[10];
+  const showFastModeNotice = isFastModeEnabled() && isFastMode && isFastModeSupportedByModel(mainLoopModel) && isFastModeAvailable();
+  if (gatewayRefreshState === 'loading') {
+    return <Text>Refreshing gateway model list...</Text>;
   }
-  let t4;
-  if ($[11] !== handleCancel || $[12] !== handleSelect || $[13] !== mainLoopModel || $[14] !== mainLoopModelForSession || $[15] !== t3) {
-    t4 = <ModelPicker initial={mainLoopModel} sessionModel={mainLoopModelForSession} onSelect={handleSelect} onCancel={handleCancel} isStandaloneCommand={true} showFastModeNotice={t3} />;
-    $[11] = handleCancel;
-    $[12] = handleSelect;
-    $[13] = mainLoopModel;
-    $[14] = mainLoopModelForSession;
-    $[15] = t3;
-    $[16] = t4;
-  } else {
-    t4 = $[16];
+  if (gatewayRefreshState === 'error') {
+    return <Text>Unable to load the latest gateway model list.</Text>;
   }
-  return t4;
+  return <ModelPicker initial={mainLoopModel} sessionModel={mainLoopModelForSession} onSelect={handleSelect} onCancel={handleCancel} isStandaloneCommand={true} showFastModeNotice={showFastModeNotice} />;
 }
 function _temp4(prev_0) {
   return {

@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-04-06（CI flaky fix 已完成）
+更新时间：2026-04-06（Gateway post-login cleanup 与 smoke 补强已收口）
 
 ## 当前阶段
 
@@ -10,6 +10,7 @@
   - 保持发布态运行时边界为 `bin/ + vendor/`
   - 继续让 GitHub Release 产出双架构 mac runtime 资产
   - 功能侧维持持续维护，不新增 release 之外的大改造
+  - 补齐 Gateway `login/logout/model` 真实流程文档，降低后续回归与排查成本
 
 ## 当前判断
 
@@ -133,7 +134,16 @@
   - `bun run smoke:single-package -- --with-registry`，通过
   - `node ./scripts/smoke-single-package-npm-registry.mjs`，通过
   - 已新增文档 `docs/overview/nonessential-traffic-flag.md`，按代码路径盘点 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 当前影响面，明确它仍会影响 auto-update、trusted device enrollment、后台预取、错误上报与部分能力发现，不是“只关 telemetry”的无效开关
-  - 已完成 logo 样式入口排查：`WelcomeV2` 不再维护独立字符画，已改为复用共享 `Clawd`
+- 已完成 logo 样式入口排查：`WelcomeV2` 不再维护独立字符画，已改为复用共享 `Clawd`
+- 已完成 Gateway auth/model 流程收口：
+  - Gateway 登录配置明确保存到 `~/.claude/settings.json`
+  - `/logout` 已改为精确清理 Gateway env，不再受 settings deep merge 残留影响
+  - `/model` 在 Gateway 场景下会先刷新 `/models` 列表再提供选择
+  - 手动 `/model` 刷新已明确绕过 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`
+  - `/login` 成功后的后置逻辑已抽到共享 helper；Gateway / 自定义 base URL 场景现在只保留本地 cache reset，不再触发 Anthropic 官方账号专属的 remote managed settings / policy limits / GrowthBook / trusted-device 流程
+  - `/logout` 成功文案与 CLI help 已切换为中性 “login and gateway configuration” 表述
+  - 已新增文档 `docs/release/gateway-auth-model-flow.md`
+  - 已新增 `smoke:login-gateway` / `smoke:login-gateway:matrix`，使用临时 `CLAUDE_CONFIG_DIR` 覆盖“登录保存 -> 交互式模型刷新 -> 退出清理”链路，不污染真实 `~/.claude`
   - 全仓补扫后，当前未发现第二套独立 logo 图形实现；`Onboarding`、`setup-token`、主消息页均已落到 `WelcomeV2` / `LogoV2` / `CondensedLogo` -> `Clawd` 共享链路
   - 仍可见的其余品牌入口主要是文案或小图标，例如 `IdeOnboardingDialog` 的欢迎文案与 `GuestPassesUpsell` 的 `[✻]` 装饰，不属于独立 logo 样式分叉
   - 已继续补扫欢迎态 / 弹窗头部：`IdeOnboardingDialog` 标题前缀 `✻` 已统一改为 `startupAccent`，与欢迎页品牌 accent 一致

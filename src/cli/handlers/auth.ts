@@ -2,6 +2,7 @@
 
 import {
   clearAuthRelatedCaches,
+  LOGOUT_SUCCESS_MESSAGE,
   performLogout,
 } from '../../commands/logout/logout.js'
 import {
@@ -34,6 +35,7 @@ import { saveGlobalConfig } from '../../utils/config.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { isRunningOnHomespace } from '../../utils/envUtils.js'
 import { errorMessage } from '../../utils/errors.js'
+import { gracefulShutdownSync } from '../../utils/gracefulShutdown.js'
 import { logError } from '../../utils/log.js'
 import { getAPIProvider } from '../../utils/model/providers.js'
 import { getInitialSettings } from '../../utils/settings/settings.js'
@@ -335,6 +337,6 @@ export async function authLogout(): Promise<void> {
     process.stderr.write('Failed to log out.\n')
     process.exit(1)
   }
-  process.stdout.write('Successfully logged out from your Anthropic account.\n')
-  process.exit(0)
+  process.stdout.write(`${LOGOUT_SUCCESS_MESSAGE}\n`)
+  gracefulShutdownSync(0, 'logout')
 }

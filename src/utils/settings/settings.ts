@@ -524,6 +524,57 @@ export function updateSettingsForSource(
 }
 
 /**
+ * Replaces the entire settings document for a writable source.
+ *
+ * Unlike updateSettingsForSource(), this does not deep-merge nested objects.
+ * Use it when the caller has already computed the exact final settings and
+ * needs missing nested keys to be removed from disk.
+ */
+export function replaceSettingsForSource(
+  source: EditableSettingSource,
+  settings: SettingsJson,
+): { error: Error | null } {
+  if (
+    (source as unknown) === 'policySettings' ||
+    (source as unknown) === 'flagSettings'
+  ) {
+    return { error: null }
+  }
+
+  const filePath = getSettingsFilePathForSource(source)
+  if (!filePath) {
+    return { error: null }
+  }
+
+  try {
+    getFsImplementation().mkdirSync(dirname(filePath))
+
+    // Mark this as an internal write before writing the file
+    markInternalWrite(filePath)
+
+    writeFileSyncAndFlush_DEPRECATED(
+      filePath,
+      jsonStringify(settings, null, 2) + '\n',
+    )
+
+    resetSettingsCache()
+
+    if (source === 'localSettings') {
+      void addFileGlobRuleToGitignore(
+        getRelativeSettingsFilePathForSource('localSettings'),
+        getOriginalCwd(),
+      )
+    }
+  } catch (e) {
+    const error = new Error(`Failed to replace settings in ${filePath}: ${e}`)
+    logError(error)
+    return { error }
+  }
+
+  return { error: null }
+}
+
+/**
  * Custom merge function for arrays - concatenate and deduplicate
  */
 function mergeArrays<T>(targetArray: T[], sourceArray: T[]): T[] {

@@ -11,9 +11,13 @@ import { refreshProviderModelOptions } from '../services/api/providerModelDiscov
 import { sendNotification } from '../services/notifier.js'
 import { OAuthService } from '../services/oauth/index.js'
 import { getOauthAccountInfo, validateForceLoginOrg } from '../utils/auth.js'
-import { saveGlobalConfig } from '../utils/config.js'
 import { logError } from '../utils/log.js'
-import { getSettings_DEPRECATED } from '../utils/settings/settings.js'
+import { settingsChangeDetector } from '../utils/settings/changeDetector.js'
+import {
+  getSettings_DEPRECATED,
+  getSettingsForSource,
+  updateSettingsForSource,
+} from '../utils/settings/settings.js'
 import { Select } from './CustomSelect/select.js'
 import { KeyboardShortcutHint } from './design-system/KeyboardShortcutHint.js'
 import { Spinner } from './Spinner.js'
@@ -46,27 +50,31 @@ function normalizeBaseUrl(raw: string): string {
 
 function saveGatewayEnv(baseUrl: string, apiKey: string): void {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl)
+  const trimmedApiKey = apiKey.trim()
 
   // Validate URL eagerly so users get fast feedback in /login.
   // eslint-disable-next-line no-new
   new URL(normalizedBaseUrl)
 
-  saveGlobalConfig(current => {
-    const env = { ...(current.env ?? {}) }
-
-    env.ANTHROPIC_BASE_URL = normalizedBaseUrl
-    env.ANTHROPIC_API_KEY = apiKey.trim()
-
-    // Gateway routing replaces explicit cloud-provider mode flags.
-    delete env.CLAUDE_CODE_USE_BEDROCK
-    delete env.CLAUDE_CODE_USE_VERTEX
-    delete env.CLAUDE_CODE_USE_FOUNDRY
-
-    return { ...current, env }
+  const currentEnv = { ...(getSettingsForSource('userSettings')?.env ?? {}) }
+  const result = updateSettingsForSource('userSettings', {
+    env: {
+      ...currentEnv,
+      ANTHROPIC_BASE_URL: normalizedBaseUrl,
+      ANTHROPIC_API_KEY: trimmedApiKey,
+      // Gateway routing replaces explicit cloud-provider mode flags.
+      CLAUDE_CODE_USE_BEDROCK: undefined,
+      CLAUDE_CODE_USE_VERTEX: undefined,
+      CLAUDE_CODE_USE_FOUNDRY: undefined,
+    },
   })
+  if (result.error) {
+    throw result.error
+  }
+  settingsChangeDetector.notifyChange('userSettings')
 
   process.env.ANTHROPIC_BASE_URL = normalizedBaseUrl
-  process.env.ANTHROPIC_API_KEY = apiKey.trim()
+  process.env.ANTHROPIC_API_KEY = trimmedApiKey
   delete process.env.CLAUDE_CODE_USE_BEDROCK
   delete process.env.CLAUDE_CODE_USE_VERTEX
   delete process.env.CLAUDE_CODE_USE_FOUNDRY
@@ -521,8 +529,9 @@ function OAuthStatusMessage({
         <Box flexDirection="column" gap={1} marginTop={1}>
           <Text bold>Configure Gateway Platform</Text>
           <Text dimColor>
-            This saves gateway settings to local config and enables model discovery via
-            conditional endpoint mapping: base URL -> /v1/models, and base URL ending in /vN -> /models.
+            This saves gateway settings to ~/.claude/settings.json and enables model
+            discovery via conditional endpoint mapping: base URL {'->'} /v1/models,
+            and base URL ending in /vN {'->'} /models.
           </Text>
 
           {platformStep === 'base_url' ? (

@@ -3,6 +3,7 @@
 本文用于网关模式下的最小可交付验收，包含：
 - 分层 smoke 如何跑
 - 登录流程如何验收
+- `login -> model -> logout` 串联 smoke 如何跑
 - 常见失败如何定位
 
 ## 1. 必备环境变量
@@ -15,6 +16,7 @@ export SMOKE_GATEWAY_API_KEY="<your-key>"
 说明：
 - 如果是 `http://host`，系统会自动拼接 ` /v1/models`
 - 如果是 `http://host/vN`，系统会自动拼接 ` /models`
+- `smoke:login-gateway` / `smoke:login-gateway:matrix` 会在临时 `CLAUDE_CONFIG_DIR` 下运行，不会污染真实 `~/.claude`
 
 ## 2. 分层 smoke 命令
 
@@ -108,3 +110,28 @@ bun run smoke:login-gateway:matrix
 - `SMOKE_GATEWAY_EXPECT_401_KEY`：无权限 key，校验 `401/403` 文案
 - `SMOKE_GATEWAY_EXPECT_429_BASE_URL`：限流网关入口，校验 `429` 文案
 - `SMOKE_GATEWAY_EXPECT_5XX_BASE_URL`：异常网关入口，校验 `Gateway is unavailable` 文案
+
+## 7. 串联 smoke（login -> model -> logout）
+
+新增脚本：
+
+```bash
+bun run smoke:login-gateway
+bun run smoke:login-gateway:matrix
+```
+
+`bun run smoke:login-gateway` 会在一个临时 `CLAUDE_CONFIG_DIR` 中顺序验证：
+- Gateway 配置成功写入 `settings.json`
+- 交互式模型刷新在 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` 下仍可执行
+- provider flag 会在 Gateway 模式下被清掉
+- 清理阶段会删除 `ANTHROPIC_BASE_URL` / `ANTHROPIC_API_KEY`
+- 无关 env 配置会被保留
+
+`bun run smoke:login-gateway:matrix` 当前覆盖：
+- 成功路径
+- 404 路径映射错误
+
+这组 smoke 的目标不是驱动完整 TUI，而是稳定验证这次改动涉及的三段核心副作用：
+- 登录保存
+- `/model` 前刷新
+- 退出清理

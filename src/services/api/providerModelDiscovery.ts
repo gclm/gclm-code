@@ -1,6 +1,5 @@
 import axios from 'axios'
 import isEqual from 'lodash-es/isEqual.js'
-import { getAuthHeaders } from '../../utils/http.js'
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { isEssentialTrafficOnly } from '../../utils/privacyLevel.js'
@@ -70,6 +69,24 @@ function getGatewayBaseUrl(): string | null {
   const baseUrl = process.env.ANTHROPIC_BASE_URL
   if (!baseUrl) return null
   return trimTrailingSlash(baseUrl)
+}
+
+function getGatewayAuthHeaders():
+  | { headers: Record<string, string> }
+  | { error: string } {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim()
+  if (!apiKey) {
+    return {
+      error:
+        'ANTHROPIC_API_KEY is not set. Configure gateway API key first.',
+    }
+  }
+
+  return {
+    headers: {
+      'x-api-key': apiKey,
+    },
+  }
 }
 
 function getPathname(baseUrl: string): string {
@@ -359,7 +376,9 @@ export async function refreshProviderModelOptions(
   const force = options.force ?? false
   const interactive = options.interactive ?? false
 
-  if (isEssentialTrafficOnly()) {
+  // Respect the privacy gate for background refreshes, but allow explicit
+  // user-driven actions like /model and gateway setup to fetch fresh models.
+  if (!interactive && isEssentialTrafficOnly()) {
     return
   }
 
@@ -400,7 +419,7 @@ export async function refreshProviderModelOptions(
     return
   }
 
-  const authResult = getAuthHeaders()
+  const authResult = getGatewayAuthHeaders()
   if (authResult.error) {
     const error = new ProviderModelDiscoveryError(authResult.error, {
       type: 'auth',
