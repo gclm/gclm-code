@@ -326,6 +326,15 @@
 - AI 辅助排障时看 `/hello2cc json`
 - 同时需要两者时看 `/hello2cc both`
 
+其中 summary 视图当前已经不是只有静态摘要，而是一个轻量 mini console：
+
+- `Severity`
+  - 先判断当前是 `low / medium / high`
+- `Detected anomalies`
+  - 汇总 retry pressure、MCP auth/failed、active team/worktree reuse opportunity、tool search confidence 等异常或机会信号
+- `Suggested actions`
+  - 直接给出下一步建议，减少人工从原始 JSON 自己推断的成本
+
 ## 新增策略的步骤
 
 1. 在 [defaultStrategies.ts](/Users/gclm/workspace/lab/ai/gclm-code/src/orchestration/hello2cc/defaultStrategies.ts) 新增策略对象

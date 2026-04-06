@@ -170,10 +170,121 @@ function summarizeRecords(
     )
 }
 
+function getHello2ccDiagnosticSeverity(
+  snapshot: Hello2ccObservabilitySnapshot,
+): 'low' | 'medium' | 'high' {
+  if (
+    snapshot.memoryPressure.totalRetries >= 3 ||
+    snapshot.hostFacts.mcp.failed > 0
+  ) {
+    return 'high'
+  }
+
+  if (
+    snapshot.hostFacts.mcp.needsAuth > 0 ||
+    snapshot.memoryPressure.recentFailureCount > 0
+  ) {
+    return 'medium'
+  }
+
+  return 'low'
+}
+
+function buildHello2ccDetectedAnomalies(
+  snapshot: Hello2ccObservabilitySnapshot,
+): string[] {
+  const anomalies: string[] = []
+
+  if (snapshot.memoryPressure.totalRetries >= 3) {
+    anomalies.push(
+      `retry pressure is elevated (${snapshot.memoryPressure.totalRetries} retries recorded in this session)`,
+    )
+  }
+
+  if (snapshot.hostFacts.mcp.failed > 0) {
+    anomalies.push(
+      `some MCP servers are in failed state (${snapshot.hostFacts.mcp.failed} failed)`,
+    )
+  }
+
+  if (snapshot.hostFacts.mcp.needsAuth > 0) {
+    anomalies.push(
+      `MCP auth is still pending for ${snapshot.hostFacts.mcp.needsAuth} server(s)`,
+    )
+  }
+
+  if (snapshot.sessionAnchors.activeTeamName) {
+    anomalies.push(
+      `active team reuse opportunity detected (${snapshot.sessionAnchors.activeTeamName})`,
+    )
+  }
+
+  if (snapshot.sessionAnchors.activeWorktreePath) {
+    anomalies.push(
+      `active worktree reuse opportunity detected (${snapshot.sessionAnchors.activeWorktreePath})`,
+    )
+  }
+
+  if (!snapshot.hostFacts.toolSearchOptimistic) {
+    anomalies.push('tool search confidence is low, so routing may need more explicit tool names')
+  }
+
+  return anomalies
+}
+
+function buildHello2ccSuggestedActions(
+  snapshot: Hello2ccObservabilitySnapshot,
+): string[] {
+  const actions: string[] = []
+
+  if (snapshot.memoryPressure.totalRetries >= 3) {
+    actions.push(
+      'inspect repeated failures before starting another implementation hop, and compare them against current preconditions first',
+    )
+  }
+
+  if (snapshot.sessionAnchors.activeTeamName) {
+    actions.push(
+      `reuse SendMessage with the active team (${snapshot.sessionAnchors.activeTeamName}) before creating another worker set`,
+    )
+  }
+
+  if (snapshot.sessionAnchors.activeWorktreePath) {
+    actions.push(
+      `reuse the tracked worktree (${snapshot.sessionAnchors.activeWorktreePath}) unless you explicitly need a fresh branch of execution`,
+    )
+  }
+
+  if (snapshot.hostFacts.mcp.failed > 0) {
+    actions.push(
+      'treat failed MCP-backed routes as unavailable until the failure is cleared or a non-MCP path is chosen',
+    )
+  } else if (snapshot.hostFacts.mcp.needsAuth > 0) {
+    actions.push(
+      'avoid MCP-dependent routes until the pending auth is cleared, or choose a route that stays inside built-in tools',
+    )
+  }
+
+  if (!snapshot.hostFacts.toolSearchOptimistic) {
+    actions.push(
+      'keep tool routing explicit by naming the target tool and the expected output shape in the prompt',
+    )
+  }
+
+  actions.push(
+    'use `/hello2cc both` when you want the human summary plus the raw JSON snapshot for AI-assisted diagnosis',
+  )
+
+  return actions
+}
+
 export function buildHello2ccDiagnosticSummary(
   state: Hello2ccSessionState,
 ): string {
   const snapshot = buildHello2ccObservabilitySnapshot(state)
+  const severity = getHello2ccDiagnosticSeverity(snapshot)
+  const anomalies = buildHello2ccDetectedAnomalies(snapshot)
+  const suggestedActions = buildHello2ccSuggestedActions(snapshot)
   const lines = [
     'hello2cc diagnostic summary',
     '',
@@ -193,6 +304,12 @@ export function buildHello2ccDiagnosticSummary(
     'Routing posture',
     ...formatHello2ccRoutingPosture(state).map(line => `- ${line}`),
     '',
+    'Severity',
+    `- ${severity}`,
+    '',
+    'Detected anomalies',
+    ...(anomalies.length > 0 ? anomalies.map(item => `- ${item}`) : ['- none']),
+    '',
     'Recent successes',
     ...(state.recentSuccesses.length > 0
       ? summarizeRecords(state.recentSuccesses)
@@ -203,26 +320,9 @@ export function buildHello2ccDiagnosticSummary(
       ? summarizeRecords(state.recentFailures)
       : ['- none']),
     '',
-    'Suggested next check',
+    'Suggested actions',
+    ...suggestedActions.map(item => `- ${item}`),
   ]
-
-  if (snapshot.memoryPressure.totalRetries >= 3) {
-    lines.push(
-      '- retry pressure is elevated, so compare recent failures against current preconditions before starting another implementation hop.',
-    )
-  } else if (snapshot.sessionAnchors.activeTeamName) {
-    lines.push(
-      '- an active team is already present, so verify whether SendMessage reuse is enough before creating new workers.',
-    )
-  } else if (snapshot.hostFacts.mcp.needsAuth > 0) {
-    lines.push(
-      '- MCP auth is still pending for some servers, so avoid depending on those routes until they are ready.',
-    )
-  } else {
-    lines.push(
-      '- use `/hello2cc both` if you want the structured summary plus the raw JSON snapshot for AI-assisted diagnosis.',
-    )
-  }
 
   return lines.join('\n')
 }
