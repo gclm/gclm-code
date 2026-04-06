@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import type { AuditRepository } from '../audit/auditRepository.js'
 import type { IdempotencyRepository } from '../channels/shared/idempotencyRepository.js'
+import type { SessionExecutionBridge } from '../execution/types.js'
 import type { ChannelIdentityRepository } from '../identity/channelIdentityRepository.js'
 import type { PermissionRepository } from '../permissions/permissionRepository.js'
 import type { SessionBindingRepository } from '../sessions/sessionBindingRepository.js'
@@ -22,4 +23,5 @@ export type GclmCodeServerAppState = {
   repositories: GclmCodeServerAppRepositories
   streamHub: StreamHub
   streamInfoService: StreamInfoService
+  executionBridge: SessionExecutionBridge
 }

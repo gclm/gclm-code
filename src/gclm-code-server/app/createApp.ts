@@ -23,6 +23,17 @@ const sendInputSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
 })
 
+const resolvePermissionSchema = z.discriminatedUnion('behavior', [
+  z.object({
+    behavior: z.literal('allow'),
+    updatedInput: z.record(z.string(), z.unknown()).optional(),
+  }),
+  z.object({
+    behavior: z.literal('deny'),
+    message: z.string(),
+  }),
+])
+
 const archiveSchema = z.object({}).optional()
 
 function getRequestIdentity(c: Context): {
@@ -98,11 +109,12 @@ export function createApp(state: GclmCodeServerAppState) {
       session = {
         id: `sess_${randomUUID()}`,
         title: body.title,
-        status: 'running' as const,
+        status: 'waiting_input' as const,
         projectId: body.projectId,
         workspaceId: body.workspaceId,
         ownerUserId: identity.userId,
         sourceChannel: body.sourceChannel,
+        executionSessionRef: randomUUID(),
         metadataJson: jsonRecord(body.metadata),
         createdAt: now,
         updatedAt: now,
@@ -139,9 +151,20 @@ export function createApp(state: GclmCodeServerAppState) {
       data: session,
     })
 
+    if (body.initialInput && body.initialInput.length > 0) {
+      const prompt = body.initialInput.map(item => item.text).join('\n')
+      await state.executionBridge.submitInput({
+        session,
+        prompt,
+        requestId: `req_${randomUUID()}`,
+      })
+    }
+
     return c.json({
       session,
-      initialPermissionRequests: [],
+      initialPermissionRequests: state.repositories.permissions.findPendingBySession(
+        session.id,
+      ),
     })
   })
 
@@ -187,44 +210,28 @@ export function createApp(state: GclmCodeServerAppState) {
 
     const body = sendInputSchema.parse(await c.req.json())
     const requestId = body.clientRequestId ?? `req_${randomUUID()}`
-    const now = new Date().toISOString()
-    state.repositories.sessions.touch(session.id, now)
-
-    const text = body.content
+    const prompt = body.content
       .filter(item => item.type === 'text')
       .map(item => item.text)
       .join('\n')
 
-    state.streamHub.publish(session.id, {
-      type: 'message.completed',
-      data: {
-        sessionId: session.id,
-        messageId: `msg_${requestId}`,
-        role: 'assistant',
-        text: `Accepted input: ${text}`,
-        createdAt: now,
-      },
-    })
-
-    state.streamHub.publish(session.id, {
-      type: 'session.updated',
-      data: {
-        ...session,
-        updatedAt: now,
-        lastActiveAt: now,
-      },
+    await state.executionBridge.submitInput({
+      session,
+      prompt,
+      requestId,
     })
 
     return c.json({ accepted: true, sessionId: session.id, requestId })
   })
 
-  app.post('/sessions/:id/interrupt', c => {
+  app.post('/sessions/:id/interrupt', async c => {
     const session = state.repositories.sessions.findById(c.req.param('id'))
     if (!session) {
       return c.json({ error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } }, 404)
     }
 
-    return c.json({ accepted: true, sessionId: session.id })
+    const accepted = await state.executionBridge.interrupt(session)
+    return c.json({ accepted, sessionId: session.id })
   })
 
   app.get('/sessions/:id/permissions/pending', c => {
@@ -234,6 +241,41 @@ export function createApp(state: GclmCodeServerAppState) {
     }
 
     return c.json({ items: state.repositories.permissions.findPendingBySession(session.id) })
+  })
+
+  app.post('/sessions/:id/permissions/:requestId/respond', async c => {
+    const session = state.repositories.sessions.findById(c.req.param('id'))
+    if (!session) {
+      return c.json({ error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } }, 404)
+    }
+
+    const pending = state.repositories.permissions.findById(c.req.param('requestId'))
+    if (!pending || pending.sessionId !== session.id) {
+      return c.json(
+        { error: { code: 'PERMISSION_NOT_FOUND', message: 'Permission request not found' } },
+        404,
+      )
+    }
+
+    const identity = getRequestIdentity(c)
+    const decision = resolvePermissionSchema.parse(await c.req.json())
+    const accepted = await state.executionBridge.resolvePermission(
+      session,
+      pending.id,
+      decision.behavior === 'allow'
+        ? {
+            behavior: 'allow',
+            updatedInput: decision.updatedInput,
+            resolvedBy: identity.userId,
+          }
+        : {
+            behavior: 'deny',
+            message: decision.message,
+            resolvedBy: identity.userId,
+          },
+    )
+
+    return c.json({ accepted, requestId: pending.id, behavior: decision.behavior })
   })
 
   app.post('/sessions/:id/archive', async c => {

@@ -1,5 +1,7 @@
 export * from './config/env.js'
 export * from './db/client.js'
+export * from './execution/types.js'
+export * from './execution/localCliExecutionBridge.js'
 export * from './identity/types.js'
 export * from './identity/channelIdentityRepository.js'
 export * from './sessions/types.js'

@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { createGclmCodeServerDatabase } from '../db/client.js'
+import { LocalCliExecutionBridge } from '../execution/localCliExecutionBridge.js'
 import { ChannelIdentityRepository } from '../identity/channelIdentityRepository.js'
 import { SessionRepository } from '../sessions/sessionRepository.js'
 import { SessionBindingRepository } from '../sessions/sessionBindingRepository.js'
@@ -19,18 +20,26 @@ export type StartGclmCodeServerOptions = {
 
 export function createAppState(signingSecret = 'gclm-code-server-dev-secret'): GclmCodeServerAppState {
   const { db } = createGclmCodeServerDatabase()
+  const repositories = {
+    channelIdentities: new ChannelIdentityRepository(db),
+    sessions: new SessionRepository(db),
+    sessionBindings: new SessionBindingRepository(db),
+    permissions: new PermissionRepository(db),
+    idempotency: new IdempotencyRepository(db),
+    audit: new AuditRepository(db),
+  }
+  const streamHub = new StreamHub()
+
   return {
     db,
-    repositories: {
-      channelIdentities: new ChannelIdentityRepository(db),
-      sessions: new SessionRepository(db),
-      sessionBindings: new SessionBindingRepository(db),
-      permissions: new PermissionRepository(db),
-      idempotency: new IdempotencyRepository(db),
-      audit: new AuditRepository(db),
-    },
-    streamHub: new StreamHub(),
+    repositories,
+    streamHub,
     streamInfoService: new StreamInfoService(signingSecret),
+    executionBridge: new LocalCliExecutionBridge({
+      sessions: repositories.sessions,
+      permissions: repositories.permissions,
+      streamHub,
+    }),
   }
 }
 
@@ -38,7 +47,7 @@ export function startGclmCodeServer(options: StartGclmCodeServerOptions = {}) {
   const state = createAppState(options.signingSecret)
   const app = createApp(state)
 
-  const server = Bun.serve<{ sessionId?: string }>({
+  const server = Bun.serve<{ sessionId?: string; unsubscribe?: () => void }>({
     hostname: options.host ?? '127.0.0.1',
     port: options.port ?? 4317,
     fetch(req, server) {
@@ -90,7 +99,7 @@ export function startGclmCodeServer(options: StartGclmCodeServerOptions = {}) {
           },
         })
 
-        ;(ws.data as { unsubscribe?: () => void }).unsubscribe = unsubscribe
+        ws.data.unsubscribe = unsubscribe
 
         const session = state.repositories.sessions.findById(sessionId)
         if (session) {
@@ -109,18 +118,10 @@ export function startGclmCodeServer(options: StartGclmCodeServerOptions = {}) {
     },
   })
 
-  const heartbeat = setInterval(() => {
-    const now = new Date().toISOString()
-    // We do not maintain a session registry here, so publish heartbeat lazily
-    // only when callers explicitly publish further events.
-    void now
-  }, 30000)
-
   return {
     server,
     state,
     stop() {
-      clearInterval(heartbeat)
       server.stop(true)
     },
   }

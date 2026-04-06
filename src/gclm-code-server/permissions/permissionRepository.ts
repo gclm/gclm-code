@@ -65,6 +65,42 @@ export class PermissionRepository {
       )
   }
 
+  updateStatus(input: {
+    id: string
+    status: PermissionRequestRecord['status']
+    updatedAt: string
+    resolvedAt?: string
+    resolvedBy?: string
+    resolutionMessage?: string
+    resolutionChannel?: string
+  }): void {
+    this.db
+      .prepare(
+        `UPDATE permission_requests
+         SET status = ?,
+             updated_at = ?,
+             resolved_at = COALESCE(?, resolved_at),
+             resolved_by = COALESCE(?, resolved_by),
+             resolution_message = COALESCE(?, resolution_message),
+             resolution_channel = COALESCE(?, resolution_channel)
+         WHERE id = ?`,
+      )
+      .run(
+        input.status,
+        input.updatedAt,
+        input.resolvedAt ?? null,
+        input.resolvedBy ?? null,
+        input.resolutionMessage ?? null,
+        input.resolutionChannel ?? null,
+        input.id,
+      )
+  }
+
+  findById(id: string): PermissionRequestRecord | null {
+    const row = this.db.prepare('SELECT * FROM permission_requests WHERE id = ?').get(id)
+    return row ? mapPermission(row as Record<string, unknown>) : null
+  }
+
   findPendingBySession(sessionId: string): PermissionRequestRecord[] {
     return this.db
       .prepare(
