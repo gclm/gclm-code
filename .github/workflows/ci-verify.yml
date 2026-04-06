@@ -47,6 +47,12 @@ jobs:
       - name: Run smoke test
         run: bun run smoke
 
+      - name: Run gateway login smoke
+        run: bun run smoke:login-gateway
+
+      - name: Run gateway login smoke matrix
+        run: bun run smoke:login-gateway:matrix
+
       - name: Pack npm
         run: node scripts/pack-npm.mjs
 

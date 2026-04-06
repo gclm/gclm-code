@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-04-06（Gateway smoke 默认 mock 已验证通过）
+更新时间：2026-04-06（Gateway smoke 已接入 CI Verify）
 
 ## 当前阶段
 
@@ -150,6 +150,7 @@
   - 已新增 `smoke:login-gateway` / `smoke:login-gateway:matrix`，使用临时 `CLAUDE_CONFIG_DIR` 覆盖“登录保存 -> 交互式模型刷新 -> 退出清理”链路，不污染真实 `~/.claude`
   - 上述 Gateway smoke 默认改为 mock `axios` `/models` 请求，不依赖真实 Gateway、环境变量或本地监听端口；仅在显式传入 `SMOKE_GATEWAY_BASE_URL` / `SMOKE_GATEWAY_API_KEY` 时切到真实网关
   - 最新本地验证（2026-04-06）：`bun run smoke:login-gateway` 与 `bun run smoke:login-gateway:matrix` 在零环境变量下均已通过
+  - `.github/workflows/ci-verify.yml` 已接入 `bun run smoke:login-gateway` 与 `bun run smoke:login-gateway:matrix`，默认用 mock 路径覆盖 Gateway 登录保存、模型刷新与退出清理链路
   - 全仓补扫后，当前未发现第二套独立 logo 图形实现；`Onboarding`、`setup-token`、主消息页均已落到 `WelcomeV2` / `LogoV2` / `CondensedLogo` -> `Clawd` 共享链路
   - 仍可见的其余品牌入口主要是文案或小图标，例如 `IdeOnboardingDialog` 的欢迎文案与 `GuestPassesUpsell` 的 `[✻]` 装饰，不属于独立 logo 样式分叉
   - 已继续补扫欢迎态 / 弹窗头部：`IdeOnboardingDialog` 标题前缀 `✻` 已统一改为 `startupAccent`，与欢迎页品牌 accent 一致
