@@ -15,5 +15,7 @@
 
 ## 2. overview（阶段路线）
 
+- `docs/overview/install-and-upgrade.md`
+  - 区分 npm 全局安装版与仓库本地构建版的安装、升级与判断方式
 - `docs/overview/roadmap.md`
   - 当前阶段状态与后续动作

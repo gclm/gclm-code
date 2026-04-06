@@ -9,9 +9,9 @@ Gclm Code 是面向团队交付的命令行 AI 编码助手。
 - 模型发现：优先从网关 `/models` 动态获取，并支持缓存与错误语义提示
 - 验收门禁：以 `verify + smoke` 为发布前标准回归链路
 
-## 安装
+## 安装与升级
 
-### npm 安装（推荐，当前仅支持 macOS）
+### npm 全局安装版（推荐，当前仅支持 macOS）
 
 ```bash
 npm i -g gclm-code
@@ -25,7 +25,7 @@ npm i -g gclm-code
 - 首批仅支持 `darwin-x64` 与 `darwin-arm64`
 - Linux / Windows 暂未纳入当前 npm 发布范围
 
-安装后可用命令：
+首次安装后可用命令：
 
 ```bash
 gc
@@ -37,12 +37,33 @@ gc
 claude
 ```
 
-### 源码运行（开发）
+升级 npm 全局安装版：
 
 ```bash
+npm i -g gclm-code@latest
+hash -r
+gc --version
+```
+
+### 仓库本地构建版（开发）
+
+首次安装 / 本地构建：
+
+```bash
+git clone https://github.com/gclm/gclm-code.git
+cd gclm-code
 bun install
 bun run build
-./gc
+./dist/gclm
+```
+
+升级仓库本地构建版：
+
+```bash
+git pull
+bun install
+bun run build
+./dist/gclm --version
 ```
 
 ## 快速使用
@@ -96,10 +117,6 @@ bun run smoke:login-gateway:matrix
 
 ## 发布说明
 
-手动发版前请先执行 release gate：
-
-- `docs/release/release-gate.md`
-
 当前仓库根 `package.json` 仅用于开发工作区，不作为对外直发入口。
 
 本项目当前以手动发布为主，PR 不是发布前置条件。
@@ -107,10 +124,9 @@ bun run smoke:login-gateway:matrix
 ## 文档索引
 
 - 总索引：`docs/README.md`
+- 安装与升级：`docs/overview/install-and-upgrade.md`
 - 阶段路线：`docs/overview/roadmap.md`
 - 网关验收：`docs/release/gateway-smoke-and-login.md`
-- 发版门禁：`docs/release/release-gate.md`
-- npm 手动发布：`docs/release/npm-manual-release-guide.md`
 
 ## 说明
 
