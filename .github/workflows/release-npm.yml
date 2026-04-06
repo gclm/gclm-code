@@ -35,7 +35,7 @@ jobs:
       publish_npm: ${{ steps.meta.outputs.publish_npm }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Resolve release metadata
         id: meta
@@ -70,7 +70,7 @@ jobs:
     needs: meta
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -96,7 +96,7 @@ jobs:
         run: node scripts/smoke-npm-package.mjs
 
       - name: Upload dist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist
           path: dist/
@@ -108,10 +108,10 @@ jobs:
     if: ${{ needs.meta.outputs.publish_npm == 'true' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node (npm)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
@@ -142,7 +142,7 @@ jobs:
     if: ${{ needs.meta.outputs.publish_npm == 'true' && needs.meta.outputs.npm_tag == 'latest' }}
     steps:
       - name: Setup Node (npm)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
