@@ -1,6 +1,7 @@
 import type { GclmCodeServerAppState } from '../../app/types.js'
 import type { PermissionRequestRecord } from '../../permissions/types.js'
 import type { StreamEvent } from '../../transport/streamHub.js'
+import type { FeishuStreamingCardSession } from './feishuStreamingCard.js'
 
 function truncateText(text: string, maxLength = 1800): string {
   if (text.length <= maxLength) {
@@ -23,7 +24,10 @@ function formatPermissionSummary(record: PermissionRequestRecord): string {
 
 export class FeishuSessionRelay {
   private readonly subscriptions = new Map<string, () => void>()
-  private readonly cards = new Map<string, { messageId?: string }>()
+  private readonly cards = new Map<
+    string,
+    { statusMessageId?: string; streaming?: FeishuStreamingCardSession }
+  >()
 
   constructor(private readonly state: GclmCodeServerAppState) {}
 
@@ -70,6 +74,32 @@ export class FeishuSessionRelay {
     this.subscriptions.clear()
   }
 
+  private getCardState(sessionId: string): {
+    statusMessageId?: string
+    streaming?: FeishuStreamingCardSession
+  } {
+    return this.cards.get(sessionId) ?? {}
+  }
+
+  private setStatusMessageId(sessionId: string, messageId?: string): void {
+    const current = this.getCardState(sessionId)
+    this.cards.set(sessionId, {
+      ...current,
+      statusMessageId: messageId ?? current.statusMessageId,
+    })
+  }
+
+  private setStreamingCard(
+    sessionId: string,
+    streaming?: FeishuStreamingCardSession,
+  ): void {
+    const current = this.getCardState(sessionId)
+    this.cards.set(sessionId, {
+      ...current,
+      streaming,
+    })
+  }
+
   private async forwardEvent(input: {
     sessionId: string
     providerUserId: string
@@ -77,24 +107,27 @@ export class FeishuSessionRelay {
     event: StreamEvent
   }): Promise<void> {
     const { event } = input
-    if (event.type === 'message.completed') {
+    if (event.type === 'session.updated') {
       const data = this.asRecord(event.data)
-      if (data?.role !== 'assistant' || typeof data.text !== 'string' || !data.text.trim()) {
+      if (data?.status !== 'running') {
         return
       }
 
-      const card = this.cards.get(input.sessionId)
-      const result = await this.state.channels.feishuPublisher.upsertSessionCard({
+      const current = this.getCardState(input.sessionId)
+      if (current.streaming) {
+        return
+      }
+
+      const streaming = await this.state.channels.feishuPublisher.createStreamingCardSession({
         providerUserId: input.providerUserId,
-        existingMessageId: card?.messageId,
         sessionId: input.sessionId,
         card: {
           title: 'gclm-code-server',
           stage: 'running',
-          summary: '已收到最新 assistant 输出。',
+          summary: '正在生成本轮输出。',
           sessionId: input.sessionId,
           updatedAt: new Date().toISOString(),
-          bodyMarkdown: data.text,
+          bodyMarkdown: 'Thinking...',
           actions: [
             {
               label: '中断执行',
@@ -107,9 +140,45 @@ export class FeishuSessionRelay {
           ],
         },
       })
-      if (result.messageId) {
-        this.cards.set(input.sessionId, { messageId: result.messageId })
+      this.setStreamingCard(input.sessionId, streaming ?? undefined)
+      return
+    }
+
+    if (event.type === 'message.completed') {
+      const data = this.asRecord(event.data)
+      if (data?.role !== 'assistant' || typeof data.text !== 'string' || !data.text.trim()) {
+        return
       }
+
+      const current = this.getCardState(input.sessionId)
+      let streaming = current.streaming
+      if (!streaming) {
+        streaming = await this.state.channels.feishuPublisher.createStreamingCardSession({
+          providerUserId: input.providerUserId,
+          sessionId: input.sessionId,
+          card: {
+            title: 'gclm-code-server',
+            stage: 'running',
+            summary: '已收到最新 assistant 输出。',
+            sessionId: input.sessionId,
+            updatedAt: new Date().toISOString(),
+            bodyMarkdown: data.text,
+            actions: [
+              {
+                label: '中断执行',
+                action: 'interrupt_session',
+                style: 'danger',
+                value: {
+                  sessionId: input.sessionId,
+                },
+              },
+            ],
+          },
+        })
+        this.setStreamingCard(input.sessionId, streaming ?? undefined)
+        return
+      }
+      await streaming.update(data.text)
       return
     }
 
@@ -119,7 +188,7 @@ export class FeishuSessionRelay {
         return
       }
 
-      const card = this.cards.get(input.sessionId)
+      const card = this.getCardState(input.sessionId)
       const result = await this.state.channels.feishuPublisher.sendStatusReceipt({
         providerUserId: input.providerUserId,
         tenantScope: input.tenantScope,
@@ -127,10 +196,10 @@ export class FeishuSessionRelay {
         requestId: typeof data.id === 'string' ? data.id : undefined,
         stage: 'permission_pending',
         summary: formatPermissionSummary(data as PermissionRequestRecord),
-        existingMessageId: card?.messageId,
+        existingMessageId: card.statusMessageId,
       })
       if (result.messageId) {
-        this.cards.set(input.sessionId, { messageId: result.messageId })
+        this.setStatusMessageId(input.sessionId, result.messageId)
       }
       return
     }
@@ -144,17 +213,29 @@ export class FeishuSessionRelay {
         requestId: typeof data?.requestId === 'string' ? data.requestId : undefined,
         stage: 'permission_resolved',
         summary: '权限请求已取消，本轮执行会继续或结束。',
-        existingMessageId: this.cards.get(input.sessionId)?.messageId,
+        existingMessageId: this.getCardState(input.sessionId).statusMessageId,
       })
       if (result.messageId) {
-        this.cards.set(input.sessionId, { messageId: result.messageId })
+        this.setStatusMessageId(input.sessionId, result.messageId)
       }
       return
     }
 
     if (event.type === 'session.execution.completed') {
       const data = this.asRecord(event.data)
-      if (!data || data.status === 'waiting_input') {
+      if (!data) {
+        return
+      }
+
+      const current = this.getCardState(input.sessionId)
+      if (current.streaming) {
+        await current.streaming.close(
+          data.status === 'failed' ? '执行失败' : '输出完成',
+        )
+        this.setStreamingCard(input.sessionId, undefined)
+      }
+
+      if (data.status === 'waiting_input') {
         return
       }
 
@@ -168,7 +249,7 @@ export class FeishuSessionRelay {
           data.status === 'failed'
             ? '本轮执行失败，请查看 Web Console 或本地日志继续排查。'
             : `本轮执行已结束，状态：${String(data.status)}`,
-        existingMessageId: this.cards.get(input.sessionId)?.messageId,
+        existingMessageId: current.statusMessageId,
         actions:
           data.status === 'failed'
             ? [
@@ -184,13 +265,18 @@ export class FeishuSessionRelay {
             : undefined,
       })
       if (result.messageId) {
-        this.cards.set(input.sessionId, { messageId: result.messageId })
+        this.setStatusMessageId(input.sessionId, result.messageId)
       }
       return
     }
 
     if (event.type === 'session.interrupted') {
       const data = this.asRecord(event.data)
+      const current = this.getCardState(input.sessionId)
+      if (current.streaming) {
+        await current.streaming.close('执行已中断', 'Interrupted by user.')
+        this.setStreamingCard(input.sessionId, undefined)
+      }
       const result = await this.state.channels.feishuPublisher.sendStatusReceipt({
         providerUserId: input.providerUserId,
         tenantScope: input.tenantScope,
@@ -198,7 +284,7 @@ export class FeishuSessionRelay {
         requestId: typeof data?.requestId === 'string' ? data.requestId : undefined,
         stage: 'interrupted',
         summary: '本轮执行已被中断。',
-        existingMessageId: this.cards.get(input.sessionId)?.messageId,
+        existingMessageId: current.statusMessageId,
         actions: [
           {
             label: '继续会话',
@@ -211,7 +297,7 @@ export class FeishuSessionRelay {
         ],
       })
       if (result.messageId) {
-        this.cards.set(input.sessionId, { messageId: result.messageId })
+        this.setStatusMessageId(input.sessionId, result.messageId)
       }
     }
   }

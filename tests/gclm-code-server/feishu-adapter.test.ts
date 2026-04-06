@@ -55,6 +55,10 @@ function createFakeExecutionBridge(): SessionExecutionBridge & {
 
 function createPublisherRecorder() {
   const calls: Array<{ url: string; method: string; body: unknown }> = []
+  const cardkitCalls: Array<{
+    type: 'card.create' | 'message.create' | 'cardElement.content' | 'card.settings'
+    body: unknown
+  }> = []
   const fetchImpl: typeof fetch = async (input, init) => {
     const url = String(input)
     const method = init?.method ?? 'GET'
@@ -74,7 +78,41 @@ function createPublisherRecorder() {
     })
   }
 
-  return { calls, fetchImpl }
+  const sdkFactory = async () => ({
+    Client: class {
+      cardkit = {
+        v1: {
+          card: {
+            create: async (input: unknown) => {
+              cardkitCalls.push({ type: 'card.create', body: input })
+              return { data: { card_id: 'card_123' } }
+            },
+            settings: async (input: unknown) => {
+              cardkitCalls.push({ type: 'card.settings', body: input })
+              return {}
+            },
+          },
+          cardElement: {
+            content: async (input: unknown) => {
+              cardkitCalls.push({ type: 'cardElement.content', body: input })
+              return {}
+            },
+          },
+        },
+      }
+
+      im = {
+        message: {
+          create: async (input: unknown) => {
+            cardkitCalls.push({ type: 'message.create', body: input })
+            return { data: { message_id: 'om_stream_123' } }
+          },
+        },
+      }
+    },
+  })
+
+  return { calls, fetchImpl, sdkFactory, cardkitCalls }
 }
 
 function signFeishuPayload(rawBody: string, input: { timestamp: string; nonce: string; encryptKey: string }) {
@@ -147,6 +185,7 @@ function createState(
         },
         audit: new AuditRepository(db),
         fetchImpl: publisher.fetchImpl,
+        sdkFactory: publisher.sdkFactory,
       }),
       feishuRelay: undefined as unknown as FeishuSessionRelay,
       feishuLongConnection: undefined as unknown as FeishuLongConnection,
@@ -327,6 +366,14 @@ describe('gclm-code-server feishu adapter', () => {
     })
 
     const json = await resp.json()
+    state.streamHub.publish(json.sessionId, {
+      type: 'session.updated',
+      data: {
+        id: json.sessionId,
+        status: 'running',
+      },
+    })
+
     state.streamHub.publish(json.sessionId, {
       type: 'message.completed',
       data: {

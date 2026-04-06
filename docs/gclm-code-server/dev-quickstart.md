@@ -8,6 +8,7 @@
 - 使用真实 `gclm-code` 子进程执行 turn
 - 通过飞书长连接接收入站消息与卡片动作
 - 通过飞书 interactive card 持续更新会话状态
+- 通过飞书 `CardKit streaming` 渲染 assistant 输出卡片
 
 ## 启动方式
 
@@ -91,8 +92,10 @@ GCLM_CODE_SERVER_FEISHU_USE_LONG_CONNECTION=true
 - permission response API 虽已保留，但在当前真实 CLI 模式下暂未接通稳定的远程回写控制通道
 - 飞书默认主入口已切到长连接：服务启动后会主动连接飞书事件流，不再依赖公网 webhook 才能收消息
 - webhook `POST /channels/feishu/events` / `POST /channels/feishu/actions` 仍保留，主要作为兼容调试入口
-- 飞书回发层已升级为 interactive card 主渲染，当前会按 session 维度持续更新卡片，并支持最小动作回调（如 `resume_session`、`interrupt_session`）
+- 飞书回发层已升级为 interactive card 主渲染，卡片结构已向 `references/tlive` 的轻量 builder 风格靠拢
+- assistant 输出链路已进一步接入 `CardKit streaming`：session 进入运行态时会先创建流式卡，assistant 内容到达后更新同一张卡，turn 结束后再关闭 streaming mode
 - 当前权限待处理会被提示到飞书，但真正的远程审批回写在真实 CLI 模式下仍未打通
+- 当前真实 CLI bridge 还没有 token 级增量输出事件，因此飞书 streaming 现阶段是“会话级流式卡体验”，不是逐 token 打字机式渲染
 
 ## 飞书入口
 
@@ -127,6 +130,20 @@ GCLM_CODE_SERVER_FEISHU_BYPASS_SIGNATURE_VERIFICATION=true
 
 建议只在纯本地调试时使用，接入真实飞书应用后关闭
 
+## 飞书长连接诊断
+
+可以先做两步 smoke：
+
+```bash
+bun run smoke:feishu-openapi
+bun run smoke:feishu-long-connection
+```
+
+- `smoke:feishu-openapi` 用来确认 `tenant_access_token` 是否可正常获取
+- `smoke:feishu-long-connection` 会直接探测飞书长连接握手接口
+
+如果返回 `code = 1000040350`，表示这套飞书应用的长连接配额已被其他实例占用。此时通常不是 `gclm-code-server` 代码有问题，而是需要先关闭其他仍然持有该 app 长连接的客户端或测试进程，再重新启动当前实例。
+
 ## 推荐验证顺序
 
 1. 启动 `bun run dev:gclm-code-server`
@@ -134,5 +151,6 @@ GCLM_CODE_SERVER_FEISHU_BYPASS_SIGNATURE_VERIFICATION=true
 3. 新建 session 并发送 `/cost`
 4. 再发 `/context`，确认 resumed turn 正常执行
 5. 执行 `bun run smoke:feishu-openapi`，确认飞书凭证可拿到 `tenant_access_token`
-6. 在飞书开放平台把事件订阅方式设为“长连接（WebSocket）”，并开通 `im.message.receive_v1`、`card.action.trigger`
-7. 给机器人发送消息，确认会收到持续更新的 interactive card
+6. 执行 `bun run smoke:feishu-long-connection`，确认长连接探测未报配额占用
+7. 在飞书开放平台把事件订阅方式设为“长连接（WebSocket）”，并开通 `im.message.receive_v1`、`card.action.trigger`
+8. 给机器人发送消息，确认会收到持续更新的 interactive card

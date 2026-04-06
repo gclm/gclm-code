@@ -6,6 +6,7 @@ import {
   type FeishuCardAction,
   type RenderFeishuSessionCardInput,
 } from './feishuCardRenderer.js'
+import { FeishuStreamingCardSession } from './feishuStreamingCard.js'
 
 type FeishuAccessTokenResponse = {
   tenant_access_token?: string
@@ -26,6 +27,44 @@ export type FeishuPublisherDeps = {
   config: GclmCodeServerFeishuEnv
   audit: AuditRepository
   fetchImpl?: typeof fetch
+  sdkFactory?: () => Promise<{
+    Client: new (options: {
+      appId: string
+      appSecret: string
+    }) => {
+      cardkit: {
+        v1: {
+          card: {
+            create(input: {
+              data: { type: 'card_json'; data: string }
+            }): Promise<{ data?: { card_id?: string } }>
+            settings(input: {
+              path: { card_id: string }
+              data: { settings: string; sequence: number; uuid: string }
+            }): Promise<unknown>
+          }
+          cardElement: {
+            content(input: {
+              path: { card_id: string; element_id: string }
+              data: { content: string; sequence: number; uuid: string }
+            }): Promise<unknown>
+          }
+        }
+      }
+      im: {
+        message: {
+          create(input: {
+            params: { receive_id_type: 'open_id' }
+            data: {
+              receive_id: string
+              msg_type: 'interactive'
+              content: string
+            }
+          }): Promise<{ data?: { message_id?: string } }>
+        }
+      }
+    }
+  }>
 }
 
 export type FeishuStatusReceiptInput = {
@@ -59,15 +98,56 @@ function isFeishuConfigReady(config: GclmCodeServerFeishuEnv): boolean {
 
 export class FeishuPublisher {
   private readonly fetchImpl: typeof fetch
+  private readonly sdkFactory: NonNullable<FeishuPublisherDeps['sdkFactory']>
   private accessTokenCache:
     | {
         token: string
         expiresAt: number
       }
     | undefined
+  private sdkClientPromise:
+    | Promise<{
+        cardkit: {
+          v1: {
+            card: {
+              create(input: {
+                data: { type: 'card_json'; data: string }
+              }): Promise<{ data?: { card_id?: string } }>
+              settings(input: {
+                path: { card_id: string }
+                data: { settings: string; sequence: number; uuid: string }
+              }): Promise<unknown>
+            }
+            cardElement: {
+              content(input: {
+                path: { card_id: string; element_id: string }
+                data: { content: string; sequence: number; uuid: string }
+              }): Promise<unknown>
+            }
+          }
+        }
+        im: {
+          message: {
+            create(input: {
+              params: { receive_id_type: 'open_id' }
+              data: {
+                receive_id: string
+                msg_type: 'interactive'
+                content: string
+              }
+            }): Promise<{ data?: { message_id?: string } }>
+          }
+        }
+      }>
+    | undefined
 
   constructor(private readonly deps: FeishuPublisherDeps) {
     this.fetchImpl = deps.fetchImpl ?? fetch
+    this.sdkFactory =
+      deps.sdkFactory ??
+      (async () => {
+        return await import('@larksuiteoapi/node-sdk')
+      })
   }
 
   isEnabled(): boolean {
@@ -238,6 +318,36 @@ export class FeishuPublisher {
     })
   }
 
+  async createStreamingCardSession(input: {
+    providerUserId: string
+    sessionId?: string
+    requestId?: string
+    card: RenderFeishuSessionCardInput
+  }): Promise<FeishuStreamingCardSession | null> {
+    if (!this.isEnabled()) {
+      return null
+    }
+
+    const client = await this.getSdkClient()
+    const session = new FeishuStreamingCardSession({
+      client,
+      providerUserId: input.providerUserId,
+      sessionId: input.sessionId,
+      requestId: input.requestId,
+      audit: (eventType, payload) => {
+        this.insertAudit({
+          eventType,
+          actorId: input.providerUserId,
+          sessionId: input.sessionId,
+          requestId: input.requestId,
+          payload,
+        })
+      },
+    })
+    await session.start(input.card)
+    return session
+  }
+
   private async getTenantAccessToken(): Promise<string> {
     const now = Date.now()
     if (this.accessTokenCache && this.accessTokenCache.expiresAt > now + 30_000) {
@@ -273,6 +383,51 @@ export class FeishuPublisher {
     return json.tenant_access_token
   }
 
+  private async getSdkClient(): Promise<{
+    cardkit: {
+      v1: {
+        card: {
+          create(input: {
+            data: { type: 'card_json'; data: string }
+          }): Promise<{ data?: { card_id?: string } }>
+          settings(input: {
+            path: { card_id: string }
+            data: { settings: string; sequence: number; uuid: string }
+          }): Promise<unknown>
+        }
+        cardElement: {
+          content(input: {
+            path: { card_id: string; element_id: string }
+            data: { content: string; sequence: number; uuid: string }
+          }): Promise<unknown>
+        }
+      }
+    }
+    im: {
+      message: {
+        create(input: {
+          params: { receive_id_type: 'open_id' }
+          data: {
+            receive_id: string
+            msg_type: 'interactive'
+            content: string
+          }
+        }): Promise<{ data?: { message_id?: string } }>
+      }
+    }
+  }> {
+    if (!this.sdkClientPromise) {
+      this.sdkClientPromise = this.sdkFactory().then(sdk => {
+        return new sdk.Client({
+          appId: this.deps.config.appId ?? '',
+          appSecret: this.deps.config.appSecret ?? '',
+        })
+      })
+    }
+
+    return await this.sdkClientPromise
+  }
+
   private async createMessage(input: {
     providerUserId: string
     msgType: 'text' | 'interactive'
@@ -306,26 +461,42 @@ export class FeishuPublisher {
     const ok = response.ok && (json.code === undefined || json.code === 0)
     const messageId = json.data?.message_id
 
-    this.deps.audit.insert({
-      id: `audit_${randomUUID()}`,
+    this.insertAudit({
       eventType: input.auditEventType,
-      sessionId: input.sessionId,
-      actorType: 'channel',
       actorId: input.providerUserId,
-      channel: 'feishu',
+      sessionId: input.sessionId,
       requestId: input.requestId,
-      payloadJson: JSON.stringify({
+      payload: {
         msgType: input.msgType,
         messageId,
         ok,
         response: json,
-      }),
-      createdAt: new Date().toISOString(),
+      },
     })
 
     return {
       ok,
       messageId,
     }
+  }
+
+  private insertAudit(input: {
+    eventType: string
+    actorId: string
+    sessionId?: string
+    requestId?: string
+    payload: Record<string, unknown>
+  }): void {
+    this.deps.audit.insert({
+      id: `audit_${randomUUID()}`,
+      eventType: input.eventType,
+      sessionId: input.sessionId,
+      actorType: 'channel',
+      actorId: input.actorId,
+      channel: 'feishu',
+      requestId: input.requestId,
+      payloadJson: JSON.stringify(input.payload),
+      createdAt: new Date().toISOString(),
+    })
   }
 }
