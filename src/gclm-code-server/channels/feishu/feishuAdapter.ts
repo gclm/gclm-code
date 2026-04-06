@@ -135,7 +135,15 @@ export class FeishuAdapter {
       tenantScope: parsed.header.tenant_key ?? parsed.event.sender.tenant_key ?? '',
       text,
       title: `Feishu ${providerUserId}`,
-      sourceMessageId: parsed.event.message?.message_id,
+    })
+
+    await this.state.channels.feishuPublisher.sendStatusReceipt({
+      providerUserId,
+      tenantScope: parsed.header.tenant_key ?? parsed.event.sender.tenant_key ?? '',
+      sessionId,
+      requestId,
+      stage: 'accepted',
+      summary: '已收到你的消息，正在通过 gclm-code-server 处理。',
     })
 
     this.state.repositories.idempotency.upsert({
@@ -256,6 +264,17 @@ export class FeishuAdapter {
           : { behavior: 'deny', message: 'Denied from Feishu action', resolvedBy: providerUserId },
       )
 
+      await this.state.channels.feishuPublisher.sendStatusReceipt({
+        providerUserId,
+        tenantScope: parsed.tenant_key ?? '',
+        sessionId,
+        requestId,
+        stage: 'permission_resolved',
+        summary: accepted
+          ? '权限决策已提交到 gclm-code-server。'
+          : '当前执行桥接暂未接受远程权限回写。',
+      })
+
       return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
         accepted,
         idempotencyKey,
@@ -271,6 +290,17 @@ export class FeishuAdapter {
         tenantScope: parsed.tenant_key ?? '',
         title: `Feishu ${providerUserId}`,
         mode: actionKind === 'resume_session' ? 'resume_or_create' : 'create',
+      })
+
+      await this.state.channels.feishuPublisher.sendStatusReceipt({
+        providerUserId,
+        tenantScope: parsed.tenant_key ?? '',
+        sessionId: binding.sessionId,
+        stage: 'session_ready',
+        summary:
+          actionKind === 'resume_session'
+            ? '会话已恢复，可以继续发送消息。'
+            : '会话已创建，可以开始远程操作。',
       })
 
       return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
@@ -292,7 +322,6 @@ export class FeishuAdapter {
     tenantScope: string
     text: string
     title: string
-    sourceMessageId?: string
   }): Promise<{ sessionId: string; requestId: string }> {
     const binding = this.ensureChannelBinding({
       providerUserId: input.providerUserId,

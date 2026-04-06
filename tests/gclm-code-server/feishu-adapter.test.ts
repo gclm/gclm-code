@@ -19,6 +19,8 @@ import { IdempotencyRepository } from '../../src/gclm-code-server/channels/share
 import { AuditRepository } from '../../src/gclm-code-server/audit/auditRepository.js'
 import { StreamHub } from '../../src/gclm-code-server/transport/streamHub.js'
 import { StreamInfoService } from '../../src/gclm-code-server/transport/streamInfoService.js'
+import { FeishuPublisher } from '../../src/gclm-code-server/channels/feishu/feishuPublisher.js'
+import { createHash } from 'crypto'
 
 const tempDirs: string[] = []
 
@@ -48,7 +50,47 @@ function createFakeExecutionBridge(): SessionExecutionBridge & {
   }
 }
 
-function createState(executionBridge = createFakeExecutionBridge()): GclmCodeServerAppState {
+function createPublisherRecorder() {
+  const calls: Array<{ url: string; method: string; body: unknown }> = []
+  const fetchImpl: typeof fetch = async (input, init) => {
+    const url = String(input)
+    const method = init?.method ?? 'GET'
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined
+    calls.push({ url, method, body })
+
+    if (url.includes('/auth/v3/tenant_access_token/internal')) {
+      return new Response(
+        JSON.stringify({ tenant_access_token: 'tenant_token', expire: 7200, code: 0 }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      )
+    }
+
+    return new Response(JSON.stringify({ code: 0, msg: 'ok' }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })
+  }
+
+  return { calls, fetchImpl }
+}
+
+function signFeishuPayload(rawBody: string, input: { timestamp: string; nonce: string; encryptKey: string }) {
+  return createHash('sha256')
+    .update(input.timestamp)
+    .update(input.nonce)
+    .update(input.encryptKey)
+    .update(rawBody)
+    .digest('hex')
+}
+
+function createState(
+  executionBridge = createFakeExecutionBridge(),
+  options?: {
+    feishuEnabled?: boolean
+    verificationToken?: string
+    encryptKey?: string
+  },
+): GclmCodeServerAppState {
   const dir = mkdtempSync(join(tmpdir(), 'gclm-code-server-feishu-'))
   tempDirs.push(dir)
   const db = createSqliteDatabase({
@@ -56,7 +98,24 @@ function createState(executionBridge = createFakeExecutionBridge()): GclmCodeSer
     busyTimeoutMs: 250,
   })
   runMigrations(db, join(import.meta.dir, '../../src/gclm-code-server/db/migrations'))
+  const publisher = createPublisherRecorder()
   return {
+    env: {
+      GCLM_CODE_SERVER_HOST: '127.0.0.1',
+      GCLM_CODE_SERVER_PORT: 4317,
+      GCLM_CODE_SERVER_SIGNING_SECRET: 'test-secret',
+      GCLM_CODE_SERVER_DB_PATH: join(dir, 'server.db'),
+      GCLM_CODE_SERVER_DB_BUSY_TIMEOUT_MS: 250,
+      feishu: {
+        enabled: options?.feishuEnabled ?? false,
+        baseUrl: 'https://open.feishu.cn',
+        appId: 'cli_app_id',
+        appSecret: 'cli_app_secret',
+        verificationToken: options?.verificationToken,
+        encryptKey: options?.encryptKey,
+        bypassSignatureVerification: false,
+      },
+    },
     db,
     repositories: {
       channelIdentities: new ChannelIdentityRepository(db),
@@ -69,6 +128,21 @@ function createState(executionBridge = createFakeExecutionBridge()): GclmCodeSer
     streamHub: new StreamHub(),
     streamInfoService: new StreamInfoService('test-secret', 300),
     executionBridge,
+    channels: {
+      feishuPublisher: new FeishuPublisher({
+        config: {
+          enabled: options?.feishuEnabled ?? false,
+          baseUrl: 'https://open.feishu.cn',
+          appId: 'cli_app_id',
+          appSecret: 'cli_app_secret',
+          verificationToken: options?.verificationToken,
+          encryptKey: options?.encryptKey,
+          bypassSignatureVerification: false,
+        },
+        audit: new AuditRepository(db),
+        fetchImpl: publisher.fetchImpl,
+      }),
+    },
   }
 }
 
@@ -91,7 +165,7 @@ describe('gclm-code-server feishu adapter', () => {
 
   test('creates or resumes a feishu session from inbound message event', async () => {
     const fakeBridge = createFakeExecutionBridge()
-    const state = createState(fakeBridge)
+    const state = createState(fakeBridge, { feishuEnabled: true })
     const app = createApp(state)
 
     const resp = await app.request('/channels/feishu/events', {
@@ -137,7 +211,7 @@ describe('gclm-code-server feishu adapter', () => {
 
   test('routes feishu permission action into execution bridge resolution', async () => {
     const fakeBridge = createFakeExecutionBridge()
-    const state = createState(fakeBridge)
+    const state = createState(fakeBridge, { feishuEnabled: true })
     const app = createApp(state)
 
     const createResp = await app.request('/channels/feishu/events', {
@@ -204,5 +278,72 @@ describe('gclm-code-server feishu adapter', () => {
     expect(fakeBridge.resolved).toHaveLength(1)
     expect(fakeBridge.resolved[0]?.requestId).toBe('perm_1')
     expect(fakeBridge.resolved[0]?.decision.behavior).toBe('allow')
+  })
+
+  test('rejects feishu event when signature verification fails', async () => {
+    const state = createState(createFakeExecutionBridge(), {
+      feishuEnabled: true,
+      verificationToken: 'token_ok',
+      encryptKey: 'encrypt_secret',
+    })
+    const app = createApp(state)
+
+    const payload = {
+      type: 'url_verification',
+      challenge: 'hello-feishu',
+      token: 'token_bad',
+    }
+    const rawBody = JSON.stringify(payload)
+
+    const resp = await app.request('/channels/feishu/events', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-lark-request-timestamp': '1710000000',
+        'x-lark-request-nonce': 'nonce_1',
+        'x-lark-signature': signFeishuPayload(rawBody, {
+          timestamp: '1710000000',
+          nonce: 'nonce_1',
+          encryptKey: 'encrypt_secret',
+        }),
+      },
+      body: rawBody,
+    })
+
+    expect(resp.status).toBe(401)
+  })
+
+  test('accepts signed feishu handshake when token and signature are valid', async () => {
+    const state = createState(createFakeExecutionBridge(), {
+      feishuEnabled: true,
+      verificationToken: 'token_ok',
+      encryptKey: 'encrypt_secret',
+    })
+    const app = createApp(state)
+
+    const payload = {
+      type: 'url_verification',
+      challenge: 'hello-feishu',
+      token: 'token_ok',
+    }
+    const rawBody = JSON.stringify(payload)
+
+    const resp = await app.request('/channels/feishu/events', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-lark-request-timestamp': '1710000000',
+        'x-lark-request-nonce': 'nonce_1',
+        'x-lark-signature': signFeishuPayload(rawBody, {
+          timestamp: '1710000000',
+          nonce: 'nonce_1',
+          encryptKey: 'encrypt_secret',
+        }),
+      },
+      body: rawBody,
+    })
+
+    expect(resp.status).toBe(200)
+    expect(await resp.json()).toEqual({ challenge: 'hello-feishu' })
   })
 })

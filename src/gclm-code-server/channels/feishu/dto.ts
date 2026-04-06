@@ -9,6 +9,7 @@ const feishuMessageContentSchema = z
 export const feishuUrlVerificationSchema = z.object({
   type: z.literal('url_verification'),
   challenge: z.string(),
+  token: z.string().optional(),
 })
 
 export const feishuMessageEventSchema = z.object({
@@ -19,6 +20,7 @@ export const feishuMessageEventSchema = z.object({
     tenant_key: z.string().optional(),
     create_time: z.string().optional(),
   }),
+  token: z.string().optional(),
   event: z.object({
     sender: z.object({
       sender_id: z.object({
@@ -40,10 +42,10 @@ export const feishuMessageEventSchema = z.object({
 })
 
 export const feishuActionPayloadSchema = z.object({
+  token: z.string().optional(),
   open_id: z.string().optional(),
   user_id: z.string().optional(),
   tenant_key: z.string().optional(),
-  token: z.string().optional(),
   action: z
     .object({
       value: z.record(z.string(), z.unknown()).optional(),

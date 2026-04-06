@@ -1,26 +1,57 @@
 import type { Context } from 'hono'
 import { FeishuAdapter } from './feishuAdapter.js'
 import type { GclmCodeServerAppState } from '../../app/types.js'
+import { FeishuSignatureVerifier } from './feishuSignature.js'
 
 export async function handleFeishuEvent(
   c: Context,
   state: GclmCodeServerAppState,
 ): Promise<Response> {
-  const adapter = new FeishuAdapter(state)
-  const result = await adapter.handleEvent(await c.req.json())
+  try {
+    const rawBody = await c.req.raw.text()
+    const payload = JSON.parse(rawBody)
+    new FeishuSignatureVerifier(state.env.feishu).verify(c.req.raw.headers, rawBody, payload)
+    const adapter = new FeishuAdapter(state)
+    const result = await adapter.handleEvent(payload)
 
-  if (result.type === 'url_verification') {
-    return c.json({ challenge: result.challenge })
+    if (result.type === 'url_verification') {
+      return c.json({ challenge: result.challenge })
+    }
+
+    return c.json(result)
+  } catch (error) {
+    return c.json(
+      {
+        error: {
+          code: 'FEISHU_EVENT_REJECTED',
+          message: error instanceof Error ? error.message : 'Rejected Feishu event',
+        },
+      },
+      401,
+    )
   }
-
-  return c.json(result)
 }
 
 export async function handleFeishuAction(
   c: Context,
   state: GclmCodeServerAppState,
 ): Promise<Response> {
-  const adapter = new FeishuAdapter(state)
-  const result = await adapter.handleAction(await c.req.json())
-  return c.json(result)
+  try {
+    const rawBody = await c.req.raw.text()
+    const payload = JSON.parse(rawBody)
+    new FeishuSignatureVerifier(state.env.feishu).verify(c.req.raw.headers, rawBody, payload)
+    const adapter = new FeishuAdapter(state)
+    const result = await adapter.handleAction(payload)
+    return c.json(result)
+  } catch (error) {
+    return c.json(
+      {
+        error: {
+          code: 'FEISHU_ACTION_REJECTED',
+          message: error instanceof Error ? error.message : 'Rejected Feishu action',
+        },
+      },
+      401,
+    )
+  }
 }
