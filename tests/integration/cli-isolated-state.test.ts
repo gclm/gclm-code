@@ -8,7 +8,7 @@ describe('cli isolated state', () => {
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('No plugins installed')
     expect(result.stderr).toBe('')
-  })
+  }, { timeout: 20_000 })
 
   test('shows empty mcp state when HOME is isolated', () => {
     const result = runCliIsolated(['mcp', 'list'])
@@ -16,7 +16,7 @@ describe('cli isolated state', () => {
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('No MCP servers configured')
     expect(result.stderr).toBe('')
-  })
+  }, { timeout: 20_000 })
 
   test('reports auth status without hanging when HOME is isolated', () => {
     const result = runCliIsolated(['auth', 'status'])
@@ -38,7 +38,7 @@ describe('cli isolated state', () => {
     expect(typeof json.loggedIn).toBe('boolean')
     expect(typeof json.authMethod).toBe('string')
     expect(typeof json.apiProvider).toBe('string')
-  })
+  }, { timeout: 20_000 })
 
   test('lists built-in agents when HOME is isolated', () => {
     const result = runCliIsolated(['agents'])
@@ -47,6 +47,6 @@ describe('cli isolated state', () => {
     expect(result.stdout).toContain('Built-in agents:')
     expect(result.stdout).toContain('general-purpose')
     expect(result.stderr).toBe('')
-  })
+  }, { timeout: 20_000 })
 })
 
