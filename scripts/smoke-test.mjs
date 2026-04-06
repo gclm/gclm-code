@@ -6,12 +6,21 @@ if (typeof Bun === 'undefined') {
 }
 
 const root = process.cwd()
+const SMOKE_COMMAND_TIMEOUT_MS = 20_000
+const CLI_SMOKE_ENV = {
+  CLAUDE_CODE_SIMPLE: '1',
+  CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: '1',
+  CLAUDE_CODE_DISABLE_AUTO_MEMORY: '1',
+  CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+  DISABLE_AUTOUPDATER: '1',
+}
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: root,
     encoding: 'utf8',
     stdio: 'pipe',
+    timeout: options.timeout ?? SMOKE_COMMAND_TIMEOUT_MS,
     env: {
       ...process.env,
       ...options.env,
@@ -45,6 +54,9 @@ function expectOk(label, command, args, validate, options) {
   if (result.status !== 0) {
     throw new Error(`${label} failed with exit code ${result.status}`)
   }
+  if (result.signal) {
+    throw new Error(`${label} failed with signal ${result.signal}`)
+  }
   if (validate && !validate(result)) {
     throw new Error(`${label} produced unexpected output`)
   }
@@ -61,16 +73,43 @@ function expectKnownFailure(label, command, args, acceptedExitCodes, validate, o
       `${label} failed with unexpected exit code ${String(result.status)}`,
     )
   }
+  if (result.signal) {
+    throw new Error(`${label} failed with signal ${result.signal}`)
+  }
   if (validate && !validate(result)) {
     throw new Error(`${label} produced unexpected output`)
   }
+}
+
+function expectCliOk(label, args, validate) {
+  return expectOk(label, './dist/gclm', args, validate, {
+    env: CLI_SMOKE_ENV,
+  })
+}
+
+function expectCliKnownFailure(
+  label,
+  args,
+  acceptedExitCodes,
+  validate,
+) {
+  return expectKnownFailure(
+    label,
+    './dist/gclm',
+    args,
+    acceptedExitCodes,
+    validate,
+    {
+      env: CLI_SMOKE_ENV,
+    },
+  )
 }
 
 expectOk('build', 'bun', ['run', 'build'], result =>
   result.stdout.includes('Built from src entrypoint'),
 )
 
-expectOk('version', './dist/gclm', ['--version'], result =>
+expectCliOk('version', ['--version'], result =>
   result.stdout.includes('(Gclm Code)'),
 )
 
@@ -130,13 +169,12 @@ expectOk('bin-launcher', 'node', ['bin/gclm.js', '--version'], result =>
   result.stdout.includes('(Gclm Code)'),
 )
 
-expectOk('help', './dist/gclm', ['--help'], result =>
+expectCliOk('help', ['--help'], result =>
   result.stdout.includes('Usage: claude'),
 )
 
-expectKnownFailure(
+expectCliKnownFailure(
   'auth-status',
-  './dist/gclm',
   ['auth', 'status', '--text'],
   [0, 1],
   result =>
@@ -148,9 +186,9 @@ expectKnownFailure(
     result.stdout.includes('API key:'),
 )
 
-expectOk('plugin-list', './dist/gclm', ['plugin', 'list'], () => true)
-expectOk('mcp-list', './dist/gclm', ['mcp', 'list'], () => true)
-expectOk('agents', './dist/gclm', ['agents'], () => true)
+expectCliOk('plugin-list', ['plugin', 'list'], () => true)
+expectCliOk('mcp-list', ['mcp', 'list'], () => true)
+expectCliOk('agents', ['agents'], () => true)
 
 expectOk(
   'computer-use-mcp-server',

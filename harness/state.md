@@ -76,9 +76,11 @@
   - `tests/integration/cli-isolated-state.test.ts` 与 `tests/integration/cli-print-mode.test.ts` 的测试级超时统一提高到 `30s`
   - `src/utils/which.ts` 已改为按当前 `PATH` 进程内查找可执行文件，不再依赖 `Bun.which`
   - 第二轮收敛已完成：CLI 集成测试优先复用 `dist/cli.js`，仅 `--version/-v/-V` 保留源码快路径；测试环境默认开启 `CLAUDE_CODE_SIMPLE=1` 并关闭 background/auto-memory/nonessential traffic/auto-updater，以减少 CI 启动噪音
+  - 第三轮收敛已完成：`scripts/smoke-test.mjs` 为 CLI smoke 子命令统一注入 `CLAUDE_CODE_SIMPLE=1` 与相关降噪环境变量，并为全部 smoke 子进程增加 `20s` 硬超时，避免 GitHub Actions 干净环境下 `auth status` 触发钥匙串/认证读取阻塞后把整条 job 挂到 workflow 级 `15m` 超时
   - `tests/utils/env.test.ts` 的 Docker 断言前已显式清掉 deployment/CI 环境变量，避免 GitHub Actions 上被 `github-actions` 分支提前命中
   - 根因已确认包括：GitHub Actions `macos-15-intel` runner 上 CLI 冷启动较慢导致集成测试子进程返回 `143`，以及 `Bun.which` 在测试动态改写 `PATH` 时未稳定反映新环境
-  - 最新本地验证（2026-04-06）：`bun run test` 全绿，`221 pass / 0 fail`
+  - 新根因已确认：GitHub Actions `CI Verify` run `24026280508` 中原始单测阶段已通过，但 `Run smoke test` 在 `./dist/gclm auth status --text` 的干净 CI 环境里进入阻塞，最终触发 job `15m` 上限取消
+  - 最新本地验证（2026-04-06）：`bun run test` 全绿，`221 pass / 0 fail`；`bun run smoke` 与干净 `HOME + CI=1 + GITHUB_ACTIONS=1` 环境下的 `bun run smoke` 也均通过
 
 ## 已知未完成项
 
@@ -88,12 +90,13 @@
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
 - 当前全量 typecheck 在仓库基线上仍有大量既有错误，无法作为本轮唯一阻断标准
 - 本轮 CI 报错已确认为测试稳定性与环境探测实现问题，不属于新的 release 架构阻断
+- 当前待补最终证据：修复 smoke 阻塞后的新一轮 GitHub Actions `CI Verify` 线上结果
 
 ## 执行边界
 
 - 当前 must-fix：
   - 无新的 release 结构 must-fix；主线已收口
-  - 本轮 CI flaky 已完成修复并通过本地全量测试验证
+  - 本轮 CI flaky 与 smoke 阻塞已完成本地修复并通过针对性验证，等待线上 `CI Verify` 最终回执
 - same-batch can-include：
   - 下一次正式单包发版前的 release-check 与 dry-run 演练
 - follow-up：

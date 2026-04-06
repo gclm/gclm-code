@@ -84,3 +84,7 @@
 - 已完成全量验证：`bun run test` 全绿，结果为 `221 pass / 0 fail`。
 - 已继续收敛同一批 CI flaky：CLI 集成测试辅助改为优先复用 `dist/cli.js`，仅 `--version/-v/-V` 继续走源码快路径；同时默认注入 `CLAUDE_CODE_SIMPLE=1`、关闭 background/auto-memory/nonessential traffic/auto-updater，显著降低 `macos-15-intel` runner 上每次 CLI 冷启动的负担。
 - 已同步修正断言稳定性：`/context` 的 print mode 期望改为匹配 bare 模式下稳定存在的 `Model` / `Tokens` 摘要字段，不再依赖旧的富输出段落；`tests/utils/env.test.ts` 的 Docker 断言前显式清理 deployment/CI 环境变量，避免在 GitHub Actions 上被 `github-actions` 分支抢先命中。
+- 已继续跟进新一轮 `CI Verify` run `24026280508`：确认原始 `Run unit and integration tests` 失败已被修复，但 job 随后在 `Run smoke test` 阶段卡住并触发 workflow `timeout-minutes: 15` 上限取消，不再是最初那批测试用例失败。
+- 已复现新的 smoke 卡点：在干净 `HOME + CI=1 + GITHUB_ACTIONS=1` 环境中，`./dist/gclm auth status --text` 会进入阻塞；而在注入 `CLAUDE_CODE_SIMPLE=1` 后可立即返回 `Not logged in`。
+- 已补强 `scripts/smoke-test.mjs`：为 CLI smoke 命令统一注入 `CLAUDE_CODE_SIMPLE=1`、关闭 background/auto-memory/nonessential traffic/auto-updater，并为所有 smoke 子进程增加 `20s` 硬超时，避免单个命令挂死整条 CI。
+- 已完成 smoke 级验证：常规 `bun run smoke` 与干净 `HOME + CI=1 + GITHUB_ACTIONS=1` 环境下的 `bun run smoke` 均通过，说明新的 CI 阻塞点已被本地关闭。
