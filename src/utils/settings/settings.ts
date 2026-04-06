@@ -1,6 +1,7 @@
 import { feature } from 'bun:bundle'
 import mergeWith from 'lodash-es/mergeWith.js'
-import { dirname, join, resolve } from 'path'
+import { basename, dirname, join, resolve } from 'path'
+import { createHash } from 'crypto'
 import { z } from 'zod/v4'
 import {
   getFlagSettingsInline,
@@ -304,6 +305,93 @@ export function getRelativeSettingsFilePathForSource(
     case 'localSettings':
       return join('.claude', 'settings.local.json')
   }
+}
+
+function sanitizeHello2ccProjectSlug(value: string): string {
+  return value
+    .normalize('NFC')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase()
+}
+
+export function getHello2ccUserPresetFileName(cwd = getOriginalCwd()): string {
+  const normalized = resolve(cwd).normalize('NFC')
+  const base = sanitizeHello2ccProjectSlug(basename(normalized)) || 'project'
+  const hash = createHash('sha256').update(normalized).digest('hex').slice(0, 8)
+  return `${base}-${hash}.json`
+}
+
+export function getHello2ccUserPresetPath(cwd = getOriginalCwd()): string {
+  return join(
+    getClaudeConfigHomeDir(),
+    'hello2cc',
+    getHello2ccUserPresetFileName(cwd),
+  )
+}
+
+export function getHello2ccProjectPresetPath(cwd = getOriginalCwd()): string {
+  return join(resolve(cwd), '.claude', 'hello2cc.json')
+}
+
+export function buildRecommendedHello2ccProjectSettings(
+  cwd = getOriginalCwd(),
+): SettingsJson {
+  return {
+    hello2cc: {
+      resumeSummaryStyle: 'compact',
+      strategyProfile: 'balanced',
+      qualityGateMode: 'advisory',
+      enableProviderPolicies: true,
+      extraStrategies: [
+        {
+          id: 'gclm-code-default-long-task',
+          priority: 90,
+          scope: {
+            cwdPrefixes: [resolve(cwd)],
+            strategyProfiles: ['balanced', 'strict'],
+            qualityGateModes: ['advisory', 'strict'],
+          },
+          activation: {
+            intents: ['implement', 'verify', 'plan'],
+            minRetryPressure: 2,
+          },
+          sessionStartLines: [
+            '- project default: keep Gateway long tasks phase-oriented, resume-friendly, and biased toward execution-surface reuse.',
+          ],
+          routeRecommendations: [
+            'Prefer SendMessage or reuse of the active team/worktree before creating another parallel branch.',
+            'If retries are accumulating, switch to diagnosis or verification before another implementation hop.',
+          ],
+          subagentGuidance: {
+            toolNames: ['Agent'],
+            shapingNotes: [
+              'For this repository, long-running Agent tasks should stay phase-scoped and always report touched files plus validation evidence.',
+            ],
+          },
+          preconditions: [
+            {
+              toolNames: ['SendMessage'],
+              requireActiveTeam: true,
+              block: false,
+              notes: [
+                'Project default: an active team already exists, so prefer reusing it rather than spinning up another parallel group.',
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  }
+}
+
+function loadHello2ccConventionalSettings(
+  filePath: string,
+): {
+  settings: SettingsJson | null
+  errors: ValidationError[]
+} {
+  return parseSettingsFile(filePath)
 }
 
 export function getSettingsForSource(
@@ -832,6 +920,32 @@ function loadSettingsFromDisk(): SettingsWithErrors {
           }
         }
       }
+
+      if (source === 'userSettings' || source === 'projectSettings') {
+        const conventionalPath =
+          source === 'userSettings'
+            ? getHello2ccUserPresetPath()
+            : getHello2ccProjectPresetPath()
+
+        const { settings, errors } =
+          loadHello2ccConventionalSettings(conventionalPath)
+
+        for (const error of errors) {
+          const errorKey = `${error.file}:${error.path}:${error.message}`
+          if (!seenErrors.has(errorKey)) {
+            seenErrors.add(errorKey)
+            allErrors.push(error)
+          }
+        }
+
+        if (settings) {
+          mergedSettings = mergeWith(
+            mergedSettings,
+            settings,
+            settingsMergeCustomizer,
+          )
+        }
+      }
     }
 
     logForDiagnosticsNoPII('info', 'settings_load_completed', {
@@ -1030,6 +1144,69 @@ export function getAutoModeConfig():
     }
   }
   return undefined
+}
+
+export function getHello2ccResumeSummaryStyle(): 'detailed' | 'compact' {
+  return getInitialSettings().hello2cc?.resumeSummaryStyle ?? 'detailed'
+}
+
+export function getHello2ccStrategyProfile(): 'balanced' | 'strict' {
+  return getInitialSettings().hello2cc?.strategyProfile ?? 'balanced'
+}
+
+export function getHello2ccQualityGateMode():
+  | 'off'
+  | 'advisory'
+  | 'strict' {
+  return getInitialSettings().hello2cc?.qualityGateMode ?? 'advisory'
+}
+
+export function isHello2ccProviderPoliciesEnabled(): boolean {
+  return getInitialSettings().hello2cc?.enableProviderPolicies ?? true
+}
+
+export function getHello2ccExtraStrategies():
+  | Array<{
+      id: string
+      enabled?: boolean
+      priority?: number
+      activation?: {
+        intents?: Array<
+          'implement' | 'review' | 'verify' | 'plan' | 'explore' | 'other'
+        >
+        minRetryPressure?: number
+        requireActiveTeam?: boolean
+        requireActiveWorktree?: boolean
+      }
+      sessionStartLines?: string[]
+      routeRecommendations?: string[]
+      subagentGuidance?: {
+        toolNames?: string[]
+        subagentType?: 'Explore' | 'Plan'
+        note?: string
+        shapingNotes?: string[]
+      }
+      preconditions?: Array<{
+        toolNames?: string[]
+        minRetryPressure?: number
+        repeatedFailureCountAtLeast?: number
+        requireActiveTeam?: boolean
+        requireActiveWorktree?: boolean
+        block?: boolean
+        reason?: string
+        notes?: string[]
+      }>
+      scope?: {
+        sessionIds?: string[]
+        cwdPrefixes?: string[]
+        providers?: string[]
+        modelPatterns?: string[]
+        strategyProfiles?: Array<'balanced' | 'strict'>
+        qualityGateModes?: Array<'off' | 'advisory' | 'strict'>
+      }
+    }>
+  | undefined {
+  return getInitialSettings().hello2cc?.extraStrategies
 }
 
 export function rawSettingsContainsKey(key: string): boolean {

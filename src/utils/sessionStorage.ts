@@ -48,6 +48,7 @@ import {
   type ContextCollapseSnapshotEntry,
   type Entry,
   type FileHistorySnapshotMessage,
+  type Hello2ccStateEntry,
   type LogOption,
   type PersistedWorktreeSession,
   type SerializedMessage,
@@ -93,6 +94,7 @@ import { getSettings_DEPRECATED } from './settings/settings.js'
 import { jsonParse, jsonStringify } from './slowOperations.js'
 import type { ContentReplacementRecord } from './toolResultStorage.js'
 import { validateUuid } from './uuid.js'
+import type { PersistedHello2ccSessionState } from '../orchestration/hello2cc/types.js'
 
 // Cache MACRO.VERSION at module level to work around bun --define bug in async contexts
 // See: https://github.com/oven-sh/bun/issues/26168
@@ -542,6 +544,7 @@ class Project {
   // object = currently in worktree. reAppendSessionMetadata writes null so
   // --resume knows the session exited (vs. crashed while inside).
   currentSessionWorktree: PersistedWorktreeSession | null | undefined
+  currentSessionHello2ccState: PersistedHello2ccSessionState | undefined
   currentSessionPrNumber: number | undefined
   currentSessionPrUrl: string | undefined
   currentSessionPrRepository: string | undefined
@@ -819,6 +822,13 @@ class Project {
       appendEntryToFile(this.sessionFile, {
         type: 'worktree-state',
         worktreeSession: this.currentSessionWorktree,
+        sessionId,
+      })
+    }
+    if (this.currentSessionHello2ccState) {
+      appendEntryToFile(this.sessionFile, {
+        type: 'hello2cc-state',
+        state: this.currentSessionHello2ccState,
         sessionId,
       })
     }
@@ -1205,6 +1215,8 @@ class Project {
         ? getAgentTranscriptPath(entry.agentId)
         : sessionFile
       void this.enqueueWrite(targetFile, entry)
+    } else if (entry.type === 'hello2cc-state') {
+      void this.enqueueWrite(sessionFile, entry)
     } else if (entry.type === 'marble-origami-commit') {
       // Always append. Commit order matters for restore (later commits may
       // reference earlier commits' summary messages), so these must be
@@ -2763,6 +2775,7 @@ export function restoreSessionMetadata(meta: {
   agentSetting?: string
   mode?: 'coordinator' | 'normal'
   worktreeSession?: PersistedWorktreeSession | null
+  hello2ccState?: PersistedHello2ccSessionState
   prNumber?: number
   prUrl?: string
   prRepository?: string
@@ -2778,6 +2791,7 @@ export function restoreSessionMetadata(meta: {
   if (meta.mode) project.currentSessionMode = meta.mode
   if (meta.worktreeSession !== undefined)
     project.currentSessionWorktree = meta.worktreeSession
+  if (meta.hello2ccState) project.currentSessionHello2ccState = meta.hello2ccState
   if (meta.prNumber !== undefined)
     project.currentSessionPrNumber = meta.prNumber
   if (meta.prUrl) project.currentSessionPrUrl = meta.prUrl
@@ -2799,6 +2813,7 @@ export function clearSessionMetadata(): void {
   project.currentSessionAgentSetting = undefined
   project.currentSessionMode = undefined
   project.currentSessionWorktree = undefined
+  project.currentSessionHello2ccState = undefined
   project.currentSessionPrNumber = undefined
   project.currentSessionPrUrl = undefined
   project.currentSessionPrRepository = undefined
@@ -2917,6 +2932,25 @@ export function saveWorktreeState(
       sessionId: getSessionId(),
     })
   }
+}
+
+export function saveHello2ccState(
+  state: PersistedHello2ccSessionState,
+  fullPath?: string,
+): void {
+  const project = getProject()
+  project.currentSessionHello2ccState = state
+
+  const targetFile = fullPath ?? project.sessionFile
+  if (!targetFile) {
+    return
+  }
+
+  appendEntryToFile(targetFile, {
+    type: 'hello2cc-state',
+    state,
+    sessionId: state.sessionId as UUID,
+  } satisfies Hello2ccStateEntry)
 }
 
 /**
@@ -3119,6 +3153,7 @@ const METADATA_TYPE_MARKERS = [
   '"type":"agent-setting"',
   '"type":"mode"',
   '"type":"worktree-state"',
+  '"type":"hello2cc-state"',
   '"type":"pr-link"',
 ]
 const METADATA_MARKER_BUFS = METADATA_TYPE_MARKERS.map(m => Buffer.from(m))
@@ -3485,6 +3520,7 @@ export async function loadTranscriptFile(
   prRepositories: Map<UUID, string>
   modes: Map<UUID, string>
   worktreeStates: Map<UUID, PersistedWorktreeSession | null>
+  hello2ccStates: Map<UUID, PersistedHello2ccSessionState>
   fileHistorySnapshots: Map<UUID, FileHistorySnapshotMessage>
   attributionSnapshots: Map<UUID, AttributionSnapshotMessage>
   contentReplacements: Map<UUID, ContentReplacementRecord[]>
@@ -3505,6 +3541,7 @@ export async function loadTranscriptFile(
   const prRepositories = new Map<UUID, string>()
   const modes = new Map<UUID, string>()
   const worktreeStates = new Map<UUID, PersistedWorktreeSession | null>()
+  const hello2ccStates = new Map<UUID, PersistedHello2ccSessionState>()
   const fileHistorySnapshots = new Map<UUID, FileHistorySnapshotMessage>()
   const attributionSnapshots = new Map<UUID, AttributionSnapshotMessage>()
   const contentReplacements = new Map<UUID, ContentReplacementRecord[]>()
@@ -3603,6 +3640,8 @@ export async function loadTranscriptFile(
           modes.set(entry.sessionId, entry.mode)
         } else if (entry.type === 'worktree-state' && entry.sessionId) {
           worktreeStates.set(entry.sessionId, entry.worktreeSession)
+        } else if (entry.type === 'hello2cc-state' && entry.sessionId) {
+          hello2ccStates.set(entry.sessionId, entry.state)
         } else if (entry.type === 'pr-link' && entry.sessionId) {
           prNumbers.set(entry.sessionId, entry.prNumber)
           prUrls.set(entry.sessionId, entry.prUrl)
@@ -3655,46 +3694,116 @@ export async function loadTranscriptFile(
           contextCollapseCommits.length = 0
           contextCollapseSnapshot = undefined
         }
-      } else if (entry.type === 'summary' && entry.leafUuid) {
-        summaries.set(entry.leafUuid, entry.summary)
-      } else if (entry.type === 'custom-title' && entry.sessionId) {
-        customTitles.set(entry.sessionId, entry.customTitle)
-      } else if (entry.type === 'tag' && entry.sessionId) {
-        tags.set(entry.sessionId, entry.tag)
-      } else if (entry.type === 'agent-name' && entry.sessionId) {
-        agentNames.set(entry.sessionId, entry.agentName)
-      } else if (entry.type === 'agent-color' && entry.sessionId) {
-        agentColors.set(entry.sessionId, entry.agentColor)
-      } else if (entry.type === 'agent-setting' && entry.sessionId) {
-        agentSettings.set(entry.sessionId, entry.agentSetting)
-      } else if (entry.type === 'mode' && entry.sessionId) {
-        modes.set(entry.sessionId, entry.mode)
-      } else if (entry.type === 'worktree-state' && entry.sessionId) {
-        worktreeStates.set(entry.sessionId, entry.worktreeSession)
-      } else if (entry.type === 'pr-link' && entry.sessionId) {
-        prNumbers.set(entry.sessionId, entry.prNumber)
-        prUrls.set(entry.sessionId, entry.prUrl)
-        prRepositories.set(entry.sessionId, entry.prRepository)
-      } else if (entry.type === 'file-history-snapshot') {
-        fileHistorySnapshots.set(entry.messageId, entry)
-      } else if (entry.type === 'attribution-snapshot') {
-        attributionSnapshots.set(entry.messageId, entry)
-      } else if (entry.type === 'content-replacement') {
-        // Subagent decisions key by agentId (sidechain resume); main-thread
-        // decisions key by sessionId (/resume).
-        if (entry.agentId) {
-          const existing = agentContentReplacements.get(entry.agentId) ?? []
-          agentContentReplacements.set(entry.agentId, existing)
-          existing.push(...entry.replacements)
-        } else {
-          const existing = contentReplacements.get(entry.sessionId) ?? []
-          contentReplacements.set(entry.sessionId, existing)
-          existing.push(...entry.replacements)
+      } else {
+        const nonTranscriptEntry = entry as Exclude<Entry, TranscriptMessage>
+        switch (nonTranscriptEntry.type) {
+          case 'summary':
+            if (nonTranscriptEntry.leafUuid) {
+              summaries.set(nonTranscriptEntry.leafUuid, nonTranscriptEntry.summary)
+            }
+            break
+          case 'custom-title':
+            if (nonTranscriptEntry.sessionId) {
+              customTitles.set(
+                nonTranscriptEntry.sessionId,
+                nonTranscriptEntry.customTitle,
+              )
+            }
+            break
+          case 'tag':
+            if (nonTranscriptEntry.sessionId) {
+              tags.set(nonTranscriptEntry.sessionId, nonTranscriptEntry.tag)
+            }
+            break
+          case 'agent-name':
+            if (nonTranscriptEntry.sessionId) {
+              agentNames.set(
+                nonTranscriptEntry.sessionId,
+                nonTranscriptEntry.agentName,
+              )
+            }
+            break
+          case 'agent-color':
+            if (nonTranscriptEntry.sessionId) {
+              agentColors.set(
+                nonTranscriptEntry.sessionId,
+                nonTranscriptEntry.agentColor,
+              )
+            }
+            break
+          case 'agent-setting':
+            if (nonTranscriptEntry.sessionId) {
+              agentSettings.set(
+                nonTranscriptEntry.sessionId,
+                nonTranscriptEntry.agentSetting,
+              )
+            }
+            break
+          case 'mode':
+            if (nonTranscriptEntry.sessionId) {
+              modes.set(nonTranscriptEntry.sessionId, nonTranscriptEntry.mode)
+            }
+            break
+          case 'worktree-state':
+            if (nonTranscriptEntry.sessionId) {
+              worktreeStates.set(
+                nonTranscriptEntry.sessionId,
+                nonTranscriptEntry.worktreeSession,
+              )
+            }
+            break
+          case 'hello2cc-state':
+            if (nonTranscriptEntry.sessionId) {
+              hello2ccStates.set(
+                nonTranscriptEntry.sessionId,
+                nonTranscriptEntry.state,
+              )
+            }
+            break
+          case 'pr-link':
+            if (nonTranscriptEntry.sessionId) {
+              prNumbers.set(nonTranscriptEntry.sessionId, nonTranscriptEntry.prNumber)
+              prUrls.set(nonTranscriptEntry.sessionId, nonTranscriptEntry.prUrl)
+              prRepositories.set(
+                nonTranscriptEntry.sessionId,
+                nonTranscriptEntry.prRepository,
+              )
+            }
+            break
+          case 'file-history-snapshot':
+            fileHistorySnapshots.set(nonTranscriptEntry.messageId, nonTranscriptEntry)
+            break
+          case 'attribution-snapshot':
+            attributionSnapshots.set(nonTranscriptEntry.messageId, nonTranscriptEntry)
+            break
+          case 'content-replacement':
+            // Subagent decisions key by agentId (sidechain resume); main-thread
+            // decisions key by sessionId (/resume).
+            if (nonTranscriptEntry.agentId) {
+              const existing =
+                agentContentReplacements.get(nonTranscriptEntry.agentId) ?? []
+              agentContentReplacements.set(nonTranscriptEntry.agentId, existing)
+              existing.push(...nonTranscriptEntry.replacements)
+            } else {
+              const existing =
+                contentReplacements.get(nonTranscriptEntry.sessionId) ?? []
+              contentReplacements.set(nonTranscriptEntry.sessionId, existing)
+              existing.push(...nonTranscriptEntry.replacements)
+            }
+            break
+          case 'marble-origami-commit':
+            contextCollapseCommits.push(nonTranscriptEntry)
+            break
+          case 'marble-origami-snapshot':
+            contextCollapseSnapshot = nonTranscriptEntry
+            break
+          case 'ai-title':
+          case 'last-prompt':
+          case 'task-summary':
+          case 'queue-operation':
+          case 'speculation-accept':
+            break
         }
-      } else if (entry.type === 'marble-origami-commit') {
-        contextCollapseCommits.push(entry)
-      } else if (entry.type === 'marble-origami-snapshot') {
-        contextCollapseSnapshot = entry
       }
     }
   } catch {
@@ -3802,6 +3911,7 @@ export async function loadTranscriptFile(
     prRepositories,
     modes,
     worktreeStates,
+    hello2ccStates,
     fileHistorySnapshots,
     attributionSnapshots,
     contentReplacements,
@@ -3822,6 +3932,7 @@ async function loadSessionFile(sessionId: UUID): Promise<{
   tags: Map<UUID, string>
   agentSettings: Map<UUID, string>
   worktreeStates: Map<UUID, PersistedWorktreeSession | null>
+  hello2ccStates: Map<UUID, PersistedHello2ccSessionState>
   fileHistorySnapshots: Map<UUID, FileHistorySnapshotMessage>
   attributionSnapshots: Map<UUID, AttributionSnapshotMessage>
   contentReplacements: Map<UUID, ContentReplacementRecord[]>
@@ -3877,6 +3988,7 @@ export async function getLastSessionLog(
     tags,
     agentSettings,
     worktreeStates,
+    hello2ccStates,
     fileHistorySnapshots,
     attributionSnapshots,
     contentReplacements,
@@ -3921,6 +4033,7 @@ export async function getLastSessionLog(
       contentReplacements.get(sessionId) ?? [],
     ),
     worktreeSession: worktreeStates.get(sessionId),
+    hello2ccState: hello2ccStates.get(sessionId),
     contextCollapseCommits: contextCollapseCommits.filter(
       e => e.sessionId === sessionId,
     ),
@@ -4611,6 +4724,7 @@ export async function loadAllLogsFromSessionFile(
     prUrls,
     prRepositories,
     modes,
+    hello2ccStates,
     fileHistorySnapshots,
     attributionSnapshots,
     contentReplacements,
@@ -4673,6 +4787,7 @@ export async function loadAllLogsFromSessionFile(
       agentColor: agentColors.get(sessionId),
       agentSetting: agentSettings.get(sessionId),
       mode: modes.get(sessionId) as LogOption['mode'],
+      hello2ccState: hello2ccStates.get(sessionId),
       prNumber: prNumbers.get(sessionId),
       prUrl: prUrls.get(sessionId),
       prRepository: prRepositories.get(sessionId),

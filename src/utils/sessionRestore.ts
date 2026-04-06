@@ -52,6 +52,8 @@ import {
   saveMode,
   saveWorktreeState,
 } from './sessionStorage.js'
+import { restoreHello2ccSessionState } from '../orchestration/hello2cc/index.js'
+import type { PersistedHello2ccSessionState } from '../orchestration/hello2cc/types.js'
 import { isTodoV2Enabled } from './tasks.js'
 import type { TodoList } from './todo/types.js'
 import { TodoListSchema } from './todo/types.js'
@@ -67,6 +69,7 @@ type ResumeResult = {
   attributionSnapshots?: AttributionSnapshotMessage[]
   contextCollapseCommits?: ContextCollapseCommitEntry[]
   contextCollapseSnapshot?: ContextCollapseSnapshotEntry
+  hello2ccState?: PersistedHello2ccSessionState
 }
 
 /**
@@ -100,6 +103,8 @@ export function restoreSessionStateFromLog(
   result: ResumeResult,
   setAppState: (f: (prev: AppState) => AppState) => void,
 ): void {
+  restoreHello2ccSessionState(result.hello2ccState)
+
   // Restore file history state
   if (result.fileHistorySnapshots && result.fileHistorySnapshots.length > 0) {
     fileHistoryRestoreStateFromLog(result.fileHistorySnapshots, newState => {

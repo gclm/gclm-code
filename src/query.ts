@@ -102,14 +102,23 @@ import { handleStopHooks } from './query/stopHooks.js'
 import { buildQueryConfig } from './query/config.js'
 import { productionDeps, type QueryDeps } from './query/deps.js'
 import type { Terminal, Continue } from './query/transitions.js'
+import { buildGatewayOrchestrationContext } from './orchestration/hello2cc/index.js'
 import { feature } from 'bun:bundle'
 import {
   getCurrentTurnTokenBudget,
+  getTotalWebSearchRequests,
   getTurnOutputTokens,
   incrementBudgetContinuationCount,
 } from './bootstrap/state.js'
 import { createBudgetTracker, checkTokenBudget } from './query/tokenBudget.js'
 import { count } from './utils/array.js'
+import { isToolSearchEnabledOptimistic } from './utils/toolSearch.js'
+import { getAPIProvider } from './utils/model/providers.js'
+import {
+  getHello2ccQualityGateMode,
+  getHello2ccStrategyProfile,
+  isHello2ccProviderPoliciesEnabled,
+} from './utils/settings/settings.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const snipModule = feature('HISTORY_SNIP')
@@ -446,8 +455,44 @@ async function* queryLoop(
       messagesForQuery = collapseResult.messages
     }
 
+    const {
+      userContext: effectiveUserContext,
+      systemContext: effectiveSystemContext,
+    } = buildGatewayOrchestrationContext({
+      messages: messagesForQuery,
+      userContext,
+      systemContext,
+      model: currentModel,
+      availableSubagentTypes:
+        toolUseContext.options.agentDefinitions.allowedAgentTypes ??
+        toolUseContext.options.agentDefinitions.activeAgents.map(
+          agent => agent.agentType,
+        ),
+      mcpConnectedCount: toolUseContext.options.mcpClients.filter(
+        client => client.type === 'connected',
+      ).length,
+      mcpPendingCount: toolUseContext.options.mcpClients.filter(
+        client => client.type === 'pending',
+      ).length,
+      mcpNeedsAuthCount: toolUseContext.options.mcpClients.filter(
+        client => client.type === 'needs-auth',
+      ).length,
+      mcpFailedCount: toolUseContext.options.mcpClients.filter(
+        client => client.type === 'failed',
+      ).length,
+      toolSearchOptimistic: isToolSearchEnabledOptimistic(),
+      webSearchAvailable: toolUseContext.options.tools.some(
+        tool => tool.name === 'WebSearch',
+      ),
+      webSearchRequests: getTotalWebSearchRequests(),
+      provider: getAPIProvider(),
+      strategyProfile: getHello2ccStrategyProfile(),
+      qualityGateMode: getHello2ccQualityGateMode(),
+      providerPoliciesEnabled: isHello2ccProviderPoliciesEnabled(),
+    })
+
     const fullSystemPrompt = asSystemPrompt(
-      appendSystemContext(systemPrompt, systemContext),
+      appendSystemContext(systemPrompt, effectiveSystemContext),
     )
 
     queryCheckpoint('query_autocompact_start')
@@ -456,8 +501,8 @@ async function* queryLoop(
       toolUseContext,
       {
         systemPrompt,
-        userContext,
-        systemContext,
+        userContext: effectiveUserContext,
+        systemContext: effectiveSystemContext,
         toolUseContext,
         forkContextMessages: messagesForQuery,
       },
@@ -657,7 +702,10 @@ async function* queryLoop(
           let streamingFallbackOccured = false
           queryCheckpoint('query_api_streaming_start')
           for await (const message of deps.callModel({
-            messages: prependUserContext(messagesForQuery, userContext),
+            messages: prependUserContext(
+              messagesForQuery,
+              effectiveUserContext,
+            ),
             systemPrompt: fullSystemPrompt,
             thinkingConfig: toolUseContext.options.thinkingConfig,
             tools: toolUseContext.options.tools,

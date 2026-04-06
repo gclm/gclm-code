@@ -15,6 +15,9 @@ import { getClaudeAiUserDefaultModelDescription, modelDisplayString } from './mo
 import { getAPIProvider } from './model/providers.js';
 import { getMTLSConfig } from './mtls.js';
 import { checkInstall } from './nativeInstaller/index.js';
+import { getGatewayOrchestrationState } from '../orchestration/hello2cc/index.js';
+import { buildHello2ccDebugDump, formatHello2ccHostFacts, formatHello2ccRoutingPosture } from '../orchestration/hello2cc/observability.js';
+import { buildHello2ccHealthSummary } from '../orchestration/hello2cc/summary.js';
 import { getProxyUrl } from './proxy.js';
 import { SandboxManager } from './sandbox/sandbox-adapter.js';
 import { getSettingsWithAllErrors } from './settings/allErrors.js';
@@ -113,6 +116,82 @@ export function buildMcpProperties(clients: MCPServerConnection[] = [], theme: T
     label: 'MCP servers',
     value: `${parts.join(', ')} ${color('inactive', theme)('· /mcp')}`
   }];
+}
+
+function summarizeHello2ccRecords(records: Array<{
+  toolName: string;
+  summary: string;
+}>): string[] {
+  return records.slice(0, 3).map(record => `${record.toolName}: ${record.summary}`);
+}
+
+export function buildHello2ccProperties(): Property[] {
+  const state = getGatewayOrchestrationState();
+  if (!state) {
+    return [];
+  }
+  const properties: Property[] = [];
+  const healthSummary = buildHello2ccHealthSummary(state);
+  if (healthSummary) {
+    properties.push({
+      label: 'Orchestration health',
+      value: healthSummary
+    });
+  }
+  properties.push({
+    label: 'Gateway orchestration',
+    value: 'Active'
+  }, {
+    label: 'Surfaced capabilities',
+    value: state.capabilities.toolNames
+  }, {
+    label: 'Host facts',
+    value: formatHello2ccHostFacts(state)
+  }, {
+    label: 'Routing posture',
+    value: formatHello2ccRoutingPosture(state)
+  }, {
+    label: 'Debug snapshot',
+    value: buildHello2ccDebugDump(state)
+  });
+  if (state.lastIntent?.primaryIntent) {
+    properties.push({
+      label: 'Last intent',
+      value: state.lastIntent.primaryIntent
+    });
+  }
+  if (state.activeTeamName) {
+    properties.push({
+      label: 'Active team',
+      value: state.activeTeamName
+    });
+  }
+  if (state.activeWorktreePath) {
+    properties.push({
+      label: 'Active worktree',
+      value: state.activeWorktreePath
+    });
+  }
+  if (state.recentSuccesses.length > 0) {
+    properties.push({
+      label: 'Recent successes',
+      value: summarizeHello2ccRecords(state.recentSuccesses)
+    });
+  }
+  if (state.recentFailures.length > 0) {
+    properties.push({
+      label: 'Recent failures',
+      value: summarizeHello2ccRecords(state.recentFailures)
+    });
+  }
+  const nonZeroFailures = Object.entries(state.toolFailureCounts).filter(([, count]) => count > 0).map(([toolName, count]) => `${toolName}: ${count}`);
+  if (nonZeroFailures.length > 0) {
+    properties.push({
+      label: 'Failure counts',
+      value: nonZeroFailures
+    });
+  }
+  return properties;
 }
 export async function buildMemoryDiagnostics(): Promise<Diagnostic[]> {
   const files = await getMemoryFiles();

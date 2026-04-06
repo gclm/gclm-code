@@ -115,6 +115,12 @@ import {
   McpAuthError,
   McpToolCallError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 } from '../mcp/client.js'
+import {
+  checkGatewayToolPreconditions,
+  normalizeGatewayToolInput,
+  rememberGatewayToolFailure,
+  rememberGatewayToolSuccess,
+} from '../../orchestration/hello2cc/index.js'
 import { mcpInfoFromString } from '../mcp/mcpStringUtils.js'
 import { normalizeNameForMCP } from '../mcp/normalization.js'
 import type { MCPServerConnection } from '../mcp/types.js'
@@ -611,8 +617,58 @@ async function checkPermissionsAndCallTool(
     progress: ToolProgress<ToolProgressData> | ProgressMessage<HookProgress>,
   ) => void,
 ): Promise<MessageUpdateLazy[]> {
+  const normalizedInput = normalizeGatewayToolInput({
+    toolName: tool.name,
+    input,
+  })
+  const precondition = checkGatewayToolPreconditions({
+    toolName: tool.name,
+    input: normalizedInput,
+  })
+  if (precondition.blocked) {
+    const errorContent = precondition.reason ?? 'The call is blocked by Gateway preconditions.'
+    logForDebugging(
+      `${tool.name} tool precondition blocked: ${errorContent.slice(0, 200)}`,
+    )
+    logEvent('tengu_tool_use_error', {
+      error: 'PreconditionError' as SafeEventValue,
+      errorDetails: errorContent.slice(0, 2000) as SafeEventValue,
+      messageID: messageId as SafeEventValue,
+      toolName: sanitizeToolNameForLogging(tool.name),
+      isMcp: tool.isMcp ?? false,
+      queryChainId: toolUseContext.queryTracking?.chainId as SafeEventValue,
+      queryDepth: toolUseContext.queryTracking?.depth,
+      ...(mcpServerType && {
+        mcpServerType: mcpServerType as SafeEventValue,
+      }),
+      ...(mcpServerBaseUrl && {
+        mcpServerBaseUrl: mcpServerBaseUrl as SafeEventValue,
+      }),
+      ...(requestId && {
+        requestId: requestId as SafeEventValue,
+      }),
+      ...getMcpToolDetailsForLogging(tool.name, mcpServerType, mcpServerBaseUrl),
+    })
+    return [
+      {
+        message: createUserMessage({
+          content: [
+            {
+              type: 'tool_result',
+              content: `<tool_use_error>PreconditionError: ${errorContent}</tool_use_error>`,
+              is_error: true,
+              tool_use_id: toolUseID,
+            },
+          ],
+          toolUseResult: `PreconditionError: ${errorContent}`,
+          sourceToolAssistantUUID: assistantMessage.uuid,
+        }),
+      },
+    ]
+  }
+
   // Validate input types with zod (surprisingly, the model is not great at generating valid input)
-  const parsedInput = tool.inputSchema.safeParse(input)
+  const parsedInput = tool.inputSchema.safeParse(normalizedInput)
   if (!parsedInput.success) {
     let errorContent = formatZodValidationError(tool.name, parsedInput.error)
 
@@ -1585,6 +1641,14 @@ async function checkPermissionsAndCallTool(
     for (const hookResult of hookResults) {
       resultingMessages.push(hookResult)
     }
+    if (processedInput && typeof processedInput === 'object') {
+      rememberGatewayToolSuccess({
+        toolName: tool.name,
+        input: processedInput as Record<string, unknown>,
+        output: toolOutput,
+      })
+    }
+
     return resultingMessages
   } catch (error) {
     const durationMs = Date.now() - startTime
@@ -1710,6 +1774,14 @@ async function checkPermissionsAndCallTool(
       mcpServerBaseUrl,
     )) {
       hookMessages.push(hookResult)
+    }
+
+    if (processedInput && typeof processedInput === 'object') {
+      rememberGatewayToolFailure({
+        toolName: tool.name,
+        input: processedInput as Record<string, unknown>,
+        error: content,
+      })
     }
 
     return [

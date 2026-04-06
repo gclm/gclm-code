@@ -163,6 +163,7 @@ import {
 import { TEAMMATE_MESSAGE_TAG, TICK_TAG } from 'src/constants/xml.js'
 import {
   getSettings_DEPRECATED,
+  getHello2ccResumeSummaryStyle,
   getSettingsWithSources,
 } from 'src/utils/settings/settings.js'
 import { settingsChangeDetector } from 'src/utils/settings/changeDetector.js'
@@ -257,7 +258,11 @@ import {
   toInternalMessages,
   toSDKRateLimitInfo,
 } from 'src/utils/messages/mappers.js'
-import { createModelSwitchBreadcrumbs } from 'src/utils/messages.js'
+import {
+  createModelSwitchBreadcrumbs,
+  createSystemMessage,
+} from 'src/utils/messages.js'
+import { buildHello2ccResumeSummary } from 'src/orchestration/hello2cc/summary.js'
 import { collectContextData } from 'src/commands/context/context-noninteractive.js'
 import { LOCAL_COMMAND_STDOUT_TAG } from 'src/constants/xml.js'
 import {
@@ -4955,6 +4960,16 @@ async function loadInitialMessages(
           }
         }
         restoreSessionStateFromLog(result, setAppState)
+        const hello2ccResumeSummary = buildHello2ccResumeSummary(
+          result.hello2ccState,
+          getHello2ccResumeSummaryStyle(),
+        )
+        if (hello2ccResumeSummary) {
+          result.messages = [
+            ...(result.messages ?? []),
+            createSystemMessage(hello2ccResumeSummary, 'info'),
+          ]
+        }
 
         // Restore session metadata so it's re-appended on exit via reAppendSessionMetadata
         restoreSessionMetadata(
@@ -5155,6 +5170,16 @@ async function loadInitialMessages(
         }
       }
       restoreSessionStateFromLog(result, setAppState)
+      const hello2ccResumeSummary = buildHello2ccResumeSummary(
+        result.hello2ccState,
+        getHello2ccResumeSummaryStyle(),
+      )
+      if (hello2ccResumeSummary) {
+        result.messages = [
+          ...(result.messages ?? []),
+          createSystemMessage(hello2ccResumeSummary, 'info'),
+        ]
+      }
 
       // Restore session metadata so it's re-appended on exit via reAppendSessionMetadata
       restoreSessionMetadata(

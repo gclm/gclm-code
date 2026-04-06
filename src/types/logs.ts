@@ -1,4 +1,5 @@
 import type { UUID } from 'crypto'
+import type { PersistedHello2ccSessionState } from '../orchestration/hello2cc/types.js'
 import type { FileHistorySnapshot } from 'src/utils/fileHistory.js'
 import type { ContentReplacementRecord } from 'src/utils/toolResultStorage.js'
 import type { AgentId } from './ids.js'
@@ -50,6 +51,7 @@ export type LogOption = {
   mode?: 'coordinator' | 'normal' // Session mode for coordinator/normal detection
   worktreeSession?: PersistedWorktreeSession | null // Worktree state at session end (null = exited, undefined = never entered)
   contentReplacements?: ContentReplacementRecord[] // Replacement decisions for resume reconstruction
+  hello2ccState?: PersistedHello2ccSessionState // Gateway orchestration state for resume restoration
 }
 
 export type SummaryMessage = {
@@ -185,6 +187,12 @@ export type ContentReplacementEntry = {
   replacements: ContentReplacementRecord[]
 }
 
+export type Hello2ccStateEntry = {
+  type: 'hello2cc-state'
+  sessionId: UUID
+  state: PersistedHello2ccSessionState
+}
+
 export type FileHistorySnapshotMessage = {
   type: 'file-history-snapshot'
   messageId: UUID
@@ -313,6 +321,7 @@ export type Entry =
   | ModeEntry
   | WorktreeStateEntry
   | ContentReplacementEntry
+  | Hello2ccStateEntry
   | ContextCollapseCommitEntry
   | ContextCollapseSnapshotEntry
 

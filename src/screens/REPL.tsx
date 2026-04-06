@@ -71,7 +71,9 @@ import { getSystemPrompt } from '../constants/prompts.js';
 import { buildEffectiveSystemPrompt } from '../utils/systemPrompt.js';
 import { getSystemContext, getUserContext } from '../context.js';
 import { getMemoryFiles } from '../utils/claudemd.js';
+import { buildHello2ccResumeSummary } from '../orchestration/hello2cc/summary.js';
 import { startBackgroundHousekeeping } from '../utils/backgroundHousekeeping.js';
+import { getHello2ccResumeSummaryStyle } from '../utils/settings/settings.js';
 import { getTotalCost, saveCurrentSessionCosts, resetCostState, getStoredSessionCosts } from '../cost-tracker.js';
 import { useCostSummary } from '../costHook.js';
 import { useFpsMetrics } from '../context/fpsMetrics.js';
@@ -1752,6 +1754,10 @@ export function REPL({
 
       // Restore file history and attribution state from the resumed conversation
       restoreSessionStateFromLog(log, setAppState);
+      const hello2ccResumeSummary = buildHello2ccResumeSummary(log.hello2ccState, getHello2ccResumeSummaryStyle());
+      if (hello2ccResumeSummary) {
+        messages.push(createSystemMessage(hello2ccResumeSummary, 'info'));
+      }
       if (log.fileHistorySnapshots) {
         void copyFileHistoryForResume(log);
       }

@@ -12,6 +12,7 @@ import type {
   PersistedWorktreeSession,
   SerializedMessage,
 } from '../types/logs.js'
+import type { PersistedHello2ccSessionState } from '../orchestration/hello2cc/types.js'
 import type {
   Message,
   NormalizedMessage,
@@ -473,6 +474,7 @@ export async function loadConversationForResume(
   tag?: string
   mode?: 'coordinator' | 'normal'
   worktreeSession?: PersistedWorktreeSession | null
+  hello2ccState?: PersistedHello2ccSessionState
   prNumber?: number
   prUrl?: string
   prRepository?: string
@@ -584,6 +586,7 @@ export async function loadConversationForResume(
       tag: log?.tag,
       mode: log?.mode,
       worktreeSession: log?.worktreeSession,
+      hello2ccState: log?.hello2ccState,
       prNumber: log?.prNumber,
       prUrl: log?.prUrl,
       prRepository: log?.prRepository,

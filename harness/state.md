@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-04-06（v1.0.3 已发布，并补充安装/升级文档）
+更新时间：2026-04-06（v1.0.3 已发布，并补充安装/升级、远程方案与 hello2cc 原理/集成/生命周期/诊断文档）
 
 ## 当前阶段
 
@@ -11,6 +11,11 @@
   - 继续让 GitHub Release 产出双架构 mac runtime 资产
   - 功能侧维持持续维护，不新增 release 之外的大改造
   - 补齐 Gateway `login/logout/model` 真实流程文档，降低后续回归与排查成本
+  - 补充 hello2cc 原理与 Gateway 编排映射文档，沉淀后续能力集成设计依据
+  - 补充 hello2cc Gateway 落地实施方案，明确模块边界、生命周期接线与分阶段实施顺序
+  - 补充 hello2cc Gateway 生命周期时序图，作为编排增强层实现的接线依据
+  - 补充 hello2cc Gateway 诊断与恢复文档，支撑后续排查与 `/resume` 行为确认
+  - 给 `/status` 增加 hello2cc 编排摘要，并补 transcript 写入到 resume 恢复的回归测试
 
 ## 当前判断
 
@@ -153,6 +158,62 @@
   - `.github/workflows/release-npm.yml` 已同步接入 Gateway smoke，并将 `build-and-test` runner 统一到 `macos-15-intel`
   - `release-npm` 的 `publish-npm` job 已改为下载并发布 `build-and-test` 上传的 `dist` artifact，不再在发布 job 中重新构建一份未复验产物
   - 已新增文档 `docs/overview/install-and-upgrade.md`，明确区分 npm 全局安装版与仓库本地构建版的安装、升级与判断方式
+  - 已新增远程方案文档：
+    - `docs/gclm-code-server/remote-capabilities.md`
+    - `docs/gclm-code-server/architecture.md`
+    - `docs/gclm-code-server/module-design.md`
+    - `docs/gclm-code-server/api-dto-design.md`
+    - `docs/gclm-code-server/feishu-remote-architecture.md`
+    - `docs/gclm-code-server/self-hosted-web-plan.md`
+  - 远程方案判断已继续收敛：若目标包含 Web、飞书及后续钉钉等多渠道，建议引入第一方 `gclm-code-server` 作为统一会话与渠道中台，但第一阶段保持薄实现，仅承接统一 session、stream、permission 与 channel adapter contract
+  - `gclm-code-server` 模块与技术栈建议已补充：当前推荐 `Bun + TypeScript + Hono + zod + Bun WebSocket + SQLite`，目录先落在 `src/gclm-code-server/`，按 app/config/identity/sessions/transport/permissions/channels/web/audit 等九个一级模块推进；当前明确不采用 Rust 作为第一阶段主技术栈
+  - `gclm-code-server` API / DTO 设计已补充：第一阶段接口收敛为 Session / Input / Stream / Permission / Channel 五组 contract，Web 与飞书统一复用同一套 session、permission 与 stream 语义
+  - 远程方案文档已进一步收口到 `gclm-code-server + SQLite`：一期正式引入本地 `SQLite` 作为控制面状态存储，覆盖 session metadata、channel binding、pending permission、webhook 幂等与轻量审计；同时明确 `web/` 属于第一方 Presentation，不再与 `channels/*` 混层
+  - `gclm-code-server` API / DTO 边界已继续修正：`CreateSessionResponse` 不再直接返回 Web 专属 `wsUrl`，改为单独 `GET /sessions/:id/stream-info`；飞书 / 钉钉原始 webhook payload 与控制面内部标准 DTO 已明确分层
+  - 已新增 `docs/gclm-code-server/sqlite-schema-design.md`：收敛 `gclm-code-server` 一期 `SQLite` 控制面存储模型，明确 `sessions`、`session_bindings`、`permission_requests`、`webhook_idempotency`、`audit_events` 与 `schema_migrations` 的表结构、索引、状态流转和 migration 策略
+  - 已新增 `docs/gclm-code-server/README.md`，并将 `gclm-code-server` 相关文档从 `docs/overview/` 归档到独立目录，统一做专题索引与管理
+  - 已继续修正文档设计问题：统一 `webhook idempotency key` 生成规则、明确 `channel_identities` 为身份事实源并让 `session_bindings` 仅承接上下文绑定、补充 `stream token` 一期采用短 TTL 签名令牌的策略、统一技术栈口径为 `Bun + TypeScript + Hono + zod + Bun WebSocket + SQLite`，并修正架构分层口径
+  - 已新增文档 `docs/overview/hello2cc-capability-orchestration.md`，说明 hello2cc 如何通过会话能力快照、路由提示、工具前纠偏与 session state 记忆，让第三方模型更稳定地感知并使用宿主已暴露能力，并给出映射到当前 Gateway 编排层的集成视角
+  - 已新增文档 `docs/overview/hello2cc-gateway-integration-plan.md`，给出将 hello2cc 能力内建到当前 Gateway 的推荐方案，包括模块拆分、生命周期接线、两阶段实施计划、风险与验收建议
+  - 已新增文档 `docs/overview/hello2cc-gateway-lifecycle-sequence.md`，通过时序图拆解 `SessionStart -> UserPromptSubmit -> PreToolUse -> PostToolUse/PostToolUseFailure` 的闭环，明确 Gateway 编排增强层在单次会话中的主链流转
+  - 已新增文档 `docs/overview/hello2cc-gateway-diagnostics.md`，面向开发者说明当前 hello2cc 编排层的 debug 入口、关键信号、`hello2cc-state` transcript 持久化，以及 `/resume` 后如何判断 session memory 是否真正恢复
+  - 已新增 `src/orchestration/hello2cc/` Phase 1 编排增强层骨架，并已把 route guidance 接到 `src/query.ts` 主查询链路、把 input normalization 与 success/failure memory 接到 `src/services/tools/toolExecution.ts` 主执行链路：当前已覆盖 session capability snapshot、intent profile、route guidance、关键工具 input normalization，以及 PostToolUse/PostToolUseFailure 的 session memory
+  - 已补 hello2cc 编排层 debug 可观测性：当前会记录 route guidance 构建、关键工具 normalization 命中、success/failure memory 写回等关键节点，便于后续排查 Gateway 编排层是否真正介入主链
+  - 已补 hello2cc session memory 持久化与恢复：当前会把编排状态以 `hello2cc-state` metadata entry 追加写入 transcript，在 `/resume` / print resume 过程中通过通用恢复链路回填到内存态，使 route guidance、recent success/failure、active team/worktree 等信息可跨进程续接
+  - 已把 hello2cc 编排摘要接入 `/status`：当前状态页会展示 surfaced capabilities、last intent、active team/worktree、recent successes/failures 与 failure counts，便于不翻 debug log 先判断编排层是否仍持有预期 session memory
+  - 已继续收敛 `/status` 的 hello2cc 展示：当前在详细字段之前增加 `Orchestration health` 单行摘要，用于快速判断 intent、capability 数量、team/worktree、success/failure 与 retry 压力
+  - 已补 `/resume` 的 hello2cc 恢复提示：恢复 transcript 中的 `hello2cc-state` 后，会追加一条 system info，直接提示已恢复的 team/worktree/intent 与 success/failure/capability 轮廓，适配长任务续跑场景
+  - 已给 `/resume` 的 hello2cc 恢复提示补设置开关：当前支持 `hello2cc.resumeSummaryStyle = "detailed" | "compact"`，默认 `detailed`，便于长任务用户按噪音偏好切换
+  - 已新增文档 `docs/overview/hello2cc-gateway-status-and-resume.md`，专门说明 `/status`、`/resume`、`hello2cc-state` 三者关系，以及 `resumeSummaryStyle` 配置与长任务场景下的推荐使用方式
+  - 已补 hello2cc 文档互链与口径校正：`status-and-resume` 文档增加诊断入口，`diagnostics` 文档增加日常使用入口，并移除已经过时的“`/status` / `/resume` 尚未接入”表述
+  - 已补 `docs/overview/hello2cc-gateway-integration-plan.md` 的“当前落地现状”小节，明确 Phase 1 已完成项、部分落地项与尚未落地项，避免方案文档与当前实现状态脱节
+  - 已把 hello2cc `preconditions` 独立成正式模块并接到主执行链路：当前会对重复 worktree、无 active team 的广播消息、同输入重复失败等高置信度场景做 fail-closed 阻断
+  - 已补“恢复后影响下一轮决策”的回归测试：当前不仅验证 `hello2cc-state` 能恢复，还验证恢复出的 memory 会继续影响后续 route guidance 与 precondition 判断
+  - 已补最小版 `subagentGuidance`：当前 planning 请求会优先补 `Plan`，explore / review 请求会优先补 `Explore`，作为更完整 agent-specific guidance 的第一步
+  - 已同步更新 hello2cc 方案文档与诊断文档，纳入 `preconditions`、恢复后行为验证与最小版 `subagentGuidance` 的现状说明
+  - 已新增回归测试 `tests/orchestration/hello2cc.resume.test.ts`，覆盖两条主线：`/status` 的 hello2cc 摘要展示，以及真实 transcript 中写入 `hello2cc-state` 后经 `getLastSessionLog(...) -> restoreSessionStateFromLog(...)` 恢复回内存态的闭环
+  - 已新增文档 `docs/overview/hello2cc-plugin-vs-deep-integration.md`，专门比较插件式、深度集成式与混合式方案，并明确当前项目继续以深度集成为主、策略层后续再收敛到可插拔
+  - 已扩 hello2cc capability snapshot：当前除基础 tool 面外，还会记录 available subagent types、MCP connected / pending / needs-auth / failed 计数、tool search optimistic 信号、web search 可用性与请求计数
+  - 已补 hello2cc 结构化观测层：当前会生成 host facts 与 routing posture，并接到 `/status`，方便直接判断宿主事实、会话锚点与 retry 压力
+  - 已增强 `routeGuidance`：当前除 intent 与 tool 能力外，还会显式提示 MCP 待授权 / pending、tool search 不可置信、已暴露 subagent specializations 与 web search 使用痕迹
+  - 已增强 `subagentGuidance`：当前会结合宿主已暴露的 subagent type 决定是否自动补 `Plan` / `Explore`，并在不自动改写时补只读 shaping notes，避免 investigation / planning 请求误走实现型 worker
+  - 已抽 hello2cc 第一版 strategy registry：当前 `session start guidance`、`route recommendations`、`subagent guidance` 已可通过 registry 叠加自定义策略，默认仍以内建策略提供主行为
+  - 已补保守版长任务 orchestrator policy：当前会在 active team / active worktree 已存在、或 retry pressure 升高时，显式引导复用现有执行面并优先诊断，不再只给基础 capability 提示
+  - 已继续扩 hello2cc settings：当前新增 `strategyProfile`、`qualityGateMode`、`enableProviderPolicies`，用于控制 provider-aware policy 与长任务质量门控强度
+  - 已补 provider/model-specific policy：当前策略层会根据 provider 与 model 提示是否需要更显式的 host scaffolding，并在非 first-party provider 下强调 lean / explicit 的 tool routing
+  - 已继续升级 strategy registry：当前支持 `priority`、`when(context)`、`checkPreconditions(...)`，并将 provider、model、strategyProfile、qualityGateMode 一并注入策略上下文
+  - 已继续扩 hello2cc 结构化观测：当前 `Host facts` 已显示 provider / strategy / qualityGate，`Routing posture` 已显示 active strategy IDs，route guidance debug log 也已输出结构化 provider / strategy 信息
+  - 已新增开发文档 `docs/overview/hello2cc-strategy-development.md`，说明如何新增 strategy、如何使用 hello2cc 设置项，以及如何排查策略命中与优先级
+  - 已继续细分 provider/model 策略：当前在 provider-aware 通用策略之外，已内建 GPT-family、Qwen-family、DeepSeek-family 的 route guidance 规则，用于不同模型族的编排提示收敛
+  - 已继续升级 strategy registry 的选择能力：当前支持 `scope`，可按 `sessionIds`、`cwdPrefixes`、`providers`、`modelPatterns` 做 project / session / provider / model 级策略选择，不必每次都手写 `when(context)`
+  - 已补 hello2cc declarative config 策略入口：当前支持在 `settings.json -> hello2cc.extraStrategies` 中声明额外 route strategy，并通过 scope 挂到特定 session / project / provider / model
+  - 已补 `/status` 的 hello2cc `Debug snapshot`：当前可一次性看到 host facts、active strategies、memory pressure、recent success/failure 与 toolFailureCounts，更适合线上排查
+  - 已补独立 `/hello2cc` 命令入口：当前无需进入 `/status` 也可直接拿到 hello2cc 结构化 debug snapshot，更适合长任务排障与 `/resume` 后的快速确认
+  - 已把 hello2cc declarative strategy 扩成更强的 declarative policy：`settings.json -> hello2cc.extraStrategies` 现支持 `activation`、`sessionStartLines`、`subagentGuidance`、`preconditions`，并支持按 `strategyProfiles` / `qualityGateModes` 做 scope 选择
+  - 已补当前项目的 hello2cc 推荐默认配置片段，并同步写入策略开发文档，便于直接落到项目 `settings.json`
+  - 已补 hello2cc 约定式项目配置：当前会自动加载 `~/.claude/hello2cc/<project>.json` 与 `<repo>/.claude/hello2cc.json`，不必每次手改主 `settings.json`
+  - 已新增 `/hello2cc-init` 命令：可为当前项目一键生成推荐 hello2cc 配置，并写到用户级、仓库级或两者同时写入的约定位置
+  - 已完成 hello2cc 焦点回归验证：`bun test tests/orchestration/hello2cc.test.ts tests/orchestration/hello2cc.resume.test.ts` 当前为 `25 pass / 0 fail`
   - 全仓补扫后，当前未发现第二套独立 logo 图形实现；`Onboarding`、`setup-token`、主消息页均已落到 `WelcomeV2` / `LogoV2` / `CondensedLogo` -> `Clawd` 共享链路
   - 仍可见的其余品牌入口主要是文案或小图标，例如 `IdeOnboardingDialog` 的欢迎文案与 `GuestPassesUpsell` 的 `[✻]` 装饰，不属于独立 logo 样式分叉
   - 已继续补扫欢迎态 / 弹窗头部：`IdeOnboardingDialog` 标题前缀 `✻` 已统一改为 `startupAccent`，与欢迎页品牌 accent 一致
