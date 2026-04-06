@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-04-06（v1.0.3 已发布，并补充安装/升级、远程方案与 hello2cc 原理/集成/生命周期/诊断文档）
+更新时间：2026-04-07（v1.0.3 已发布，并补充安装/升级、远程方案与 hello2cc 原理/集成/生命周期/诊断文档）
 
 ## 当前阶段
 
@@ -95,6 +95,10 @@
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否继续去历史语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
 - 当前全量 typecheck 在仓库基线上仍有大量既有错误，无法作为本轮唯一阻断标准
+- hello2cc 后续增强已记录为非阻断 backlog：
+  - route guidance / normalization / memory hit 的独立 metrics
+  - `/status` 与 `/resume` 摘要补最近失败时间、最近命中的 route guidance 片段等字段
+  - `/hello2cc` summary 继续做更强的控制台化展示
 - 本轮 CI 报错已确认为测试稳定性与环境探测实现问题，不属于新的 release 架构阻断
 - 当前待补最终证据：`Release NPM` 在升级 workflow actions 后的下一次正式发版线上回执
 
