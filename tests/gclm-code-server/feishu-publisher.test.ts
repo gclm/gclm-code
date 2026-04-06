@@ -39,6 +39,7 @@ describe('FeishuPublisher', () => {
           baseUrl: 'https://open.feishu.cn',
           appId: 'app_id',
           appSecret: 'app_secret',
+          useLongConnection: true,
           bypassSignatureVerification: false,
         },
         audit: new AuditRepository(db),
@@ -71,10 +72,11 @@ describe('FeishuPublisher', () => {
         summary: '已收到消息',
       })
 
-      expect(ok).toBe(true)
+      expect(ok.ok).toBe(true)
       expect(calls).toHaveLength(2)
       expect(calls[0]?.url).toContain('/auth/v3/tenant_access_token/internal')
       expect(calls[1]?.url).toContain('/open-apis/im/v1/messages')
+      expect((calls[1]?.body as { msg_type?: string })?.msg_type).toBe('interactive')
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

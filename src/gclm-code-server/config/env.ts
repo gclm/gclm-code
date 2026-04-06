@@ -3,6 +3,7 @@ export type GclmCodeServerFeishuEnv = {
   baseUrl: string
   appId?: string
   appSecret?: string
+  useLongConnection: boolean
   verificationToken?: string
   encryptKey?: string
   bypassSignatureVerification: boolean
@@ -63,6 +64,10 @@ export function readGclmCodeServerEnv(
       baseUrl: env.GCLM_CODE_SERVER_FEISHU_BASE_URL ?? 'https://open.feishu.cn',
       appId: env.GCLM_CODE_SERVER_FEISHU_APP_ID,
       appSecret: env.GCLM_CODE_SERVER_FEISHU_APP_SECRET,
+      useLongConnection: readBoolean(
+        env.GCLM_CODE_SERVER_FEISHU_USE_LONG_CONNECTION,
+        true,
+      ),
       verificationToken: env.GCLM_CODE_SERVER_FEISHU_VERIFICATION_TOKEN,
       encryptKey: env.GCLM_CODE_SERVER_FEISHU_ENCRYPT_KEY,
       bypassSignatureVerification: readBoolean(

@@ -1,6 +1,11 @@
 import { randomUUID } from 'crypto'
 import type { AuditRepository } from '../../audit/auditRepository.js'
 import type { GclmCodeServerFeishuEnv } from '../../config/env.js'
+import {
+  renderFeishuSessionCard,
+  type FeishuCardAction,
+  type RenderFeishuSessionCardInput,
+} from './feishuCardRenderer.js'
 
 type FeishuAccessTokenResponse = {
   tenant_access_token?: string
@@ -12,6 +17,9 @@ type FeishuAccessTokenResponse = {
 type FeishuSendMessageResponse = {
   code?: number
   msg?: string
+  data?: {
+    message_id?: string
+  }
 }
 
 export type FeishuPublisherDeps = {
@@ -25,8 +33,24 @@ export type FeishuStatusReceiptInput = {
   tenantScope?: string
   sessionId: string
   requestId?: string
-  stage: 'accepted' | 'permission_pending' | 'permission_resolved' | 'session_ready'
+  stage:
+    | 'accepted'
+    | 'permission_pending'
+    | 'permission_resolved'
+    | 'session_ready'
+    | 'running'
+    | 'completed'
+    | 'failed'
+    | 'interrupted'
   summary: string
+  bodyMarkdown?: string
+  existingMessageId?: string
+  actions?: FeishuCardAction[]
+}
+
+export type FeishuCardPublishResult = {
+  ok: boolean
+  messageId?: string
 }
 
 function isFeishuConfigReady(config: GclmCodeServerFeishuEnv): boolean {
@@ -99,14 +123,118 @@ export class FeishuPublisher {
     return ok
   }
 
-  async sendStatusReceipt(input: FeishuStatusReceiptInput): Promise<boolean> {
-    return this.sendTextMessage({
+  async sendInteractiveCard(input: {
+    providerUserId: string
+    card: string
+    sessionId?: string
+    requestId?: string
+  }): Promise<FeishuCardPublishResult> {
+    return this.createMessage({
       providerUserId: input.providerUserId,
+      msgType: 'interactive',
+      content: input.card,
       sessionId: input.sessionId,
       requestId: input.requestId,
-      text: `[${input.stage}] ${input.summary}\nSession: ${input.sessionId}${
-        input.requestId ? `\nRequest: ${input.requestId}` : ''
-      }`,
+      auditEventType: 'feishu.outbound.card.create',
+    })
+  }
+
+  async updateInteractiveCard(input: {
+    messageId: string
+    card: string
+    providerUserId: string
+    sessionId?: string
+    requestId?: string
+  }): Promise<FeishuCardPublishResult> {
+    if (!this.isEnabled()) {
+      return { ok: false }
+    }
+
+    const tenantAccessToken = await this.getTenantAccessToken()
+    const response = await this.fetchImpl(
+      `${this.deps.config.baseUrl}/open-apis/im/v1/messages/${input.messageId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json; charset=utf-8',
+          Authorization: `Bearer ${tenantAccessToken}`,
+        },
+        body: JSON.stringify({
+          content: input.card,
+        }),
+      },
+    )
+
+    const json = (await response.json()) as FeishuSendMessageResponse
+    const ok = response.ok && (json.code === undefined || json.code === 0)
+
+    this.deps.audit.insert({
+      id: `audit_${randomUUID()}`,
+      eventType: 'feishu.outbound.card.update',
+      sessionId: input.sessionId,
+      actorType: 'channel',
+      actorId: input.providerUserId,
+      channel: 'feishu',
+      requestId: input.requestId,
+      payloadJson: JSON.stringify({
+        messageId: input.messageId,
+        ok,
+        response: json,
+      }),
+      createdAt: new Date().toISOString(),
+    })
+
+    return {
+      ok,
+      messageId: input.messageId,
+    }
+  }
+
+  async sendStatusReceipt(input: FeishuStatusReceiptInput): Promise<FeishuCardPublishResult> {
+    return this.upsertSessionCard({
+      providerUserId: input.providerUserId,
+      existingMessageId: input.existingMessageId,
+      card: {
+        title: 'gclm-code-server',
+        stage: input.stage,
+        summary: input.summary,
+        sessionId: input.sessionId,
+        requestId: input.requestId,
+        updatedAt: new Date().toISOString(),
+        bodyMarkdown: input.bodyMarkdown,
+        actions: input.actions,
+      },
+      sessionId: input.sessionId,
+      requestId: input.requestId,
+    })
+  }
+
+  async upsertSessionCard(input: {
+    providerUserId: string
+    existingMessageId?: string
+    card: RenderFeishuSessionCardInput
+    sessionId?: string
+    requestId?: string
+  }): Promise<FeishuCardPublishResult> {
+    const card = renderFeishuSessionCard(input.card)
+    if (input.existingMessageId) {
+      const updated = await this.updateInteractiveCard({
+        messageId: input.existingMessageId,
+        card,
+        providerUserId: input.providerUserId,
+        sessionId: input.sessionId,
+        requestId: input.requestId,
+      })
+      if (updated.ok) {
+        return updated
+      }
+    }
+
+    return this.sendInteractiveCard({
+      providerUserId: input.providerUserId,
+      card,
+      sessionId: input.sessionId,
+      requestId: input.requestId,
     })
   }
 
@@ -143,5 +271,61 @@ export class FeishuPublisher {
     }
 
     return json.tenant_access_token
+  }
+
+  private async createMessage(input: {
+    providerUserId: string
+    msgType: 'text' | 'interactive'
+    content: string
+    sessionId?: string
+    requestId?: string
+    auditEventType: string
+  }): Promise<FeishuCardPublishResult> {
+    if (!this.isEnabled()) {
+      return { ok: false }
+    }
+
+    const tenantAccessToken = await this.getTenantAccessToken()
+    const response = await this.fetchImpl(
+      `${this.deps.config.baseUrl}/open-apis/im/v1/messages?receive_id_type=open_id`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json; charset=utf-8',
+          Authorization: `Bearer ${tenantAccessToken}`,
+        },
+        body: JSON.stringify({
+          receive_id: input.providerUserId,
+          msg_type: input.msgType,
+          content: input.content,
+        }),
+      },
+    )
+
+    const json = (await response.json()) as FeishuSendMessageResponse
+    const ok = response.ok && (json.code === undefined || json.code === 0)
+    const messageId = json.data?.message_id
+
+    this.deps.audit.insert({
+      id: `audit_${randomUUID()}`,
+      eventType: input.auditEventType,
+      sessionId: input.sessionId,
+      actorType: 'channel',
+      actorId: input.providerUserId,
+      channel: 'feishu',
+      requestId: input.requestId,
+      payloadJson: JSON.stringify({
+        msgType: input.msgType,
+        messageId,
+        ok,
+        response: json,
+      }),
+      createdAt: new Date().toISOString(),
+    })
+
+    return {
+      ok,
+      messageId,
+    }
   }
 }

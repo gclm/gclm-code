@@ -1,5 +1,4 @@
 import type { Context } from 'hono'
-import { FeishuAdapter } from './feishuAdapter.js'
 import type { GclmCodeServerAppState } from '../../app/types.js'
 import { FeishuSignatureVerifier } from './feishuSignature.js'
 
@@ -11,8 +10,7 @@ export async function handleFeishuEvent(
     const rawBody = await c.req.raw.text()
     const payload = JSON.parse(rawBody)
     new FeishuSignatureVerifier(state.env.feishu).verify(c.req.raw.headers, rawBody, payload)
-    const adapter = new FeishuAdapter(state)
-    const result = await adapter.handleEvent(payload)
+    const result = await state.channels.feishuAdapter.handleEvent(payload)
 
     if (result.type === 'url_verification') {
       return c.json({ challenge: result.challenge })
@@ -40,8 +38,7 @@ export async function handleFeishuAction(
     const rawBody = await c.req.raw.text()
     const payload = JSON.parse(rawBody)
     new FeishuSignatureVerifier(state.env.feishu).verify(c.req.raw.headers, rawBody, payload)
-    const adapter = new FeishuAdapter(state)
-    const result = await adapter.handleAction(payload)
+    const result = await state.channels.feishuAdapter.handleAction(payload)
     return c.json(result)
   } catch (error) {
     return c.json(

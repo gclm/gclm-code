@@ -3,6 +3,8 @@ import type { AuditRepository } from '../audit/auditRepository.js'
 import type { IdempotencyRepository } from '../channels/shared/idempotencyRepository.js'
 import type { FeishuPublisher } from '../channels/feishu/feishuPublisher.js'
 import type { FeishuSessionRelay } from '../channels/feishu/feishuSessionRelay.js'
+import type { FeishuAdapter } from '../channels/feishu/feishuAdapter.js'
+import type { FeishuLongConnection } from '../channels/feishu/feishuLongConnection.js'
 import type { SessionExecutionBridge } from '../execution/types.js'
 import type { ChannelIdentityRepository } from '../identity/channelIdentityRepository.js'
 import type { PermissionRepository } from '../permissions/permissionRepository.js'
@@ -29,7 +31,9 @@ export type GclmCodeServerAppState = {
   streamInfoService: StreamInfoService
   executionBridge: SessionExecutionBridge
   channels: {
+    feishuAdapter: FeishuAdapter
     feishuPublisher: FeishuPublisher
     feishuRelay: FeishuSessionRelay
+    feishuLongConnection: FeishuLongConnection
   }
 }

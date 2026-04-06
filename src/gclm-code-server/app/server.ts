@@ -8,6 +8,8 @@ import { SessionBindingRepository } from '../sessions/sessionBindingRepository.j
 import { PermissionRepository } from '../permissions/permissionRepository.js'
 import { IdempotencyRepository } from '../channels/shared/idempotencyRepository.js'
 import { AuditRepository } from '../audit/auditRepository.js'
+import { FeishuAdapter } from '../channels/feishu/feishuAdapter.js'
+import { FeishuLongConnection } from '../channels/feishu/feishuLongConnection.js'
 import { FeishuPublisher } from '../channels/feishu/feishuPublisher.js'
 import { FeishuSessionRelay } from '../channels/feishu/feishuSessionRelay.js'
 import { StreamHub } from '../transport/streamHub.js'
@@ -64,9 +66,12 @@ export function createAppState(
     permissions: repositories.permissions,
     streamHub,
   })
+  const feishuAdapter = new FeishuAdapter(state)
   state.channels = {
+    feishuAdapter,
     feishuPublisher,
     feishuRelay: new FeishuSessionRelay(state),
+    feishuLongConnection: new FeishuLongConnection(state),
   }
   return state
 }
@@ -77,6 +82,13 @@ export function startGclmCodeServer(options: StartGclmCodeServerOptions = {}) {
     signingSecret: options.signingSecret,
   })
   const app = createApp(state)
+  void state.channels.feishuLongConnection.start().catch(error => {
+    console.error(
+      `[gclm-code-server] failed to start Feishu long connection: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    )
+  })
 
   const server = Bun.serve<{ sessionId?: string; unsubscribe?: () => void }>({
     hostname: options.host ?? state.env.GCLM_CODE_SERVER_HOST,
@@ -153,6 +165,7 @@ export function startGclmCodeServer(options: StartGclmCodeServerOptions = {}) {
     server,
     state,
     stop() {
+      void state.channels.feishuLongConnection.stop()
       state.channels.feishuRelay.stop()
       server.stop(true)
     },

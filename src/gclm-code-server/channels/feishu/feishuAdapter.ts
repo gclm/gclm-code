@@ -285,6 +285,43 @@ export class FeishuAdapter {
       })
     }
 
+    if (actionKind === 'interrupt_session') {
+      const sessionId =
+        typeof actionValue.sessionId === 'string' ? actionValue.sessionId : undefined
+      if (!sessionId) {
+        return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
+          accepted: true,
+          idempotencyKey,
+          ignoredReason: 'missing_session_id',
+        })
+      }
+
+      const session = this.state.repositories.sessions.findById(sessionId)
+      if (!session) {
+        return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
+          accepted: true,
+          idempotencyKey,
+          ignoredReason: 'session_not_found',
+        })
+      }
+
+      const accepted = await this.state.executionBridge.interrupt(session)
+      await this.state.channels.feishuPublisher.sendStatusReceipt({
+        providerUserId,
+        tenantScope: parsed.tenant_key ?? '',
+        sessionId,
+        stage: accepted ? 'interrupted' : 'accepted',
+        summary: accepted ? '已提交中断请求。' : '当前没有正在运行的执行。',
+      })
+
+      return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
+        accepted,
+        idempotencyKey,
+        sessionId,
+        ignoredReason: accepted ? undefined : 'session_not_running',
+      })
+    }
+
     if (actionKind === 'open_session' || actionKind === 'resume_session') {
       const binding = this.ensureChannelBinding({
         providerUserId,
@@ -344,6 +381,71 @@ export class FeishuAdapter {
     })
 
     return { sessionId: session.id, requestId }
+  }
+
+  async handleLongConnectionMessageEvent(payload: unknown): Promise<FeishuInboundResponse> {
+    const raw = payload as {
+      sender?: {
+        sender_id?: {
+          open_id?: string
+          user_id?: string
+          union_id?: string
+        }
+        tenant_key?: string
+      }
+      message?: {
+        message_id?: string
+        message_type?: string
+        content?: string
+      }
+    }
+
+    return this.handleEvent({
+      schema: '2.0',
+      header: {
+        event_type: 'im.message.receive_v1',
+        tenant_key: raw.sender?.tenant_key ?? '',
+      },
+      event: {
+        sender: {
+          sender_id: {
+            open_id: raw.sender?.sender_id?.open_id,
+            union_id: raw.sender?.sender_id?.union_id,
+            user_id: raw.sender?.sender_id?.user_id,
+          },
+          tenant_key: raw.sender?.tenant_key,
+        },
+        message: {
+          message_id: raw.message?.message_id,
+          message_type: raw.message?.message_type,
+          content: raw.message?.content,
+        },
+      },
+    })
+  }
+
+  async handleLongConnectionActionEvent(payload: unknown): Promise<FeishuActionResponse> {
+    const raw = payload as {
+      operator?: {
+        open_id?: string
+        user_id?: string
+      }
+      tenant_key?: string
+      action?: {
+        value?: Record<string, unknown>
+      }
+      token?: string
+    }
+
+    return this.handleAction({
+      token: raw.token,
+      open_id: raw.operator?.open_id,
+      user_id: raw.operator?.user_id,
+      tenant_key: raw.tenant_key,
+      action: {
+        value: raw.action?.value,
+      },
+    })
   }
 
   private ensureChannelBinding(input: {

@@ -21,6 +21,9 @@ import { StreamHub } from '../../src/gclm-code-server/transport/streamHub.js'
 import { StreamInfoService } from '../../src/gclm-code-server/transport/streamInfoService.js'
 import type { SessionRecord } from '../../src/gclm-code-server/sessions/types.js'
 import { FeishuPublisher } from '../../src/gclm-code-server/channels/feishu/feishuPublisher.js'
+import { FeishuAdapter } from '../../src/gclm-code-server/channels/feishu/feishuAdapter.js'
+import { FeishuSessionRelay } from '../../src/gclm-code-server/channels/feishu/feishuSessionRelay.js'
+import { FeishuLongConnection } from '../../src/gclm-code-server/channels/feishu/feishuLongConnection.js'
 
 const tempDirs: string[] = []
 
@@ -61,7 +64,7 @@ function createState(executionBridge = createFakeExecutionBridge()): GclmCodeSer
     busyTimeoutMs: 250,
   })
   runMigrations(db, join(import.meta.dir, '../../src/gclm-code-server/db/migrations'))
-  return {
+  const state = {
     env: {
       GCLM_CODE_SERVER_HOST: '127.0.0.1',
       GCLM_CODE_SERVER_PORT: 4317,
@@ -71,6 +74,7 @@ function createState(executionBridge = createFakeExecutionBridge()): GclmCodeSer
       feishu: {
         enabled: false,
         baseUrl: 'https://open.feishu.cn',
+        useLongConnection: false,
         bypassSignatureVerification: false,
       },
     },
@@ -87,17 +91,28 @@ function createState(executionBridge = createFakeExecutionBridge()): GclmCodeSer
     streamInfoService: new StreamInfoService('test-secret', 300),
     executionBridge,
     channels: {
+      feishuAdapter: undefined as unknown as FeishuAdapter,
       feishuPublisher: new FeishuPublisher({
         config: {
           enabled: false,
           baseUrl: 'https://open.feishu.cn',
+          useLongConnection: false,
           bypassSignatureVerification: false,
         },
         audit: new AuditRepository(db),
         fetchImpl: fetch,
       }),
+      feishuRelay: undefined as unknown as FeishuSessionRelay,
+      feishuLongConnection: undefined as unknown as FeishuLongConnection,
     },
   }
+  state.channels.feishuAdapter = new FeishuAdapter(state)
+  state.channels.feishuRelay = new FeishuSessionRelay(state)
+  state.channels.feishuLongConnection = {
+    start: async () => {},
+    stop: async () => {},
+  } as FeishuLongConnection
+  return state
 }
 
 describe('gclm-code-server app', () => {

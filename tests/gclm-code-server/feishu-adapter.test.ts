@@ -20,7 +20,9 @@ import { AuditRepository } from '../../src/gclm-code-server/audit/auditRepositor
 import { StreamHub } from '../../src/gclm-code-server/transport/streamHub.js'
 import { StreamInfoService } from '../../src/gclm-code-server/transport/streamInfoService.js'
 import { FeishuPublisher } from '../../src/gclm-code-server/channels/feishu/feishuPublisher.js'
+import { FeishuAdapter } from '../../src/gclm-code-server/channels/feishu/feishuAdapter.js'
 import { FeishuSessionRelay } from '../../src/gclm-code-server/channels/feishu/feishuSessionRelay.js'
+import { FeishuLongConnection } from '../../src/gclm-code-server/channels/feishu/feishuLongConnection.js'
 import { createHash } from 'crypto'
 
 const tempDirs: string[] = []
@@ -112,6 +114,7 @@ function createState(
         baseUrl: 'https://open.feishu.cn',
         appId: 'cli_app_id',
         appSecret: 'cli_app_secret',
+        useLongConnection: true,
         verificationToken: options?.verificationToken,
         encryptKey: options?.encryptKey,
         bypassSignatureVerification: false,
@@ -130,12 +133,14 @@ function createState(
     streamInfoService: new StreamInfoService('test-secret', 300),
     executionBridge,
     channels: {
+      feishuAdapter: undefined as unknown as FeishuAdapter,
       feishuPublisher: new FeishuPublisher({
         config: {
           enabled: options?.feishuEnabled ?? false,
           baseUrl: 'https://open.feishu.cn',
           appId: 'cli_app_id',
           appSecret: 'cli_app_secret',
+          useLongConnection: true,
           verificationToken: options?.verificationToken,
           encryptKey: options?.encryptKey,
           bypassSignatureVerification: false,
@@ -144,9 +149,15 @@ function createState(
         fetchImpl: publisher.fetchImpl,
       }),
       feishuRelay: undefined as unknown as FeishuSessionRelay,
+      feishuLongConnection: undefined as unknown as FeishuLongConnection,
     },
   }
+  state.channels.feishuAdapter = new FeishuAdapter(state)
   state.channels.feishuRelay = new FeishuSessionRelay(state)
+  state.channels.feishuLongConnection = {
+    start: async () => {},
+    stop: async () => {},
+  } as FeishuLongConnection
   return state
 }
 
@@ -327,10 +338,49 @@ describe('gclm-code-server feishu adapter', () => {
 
     const outboundCount = Number(
       state.db
-        .prepare("SELECT COUNT(*) AS count FROM audit_events WHERE event_type = 'feishu.outbound.text'")
+        .prepare(
+          "SELECT COUNT(*) AS count FROM audit_events WHERE event_type IN ('feishu.outbound.card.create', 'feishu.outbound.card.update')",
+        )
         .get()?.count ?? 0,
     )
     expect(outboundCount).toBeGreaterThan(0)
+  })
+
+  test('normalizes long connection events into session input and interrupt action', async () => {
+    const fakeBridge = createFakeExecutionBridge()
+    const state = createState(fakeBridge, { feishuEnabled: true })
+
+    const inbound = await state.channels.feishuAdapter.handleLongConnectionMessageEvent({
+      sender: {
+        sender_id: {
+          open_id: 'ou_long_1',
+        },
+        tenant_key: 'tenant_long_1',
+      },
+      message: {
+        message_id: 'om_long_1',
+        message_type: 'text',
+        content: JSON.stringify({ text: '/cost' }),
+      },
+    })
+
+    expect(inbound.accepted).toBe(true)
+    expect(fakeBridge.submitted).toHaveLength(1)
+
+    const interrupt = await state.channels.feishuAdapter.handleLongConnectionActionEvent({
+      operator: {
+        open_id: 'ou_long_1',
+      },
+      tenant_key: 'tenant_long_1',
+      action: {
+        value: {
+          action: 'interrupt_session',
+          sessionId: inbound.sessionId,
+        },
+      },
+    })
+
+    expect(interrupt.accepted).toBe(true)
   })
 
   test('rejects feishu event when signature verification fails', async () => {
