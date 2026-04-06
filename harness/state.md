@@ -74,6 +74,8 @@
   - `tests/integration/cliTestUtils.ts` 将 CLI 子进程超时从 `15s` 提高到 `30s`
   - `tests/integration/cli-isolated-state.test.ts` 与 `tests/integration/cli-print-mode.test.ts` 的测试级超时统一提高到 `30s`
   - `src/utils/which.ts` 已改为按当前 `PATH` 进程内查找可执行文件，不再依赖 `Bun.which`
+  - 第二轮收敛已完成：CLI 集成测试优先复用 `dist/cli.js`，仅 `--version/-v/-V` 保留源码快路径；测试环境默认开启 `CLAUDE_CODE_SIMPLE=1` 并关闭 background/auto-memory/nonessential traffic/auto-updater，以减少 CI 启动噪音
+  - `tests/utils/env.test.ts` 的 Docker 断言前已显式清掉 deployment/CI 环境变量，避免 GitHub Actions 上被 `github-actions` 分支提前命中
   - 根因已确认包括：GitHub Actions `macos-15-intel` runner 上 CLI 冷启动较慢导致集成测试子进程返回 `143`，以及 `Bun.which` 在测试动态改写 `PATH` 时未稳定反映新环境
   - 最新本地验证（2026-04-06）：`bun run test` 全绿，`221 pass / 0 fail`
 

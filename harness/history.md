@@ -82,3 +82,5 @@
 - 已重写 `src/utils/which.ts` 为按当前 `PATH` 进程内查找可执行文件，不再依赖 `Bun.which`，从而修复 `tests/utils/env.test.ts` 中 package manager/runtime 探测与 Docker/CI 环境判断被 runner 现有环境污染的问题。
 - 已完成定向验证：`tests/integration/cli-isolated-state.test.ts`、`tests/integration/cli-print-mode.test.ts`、`tests/utils/env.test.ts`、`tests/utils/which.test.ts` 全部通过。
 - 已完成全量验证：`bun run test` 全绿，结果为 `221 pass / 0 fail`。
+- 已继续收敛同一批 CI flaky：CLI 集成测试辅助改为优先复用 `dist/cli.js`，仅 `--version/-v/-V` 继续走源码快路径；同时默认注入 `CLAUDE_CODE_SIMPLE=1`、关闭 background/auto-memory/nonessential traffic/auto-updater，显著降低 `macos-15-intel` runner 上每次 CLI 冷启动的负担。
+- 已同步修正断言稳定性：`/context` 的 print mode 期望改为匹配 bare 模式下稳定存在的 `Model` / `Tokens` 摘要字段，不再依赖旧的富输出段落；`tests/utils/env.test.ts` 的 Docker 断言前显式清理 deployment/CI 环境变量，避免在 GitHub Actions 上被 `github-actions` 分支抢先命中。

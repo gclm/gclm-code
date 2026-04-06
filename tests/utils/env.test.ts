@@ -245,6 +245,7 @@ describe('env', () => {
 
     restoreProcessState()
     resetEnvModuleState()
+    clearDeploymentEnv()
     setFsImplementation({
       ...NodeFsOperations,
       existsSync(path) {

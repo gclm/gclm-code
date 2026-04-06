@@ -58,7 +58,8 @@ describe('cli print mode', () => {
 
     expect(context.exitCode).toBe(0)
     expect(context.stdout).toContain('## Context Usage')
-    expect(context.stdout).toContain('### Estimated usage by category')
+    expect(context.stdout).toContain('**Model:**')
+    expect(context.stdout).toContain('**Tokens:**')
     expect(context.stderr).toBe('')
   }, { timeout: CLI_TEST_TIMEOUT_MS })
 
@@ -97,7 +98,8 @@ describe('cli print mode', () => {
     expect(contextJson.subtype).toBe('success')
     expect(contextJson.is_error).toBe(false)
     expect(contextJson.result).toContain('## Context Usage')
-    expect(contextJson.result).toContain('### Skills')
+    expect(contextJson.result).toContain('**Model:**')
+    expect(contextJson.result).toContain('**Tokens:**')
     expect(contextJson.usage.input_tokens).toBe(0)
     expect(contextJson.usage.output_tokens).toBe(0)
   }, { timeout: CLI_TEST_TIMEOUT_MS })
