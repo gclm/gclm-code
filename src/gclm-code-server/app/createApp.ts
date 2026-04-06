@@ -5,6 +5,7 @@ import type { Context } from 'hono'
 import type { ChannelProvider } from '../identity/types.js'
 import type { GclmCodeServerAppState } from './types.js'
 import { renderConsolePage } from './consolePage.js'
+import { handleFeishuAction, handleFeishuEvent } from '../channels/feishu/feishuController.js'
 
 const createSessionSchema = z.object({
   title: z.string().optional(),
@@ -307,6 +308,14 @@ export function createApp(state: GclmCodeServerAppState) {
     })
 
     return c.json({ session: updated ?? session })
+  })
+
+  app.post('/channels/feishu/events', async c => {
+    return handleFeishuEvent(c, state)
+  })
+
+  app.post('/channels/feishu/actions', async c => {
+    return handleFeishuAction(c, state)
   })
 
   return app
