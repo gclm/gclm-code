@@ -74,3 +74,11 @@
 - 已完成一轮 release hardening：`publish-npm` 现已显式等待 `publish-release-assets`，避免 npm 包先于 runtime 资产对外可见；同时为 `smoke-single-package-npm-install` 与 `smoke-single-package-npm-registry` 加入临时 `.npmrc / --userconfig / 显式 npm env` 隔离，减少宿主用户级 npm 配置对 smoke 结论的污染；另外把 Verdaccio bootstrap 等待窗口放宽到 180 秒，以适配强制走 `npmjs upstream` 后更慢的首次拉起。
 - 已完成 `1.0.1` 发版前本地 dry-run：先修正 history 中触发 `brand:guard` 的旧品牌历史文案，再执行 `bun run verify` 与 `bun run smoke:single-package -- --with-registry`；当前 tarball 安装、vendor modules 与 Verdaccio registry 安装三段均通过，`gc --version` 全链路已对齐到 `1.0.1 (Gclm Code)`。
 - 已完成 `v1.0.1` 正式发布：tag push 触发 GitHub Actions `Release NPM` run `24003714609`，其中双架构 `Tarball smoke`、双架构 `Registry smoke`、`publish-release-assets`、`publish-npm` 与 `tag-stable` 全部成功；GitHub Release `v1.0.1` 已发布双架构 runtime 资产，npm registry 中 `gclm-code@1.0.1` 也已可见，`latest` 已切到 `1.0.1`。
+
+## 2026-04-06
+
+- 已修复 GitHub Actions `CI Verify` run `24025465159` 的测试失败：定位到 `cli isolated state` 与 `cli print mode` 多个集成测试在 `macos-15-intel` runner 上被超时杀掉，子进程返回 `143`，同时 `env` 测试暴露 `Bun.which` 在动态改写 `PATH` 的测试场景下不能稳定反映当前环境。
+- 已将 `tests/integration/cliTestUtils.ts` 的 CLI 子进程超时从 `15s` 调整到 `30s`，并把 `tests/integration/cli-isolated-state.test.ts`、`tests/integration/cli-print-mode.test.ts` 的测试级超时统一提高到 `30s`，消除 CI 机器慢启动带来的假失败。
+- 已重写 `src/utils/which.ts` 为按当前 `PATH` 进程内查找可执行文件，不再依赖 `Bun.which`，从而修复 `tests/utils/env.test.ts` 中 package manager/runtime 探测与 Docker/CI 环境判断被 runner 现有环境污染的问题。
+- 已完成定向验证：`tests/integration/cli-isolated-state.test.ts`、`tests/integration/cli-print-mode.test.ts`、`tests/utils/env.test.ts`、`tests/utils/which.test.ts` 全部通过。
+- 已完成全量验证：`bun run test` 全绿，结果为 `221 pass / 0 fail`。

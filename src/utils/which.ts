@@ -1,64 +1,91 @@
-import { execa } from 'execa'
-import { execSync_DEPRECATED } from './execSyncWrapper.js'
+import { accessSync, constants } from 'node:fs'
+import { delimiter, isAbsolute, join } from 'node:path'
 
-async function whichNodeAsync(command: string): Promise<string | null> {
-  if (process.platform === 'win32') {
-    // On Windows, use where.exe and return the first result
-    const result = await execa(`where.exe ${command}`, {
-      shell: true,
-      stderr: 'ignore',
-      reject: false,
-    })
-    if (result.exitCode !== 0 || !result.stdout) {
-      return null
-    }
-    // where.exe returns multiple paths separated by newlines, return the first
-    return result.stdout.trim().split(/\r?\n/)[0] || null
+const DEFAULT_WINDOWS_PATHEXT = ['.COM', '.EXE', '.BAT', '.CMD']
+
+function getWindowsExtensions(command: string): string[] {
+  if (command.includes('.')) {
+    return ['']
   }
 
-  // On POSIX systems (macOS, Linux, WSL), use which
-  // Cross-platform safe: Windows is handled above
-  // eslint-disable-next-line custom-rules/no-cross-platform-process-issues
-  const result = await execa(`which ${command}`, {
-    shell: true,
-    stderr: 'ignore',
-    reject: false,
-  })
-  if (result.exitCode !== 0 || !result.stdout) {
-    return null
-  }
-  return result.stdout.trim()
+  const pathExt = process.env.PATHEXT
+    ?.split(';')
+    .map(ext => ext.trim())
+    .filter(Boolean)
+
+  return [''].concat(pathExt?.length ? pathExt : DEFAULT_WINDOWS_PATHEXT)
 }
 
-function whichNodeSync(command: string): string | null {
-  if (process.platform === 'win32') {
-    try {
-      const result = execSync_DEPRECATED(`where.exe ${command}`, {
-        encoding: 'utf-8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-      })
-      const output = result.toString().trim()
-      return output.split(/\r?\n/)[0] || null
-    } catch {
-      return null
-    }
-  }
+function isPathLike(command: string): boolean {
+  return (
+    command.includes('/') ||
+    command.includes('\\') ||
+    command === '.' ||
+    command === '..'
+  )
+}
 
+function isExecutable(path: string): boolean {
   try {
-    const result = execSync_DEPRECATED(`which ${command}`, {
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    })
-    return result.toString().trim() || null
+    accessSync(
+      path,
+      process.platform === 'win32' ? constants.F_OK : constants.X_OK,
+    )
+    return true
   } catch {
-    return null
+    return false
   }
 }
 
-const bunWhich =
-  typeof Bun !== 'undefined' && typeof Bun.which === 'function'
-    ? Bun.which
-    : null
+function findCommandInPath(command: string): string | null {
+  const pathValue = process.env.PATH
+  if (!pathValue) {
+    return null
+  }
+
+  const searchDirectories = pathValue
+    .split(delimiter)
+    .map(segment => segment || process.cwd())
+
+  for (const directory of searchDirectories) {
+    for (const extension of getWindowsExtensions(command)) {
+      const candidate = join(directory, `${command}${extension}`)
+      if (isExecutable(candidate)) {
+        return candidate
+      }
+    }
+  }
+
+  return null
+}
+
+function resolvePathLikeCommand(command: string): string | null {
+  const candidates =
+    process.platform === 'win32'
+      ? getWindowsExtensions(command).map(extension => `${command}${extension}`)
+      : [command]
+
+  for (const candidate of candidates) {
+    const resolved = isAbsolute(candidate) ? candidate : join(process.cwd(), candidate)
+    if (isExecutable(resolved)) {
+      return resolved
+    }
+  }
+
+  return null
+}
+
+function whichSyncInternal(command: string): string | null {
+  if (!command.trim()) {
+    return null
+  }
+
+  if (isPathLike(command)) {
+    return resolvePathLikeCommand(command)
+  }
+
+  return findCommandInPath(command)
+}
 
 /**
  * Finds the full path to a command executable.
@@ -68,9 +95,8 @@ const bunWhich =
  * @param command - The command name to look up
  * @returns The full path to the command, or null if not found
  */
-export const which: (command: string) => Promise<string | null> = bunWhich
-  ? async command => bunWhich(command)
-  : whichNodeAsync
+export const which = async (command: string): Promise<string | null> =>
+  whichSyncInternal(command)
 
 /**
  * Synchronous version of `which`.
@@ -78,5 +104,5 @@ export const which: (command: string) => Promise<string | null> = bunWhich
  * @param command - The command name to look up
  * @returns The full path to the command, or null if not found
  */
-export const whichSync: (command: string) => string | null =
-  bunWhich ?? whichNodeSync
+export const whichSync = (command: string): string | null =>
+  whichSyncInternal(command)

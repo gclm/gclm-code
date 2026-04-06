@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-04-06（`R5` 已完成）
+更新时间：2026-04-06（CI flaky fix 已完成）
 
 ## 当前阶段
 
@@ -70,6 +70,12 @@
 
 - 功能侧处于持续维护模式
 - 发布侧当前进入 `ship / release-check`：等待下一次正式发版时验证单包主链的公网发布闭环
+- 已完成一轮 CI 稳定性修复：
+  - `tests/integration/cliTestUtils.ts` 将 CLI 子进程超时从 `15s` 提高到 `30s`
+  - `tests/integration/cli-isolated-state.test.ts` 与 `tests/integration/cli-print-mode.test.ts` 的测试级超时统一提高到 `30s`
+  - `src/utils/which.ts` 已改为按当前 `PATH` 进程内查找可执行文件，不再依赖 `Bun.which`
+  - 根因已确认包括：GitHub Actions `macos-15-intel` runner 上 CLI 冷启动较慢导致集成测试子进程返回 `143`，以及 `Bun.which` 在测试动态改写 `PATH` 时未稳定反映新环境
+  - 最新本地验证（2026-04-06）：`bun run test` 全绿，`221 pass / 0 fail`
 
 ## 已知未完成项
 
@@ -78,11 +84,13 @@
 - `runtimeConfig/growthbook.ts` 仍沿用 `GrowthBook` 命名，后续可再判断是否继续去历史语义
 - 文档中的功能开关计数与源码现状存在轻微偏差，需后续同步
 - 当前全量 typecheck 在仓库基线上仍有大量既有错误，无法作为本轮唯一阻断标准
+- 本轮 CI 报错已确认为测试稳定性与环境探测实现问题，不属于新的 release 架构阻断
 
 ## 执行边界
 
 - 当前 must-fix：
   - 无新的 release 结构 must-fix；主线已收口
+  - 本轮 CI flaky 已完成修复并通过本地全量测试验证
 - same-batch can-include：
   - 下一次正式单包发版前的 release-check 与 dry-run 演练
 - follow-up：

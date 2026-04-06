@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { runCliIsolated } from './cliTestUtils.ts'
 
+const CLI_TEST_TIMEOUT_MS = 30_000
+
 describe('cli print mode', () => {
   const invalidFormatCases = [
     {
@@ -42,7 +44,7 @@ describe('cli print mode', () => {
       expect(result.exitCode).toBe(1)
       expect(result.stdout).toBe('')
       expect(result.stderr.trim()).toBe(error)
-    })
+    }, { timeout: CLI_TEST_TIMEOUT_MS })
   }
 
   test('runs local slash commands in text print mode', () => {
@@ -58,7 +60,7 @@ describe('cli print mode', () => {
     expect(context.stdout).toContain('## Context Usage')
     expect(context.stdout).toContain('### Estimated usage by category')
     expect(context.stderr).toBe('')
-  })
+  }, { timeout: CLI_TEST_TIMEOUT_MS })
 
   test('emits structured json results for local slash commands', () => {
     const cost = runCliIsolated(['-p', '/cost', '--output-format', 'json'])
@@ -98,5 +100,5 @@ describe('cli print mode', () => {
     expect(contextJson.result).toContain('### Skills')
     expect(contextJson.usage.input_tokens).toBe(0)
     expect(contextJson.usage.output_tokens).toBe(0)
-  })
+  }, { timeout: CLI_TEST_TIMEOUT_MS })
 })

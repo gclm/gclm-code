@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { runCliIsolated } from './cliTestUtils.ts'
 
+const CLI_TEST_TIMEOUT_MS = 30_000
+
 describe('cli isolated state', () => {
   test('shows empty plugin state when HOME is isolated', () => {
     const result = runCliIsolated(['plugin', 'list'])
@@ -8,7 +10,7 @@ describe('cli isolated state', () => {
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('No plugins installed')
     expect(result.stderr).toBe('')
-  }, { timeout: 20_000 })
+  }, { timeout: CLI_TEST_TIMEOUT_MS })
 
   test('shows empty mcp state when HOME is isolated', () => {
     const result = runCliIsolated(['mcp', 'list'])
@@ -16,7 +18,7 @@ describe('cli isolated state', () => {
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('No MCP servers configured')
     expect(result.stderr).toBe('')
-  }, { timeout: 20_000 })
+  }, { timeout: CLI_TEST_TIMEOUT_MS })
 
   test('reports auth status without hanging when HOME is isolated', () => {
     const result = runCliIsolated(['auth', 'status'])
@@ -38,7 +40,7 @@ describe('cli isolated state', () => {
     expect(typeof json.loggedIn).toBe('boolean')
     expect(typeof json.authMethod).toBe('string')
     expect(typeof json.apiProvider).toBe('string')
-  }, { timeout: 20_000 })
+  }, { timeout: CLI_TEST_TIMEOUT_MS })
 
   test('lists built-in agents when HOME is isolated', () => {
     const result = runCliIsolated(['agents'])
@@ -47,6 +49,5 @@ describe('cli isolated state', () => {
     expect(result.stdout).toContain('Built-in agents:')
     expect(result.stdout).toContain('general-purpose')
     expect(result.stderr).toBe('')
-  }, { timeout: 20_000 })
+  }, { timeout: CLI_TEST_TIMEOUT_MS })
 })
-

@@ -6,6 +6,7 @@ export const root = join(import.meta.dir, '..', '..')
 export const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {
   version: string
 }
+const CLI_SPAWN_TIMEOUT_MS = 30_000
 
 function buildEnv(overrides: Record<string, string> = {}) {
   return Object.fromEntries(
@@ -25,7 +26,7 @@ function spawnCli(args: string[], env: Record<string, string>) {
       cwd: root,
       env,
       stdin: 'ignore',
-      timeout: 15_000,
+      timeout: CLI_SPAWN_TIMEOUT_MS,
     },
   )
 
