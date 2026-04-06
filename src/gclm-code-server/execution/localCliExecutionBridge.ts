@@ -18,10 +18,12 @@ export type LocalCliExecutionBridgeOptions = {
   repoRoot?: string
   cliEntry?: string
   spawnProcess?: typeof spawn
+  env?: NodeJS.ProcessEnv
 }
 
 type ActiveSessionProcess = {
   child: ChildProcess
+  requestId: string
 }
 
 type JsonMap = Record<string, unknown>
@@ -42,72 +44,55 @@ function collectTextFromContent(content: unknown): string {
     .join('')
 }
 
-function buildUserMessage(prompt: string): string {
-  return JSON.stringify({
-    type: 'user',
-    session_id: '',
-    message: {
-      role: 'user',
-      content: prompt,
-    },
-    parent_tool_use_id: null,
-  })
-}
-
-function buildInterruptRequest(): string {
-  return JSON.stringify({
-    type: 'control_request',
-    request_id: `interrupt_${randomUUID()}`,
-    request: {
-      subtype: 'interrupt',
-    },
-  })
-}
-
-function buildPermissionResponse(
-  requestId: string,
-  decision: ExecutionPermissionDecision,
-): string {
-  return JSON.stringify({
-    type: 'control_response',
-    response: {
-      subtype: 'success',
-      request_id: requestId,
-      response:
-        decision.behavior === 'allow'
-          ? {
-              behavior: 'allow',
-              updatedInput: decision.updatedInput ?? {},
-            }
-          : {
-              behavior: 'deny',
-              message: decision.message,
-            },
-    },
-  })
-}
-
 export class LocalCliExecutionBridge implements SessionExecutionBridge {
   private readonly activeProcesses = new Map<string, ActiveSessionProcess>()
   private readonly repoRoot: string
   private readonly cliEntry: string
   private readonly spawnProcess: typeof spawn
   private readonly startedSessions = new Set<string>()
+  private readonly env: NodeJS.ProcessEnv
 
   constructor(private readonly options: LocalCliExecutionBridgeOptions) {
     this.repoRoot = options.repoRoot ?? process.cwd()
     this.cliEntry = options.cliEntry ?? './src/entrypoints/cli.tsx'
     this.spawnProcess = options.spawnProcess ?? spawn
+    this.env = options.env ?? process.env
   }
 
   async submitInput(input: ExecutionSubmitInput): Promise<void> {
-    const processHandle = this.ensureProcess(input.session)
+    if (this.activeProcesses.has(input.session.id)) {
+      throw new Error(`Session ${input.session.id} already has an active execution`)
+    }
+
     this.markSessionRunning(input.session)
-    this.writeLine(
-      input.session,
-      processHandle.child,
-      buildUserMessage(input.prompt),
+    const resume = this.startedSessions.has(input.session.id)
+    const child = this.spawnProcess(
+      process.execPath,
+      this.buildArgs(input.session, input.prompt, resume),
+      {
+        cwd: this.repoRoot,
+        env: {
+          ...this.env,
+          CLAUDE_CODE_SIMPLE: this.env.CLAUDE_CODE_SIMPLE ?? '1',
+          CLAUDE_CODE_DISABLE_BACKGROUND_TASKS:
+            this.env.CLAUDE_CODE_DISABLE_BACKGROUND_TASKS ?? '1',
+          CLAUDE_CODE_DISABLE_AUTO_MEMORY:
+            this.env.CLAUDE_CODE_DISABLE_AUTO_MEMORY ?? '1',
+          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:
+            this.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC ?? '1',
+          DISABLE_AUTOUPDATER: this.env.DISABLE_AUTOUPDATER ?? '1',
+          USER_TYPE: this.env.USER_TYPE ?? 'external',
+        },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
     )
+
+    this.activeProcesses.set(input.session.id, {
+      child,
+      requestId: input.requestId,
+    })
+    this.startedSessions.add(input.session.id)
+    this.attachProcessListeners(input.session, child)
   }
 
   async interrupt(session: SessionRecord): Promise<boolean> {
@@ -116,10 +101,10 @@ export class LocalCliExecutionBridge implements SessionExecutionBridge {
       return false
     }
 
-    this.writeLine(session, processHandle.child, buildInterruptRequest())
+    processHandle.child.kill('SIGTERM')
     this.options.streamHub.publish(session.id, {
       type: 'session.interrupted',
-      data: { sessionId: session.id },
+      data: { sessionId: session.id, requestId: processHandle.requestId },
     })
     return true
   }
@@ -129,88 +114,31 @@ export class LocalCliExecutionBridge implements SessionExecutionBridge {
     requestId: string,
     decision: ExecutionPermissionDecision,
   ): Promise<boolean> {
-    const processHandle = this.activeProcesses.get(session.id)
-    if (!processHandle) {
-      return false
-    }
-
-    this.writeLine(
-      session,
-      processHandle.child,
-      buildPermissionResponse(requestId, decision),
-    )
-
-    const now = new Date().toISOString()
-    this.options.permissions.updateStatus({
-      id: requestId,
-      status: decision.behavior === 'allow' ? 'approved' : 'denied',
-      updatedAt: now,
-      resolvedAt: now,
-      resolvedBy: decision.resolvedBy,
-      resolutionMessage:
-        decision.behavior === 'deny' ? decision.message : undefined,
-    })
-
-    this.options.streamHub.publish(session.id, {
-      type: 'permission.resolved',
-      data: {
-        sessionId: session.id,
-        requestId,
-        behavior: decision.behavior,
-      },
-    })
-
-    return true
+    void session
+    void requestId
+    void decision
+    // The current MVP bridge runs each turn via argv prompt + stream-json output.
+    // That mode gives us stable real execution and resume, but it does not expose
+    // a supported stdin control channel for permission responses yet.
+    return false
   }
 
-  private ensureProcess(session: SessionRecord): ActiveSessionProcess {
-    const existing = this.activeProcesses.get(session.id)
-    if (existing && !existing.child.killed && existing.child.exitCode === null) {
-      return existing
-    }
-
-    const resume = this.startedSessions.has(session.id)
-
-    const child = this.spawnProcess(
-      process.execPath,
-      this.buildArgs(session, resume),
-      {
-        cwd: this.repoRoot,
-        env: {
-          ...process.env,
-          CLAUDE_CODE_SIMPLE: process.env.CLAUDE_CODE_SIMPLE ?? '1',
-        },
-        stdio: ['pipe', 'pipe', 'pipe'],
-      },
-    )
-
-    const handle: ActiveSessionProcess = {
-      child,
-    }
-    this.activeProcesses.set(session.id, handle)
-    this.startedSessions.add(session.id)
-    this.attachProcessListeners(session, child)
-    return handle
-  }
-
-  private buildArgs(session: SessionRecord, resume: boolean): string[] {
+  private buildArgs(session: SessionRecord, prompt: string, resume: boolean): string[] {
     const executionSessionRef = session.executionSessionRef ?? randomUUID()
     const base = [
       'run',
       this.cliEntry,
       '--print',
-      '--input-format',
-      'stream-json',
       '--output-format',
       'stream-json',
       '--verbose',
     ]
 
     if (resume) {
-      return [...base, '--resume', executionSessionRef]
+      return [...base, '--resume', executionSessionRef, prompt]
     }
 
-    return [...base, '--session-id', executionSessionRef]
+    return [...base, '--session-id', executionSessionRef, prompt]
   }
 
   private attachProcessListeners(session: SessionRecord, child: ChildProcess): void {
@@ -313,7 +241,11 @@ export class LocalCliExecutionBridge implements SessionExecutionBridge {
       this.finalizeTurn(
         session,
         parsed.subtype === 'success' ? 'waiting_input' : 'failed',
-        { sessionId: session.id, result: parsed },
+        {
+          sessionId: session.id,
+          requestId: this.activeProcesses.get(session.id)?.requestId,
+          result: parsed,
+        },
       )
     }
   }
@@ -407,12 +339,5 @@ export class LocalCliExecutionBridge implements SessionExecutionBridge {
         status,
       },
     })
-  }
-
-  private writeLine(session: SessionRecord, child: ChildProcess, line: string): void {
-    if (!child.stdin || child.stdin.destroyed) {
-      throw new Error(`Session ${session.id} execution stdin is not available`)
-    }
-    child.stdin.write(`${line}\n`)
   }
 }
