@@ -70,7 +70,7 @@ expectOk('build', 'bun', ['run', 'build'], result =>
   result.stdout.includes('Built from src entrypoint'),
 )
 
-expectOk('version', './dist/claude', ['--version'], result =>
+expectOk('version', './dist/gclm', ['--version'], result =>
   result.stdout.includes('(Gclm Code)'),
 )
 
@@ -130,13 +130,13 @@ expectOk('bin-launcher', 'node', ['bin/gclm.js', '--version'], result =>
   result.stdout.includes('(Gclm Code)'),
 )
 
-expectOk('help', './dist/claude', ['--help'], result =>
+expectOk('help', './dist/gclm', ['--help'], result =>
   result.stdout.includes('Usage: claude'),
 )
 
 expectKnownFailure(
   'auth-status',
-  './dist/claude',
+  './dist/gclm',
   ['auth', 'status', '--text'],
   [0, 1],
   result =>
@@ -148,9 +148,9 @@ expectKnownFailure(
     result.stdout.includes('API key:'),
 )
 
-expectOk('plugin-list', './dist/claude', ['plugin', 'list'], () => true)
-expectOk('mcp-list', './dist/claude', ['mcp', 'list'], () => true)
-expectOk('agents', './dist/claude', ['agents'], () => true)
+expectOk('plugin-list', './dist/gclm', ['plugin', 'list'], () => true)
+expectOk('mcp-list', './dist/gclm', ['mcp', 'list'], () => true)
+expectOk('agents', './dist/gclm', ['agents'], () => true)
 
 expectOk(
   'computer-use-mcp-server',

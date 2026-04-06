@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const args = process.argv.slice(2)
 
-const compiledBinary = join(root, 'dist', 'claude')
+const compiledBinary = join(root, 'dist', 'gclm')
 const sourceBundle = join(root, 'dist', 'cli.js')
 const sourceEntrypoint = join(root, 'src', 'entrypoints', 'cli.tsx')
 const devPreload = join(root, 'scripts', 'dev-preload.mjs')

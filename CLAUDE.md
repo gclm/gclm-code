@@ -8,23 +8,23 @@ This file provides guidance to Gclm Code (claude.ai/code) when working with code
 # Install dependencies
 bun install
 
-# Standard build (./cli)
+# Standard build (dist/cli.js + dist/gclm)
 bun run build
 
-# Dev build (./cli-dev)
+# Dev build (dist/cli.js + dist/gclm-dev)
 bun run build:dev
 
-# Dev build with all experimental features (./cli-dev)
+# Dev build with all experimental features (dist/gclm-dev)
 bun run build:dev:full
 
-# Compiled build (./dist/cli)
+# Compiled build (./gclm)
 bun run compile
 
 # Run from source without compiling
 bun run dev
 ```
 
-Run the built binary with `./cli` or `./cli-dev`. Set `ANTHROPIC_API_KEY` in the environment or use OAuth via `./cli /login`.
+Run the built binary with `./dist/gclm` or `./dist/gclm-dev`. Set `ANTHROPIC_API_KEY` in the environment or use OAuth via `./dist/gclm /login`.
 
 ## High-level architecture
 
@@ -44,4 +44,4 @@ Run the built binary with `./cli` or `./cli-dev`. Set `ANTHROPIC_API_KEY` in the
 
 ## Build system
 
-- scripts/build.ts is the build script and feature-flag bundler. Feature flags are set via build arguments (e.g., `--feature=ULTRAPLAN`) or presets like `--feature-set=dev-full` (see README for details).
+- scripts/build.mjs is the unified build script and feature-flag bundler. Supports `--dev`, `--compile`, `--feature=X`, and `--feature-set=dev-full`.
