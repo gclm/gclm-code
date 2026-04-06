@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-04-06（Gateway smoke 已接入 CI Verify）
+更新时间：2026-04-06（Release NPM 已对齐 CI Verify 并发布已验产物）
 
 ## 当前阶段
 
@@ -126,10 +126,10 @@
 - 运行环境：Bun 1.3.11 项目
 - 当前统一验收门槛：`bun run verify`
 - 当前策略已调整为“不保留兼容层，直接修复断点”
-- 当前目标发版版本：`1.0.1`（已发布）
+- 当前目标发版版本：`1.0.3`（待发布）
 - 最新正式 npm 发布版本：`1.0.1`
-  - 说明：该版本已切换到 single-package + vendor runtime 主链
-  - `latest / stable` 均已指向 `1.0.1`
+  - 说明：当前线上最新正式版本仍是 `1.0.1`；本轮准备发布 `1.0.3`
+  - `latest / stable` 当前仍指向 `1.0.1`
 - 当前最强本地证据级别：`scripted-flow`
 - 最新单包验证结果（2026-04-05）：
   - `bun run verify`，通过
@@ -151,6 +151,8 @@
   - 上述 Gateway smoke 默认改为 mock `axios` `/models` 请求，不依赖真实 Gateway、环境变量或本地监听端口；仅在显式传入 `SMOKE_GATEWAY_BASE_URL` / `SMOKE_GATEWAY_API_KEY` 时切到真实网关
   - 最新本地验证（2026-04-06）：`bun run smoke:login-gateway` 与 `bun run smoke:login-gateway:matrix` 在零环境变量下均已通过
   - `.github/workflows/ci-verify.yml` 已接入 `bun run smoke:login-gateway` 与 `bun run smoke:login-gateway:matrix`，默认用 mock 路径覆盖 Gateway 登录保存、模型刷新与退出清理链路
+  - `.github/workflows/release-npm.yml` 已同步接入 Gateway smoke，并将 `build-and-test` runner 统一到 `macos-15-intel`
+  - `release-npm` 的 `publish-npm` job 已改为下载并发布 `build-and-test` 上传的 `dist` artifact，不再在发布 job 中重新构建一份未复验产物
   - 全仓补扫后，当前未发现第二套独立 logo 图形实现；`Onboarding`、`setup-token`、主消息页均已落到 `WelcomeV2` / `LogoV2` / `CondensedLogo` -> `Clawd` 共享链路
   - 仍可见的其余品牌入口主要是文案或小图标，例如 `IdeOnboardingDialog` 的欢迎文案与 `GuestPassesUpsell` 的 `[✻]` 装饰，不属于独立 logo 样式分叉
   - 已继续补扫欢迎态 / 弹窗头部：`IdeOnboardingDialog` 标题前缀 `✻` 已统一改为 `startupAccent`，与欢迎页品牌 accent 一致
