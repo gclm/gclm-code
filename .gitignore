@@ -7,6 +7,7 @@ gen
 # macOS / local temp
 .DS_Store
 .tmp/
+.local/
 
 # project
 /references/

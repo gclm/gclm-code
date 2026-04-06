@@ -16,6 +16,14 @@
 bun run dev:gclm-code-server
 ```
 
+如果存在本地文件：
+
+```text
+.local/gclm-code-server/dev.env
+```
+
+启动脚本会自动加载其中的环境变量，适合放本地联调用的飞书参数，不会进入 git。
+
 默认监听：
 
 ```text
@@ -51,6 +59,22 @@ GCLM_CODE_SERVER_FEISHU_BYPASS_SIGNATURE_VERIFICATION=false
 GCLM_CODE_SERVER_PORT=4320 bun run dev:gclm-code-server
 ```
 
+推荐把本地飞书参数放进：
+
+```bash
+.local/gclm-code-server/dev.env
+```
+
+例如：
+
+```bash
+GCLM_CODE_SERVER_FEISHU_ENABLED=true
+GCLM_CODE_SERVER_FEISHU_APP_ID=your_app_id
+GCLM_CODE_SERVER_FEISHU_APP_SECRET=your_app_secret
+GCLM_CODE_SERVER_FEISHU_VERIFICATION_TOKEN=your_verification_token
+GCLM_CODE_SERVER_FEISHU_ENCRYPT_KEY=your_encrypt_key
+```
+
 ## 当前 Console 可做什么
 
 - 新建 Web session
@@ -64,8 +88,9 @@ GCLM_CODE_SERVER_PORT=4320 bun run dev:gclm-code-server
 - 当前真实执行桥接采用“每个 turn 一个 CLI 子进程”的模式
 - prompt 通过 argv 传入，后续轮次通过 `--resume` 续接会话
 - permission response API 虽已保留，但在当前真实 CLI 模式下暂未接通稳定的远程回写控制通道
-- 飞书 adapter 目前只覆盖入口归一化、会话绑定、入站文本投递和交互 action 骨架，尚未接真实飞书回发渲染
-- 飞书回发层当前只实现最小文本消息回执，不包含卡片流式刷新、消息更新或复杂交互态
+- 飞书 adapter 已接入最小回推链路：入站建会话后会把 assistant 文本、权限待处理提示、执行失败/中断状态推回飞书
+- 飞书回发层当前仍只实现最小文本消息，不包含卡片流式刷新、消息更新或复杂交互态
+- 当前权限待处理会被提示到飞书，但真正的远程审批回写在真实 CLI 模式下仍未打通
 
 ## 飞书入口
 
@@ -99,3 +124,4 @@ GCLM_CODE_SERVER_FEISHU_BYPASS_SIGNATURE_VERIFICATION=true
 3. 新建 session 并发送 `/cost`
 4. 再发 `/context`，确认 resumed turn 正常执行
 5. 如需测飞书入口，可先手工 POST 到 `/channels/feishu/events`
+6. 如需验证飞书 OpenAPI 凭证是否可用，可执行 `bun run smoke:feishu-openapi`

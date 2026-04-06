@@ -61,4 +61,20 @@ export class ChannelIdentityRepository {
 
     return row ? mapChannelIdentity(row as Record<string, unknown>) : null
   }
+
+  findFirstByUserIdAndProvider(input: {
+    userId: string
+    provider: ChannelIdentity['provider']
+  }): ChannelIdentity | null {
+    const row = this.db
+      .prepare(
+        `SELECT * FROM channel_identities
+         WHERE user_id = ? AND provider = ?
+         ORDER BY updated_at DESC
+         LIMIT 1`,
+      )
+      .get(input.userId, input.provider)
+
+    return row ? mapChannelIdentity(row as Record<string, unknown>) : null
+  }
 }

@@ -20,6 +20,7 @@ import { AuditRepository } from '../../src/gclm-code-server/audit/auditRepositor
 import { StreamHub } from '../../src/gclm-code-server/transport/streamHub.js'
 import { StreamInfoService } from '../../src/gclm-code-server/transport/streamInfoService.js'
 import { FeishuPublisher } from '../../src/gclm-code-server/channels/feishu/feishuPublisher.js'
+import { FeishuSessionRelay } from '../../src/gclm-code-server/channels/feishu/feishuSessionRelay.js'
 import { createHash } from 'crypto'
 
 const tempDirs: string[] = []
@@ -99,7 +100,7 @@ function createState(
   })
   runMigrations(db, join(import.meta.dir, '../../src/gclm-code-server/db/migrations'))
   const publisher = createPublisherRecorder()
-  return {
+  const state = {
     env: {
       GCLM_CODE_SERVER_HOST: '127.0.0.1',
       GCLM_CODE_SERVER_PORT: 4317,
@@ -142,8 +143,11 @@ function createState(
         audit: new AuditRepository(db),
         fetchImpl: publisher.fetchImpl,
       }),
+      feishuRelay: undefined as unknown as FeishuSessionRelay,
     },
   }
+  state.channels.feishuRelay = new FeishuSessionRelay(state)
+  return state
 }
 
 describe('gclm-code-server feishu adapter', () => {
@@ -278,6 +282,55 @@ describe('gclm-code-server feishu adapter', () => {
     expect(fakeBridge.resolved).toHaveLength(1)
     expect(fakeBridge.resolved[0]?.requestId).toBe('perm_1')
     expect(fakeBridge.resolved[0]?.decision.behavior).toBe('allow')
+  })
+
+  test('relays assistant output from a feishu session back to outbound messages', async () => {
+    const fakeBridge = createFakeExecutionBridge()
+    const state = createState(fakeBridge, { feishuEnabled: true })
+    const app = createApp(state)
+
+    const resp = await app.request('/channels/feishu/events', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        schema: '2.0',
+        header: {
+          event_id: 'evt_3',
+          event_type: 'im.message.receive_v1',
+          tenant_key: 'tenant_3',
+        },
+        event: {
+          sender: {
+            sender_id: {
+              open_id: 'ou_789',
+            },
+            tenant_key: 'tenant_3',
+          },
+          message: {
+            message_id: 'om_3',
+            message_type: 'text',
+            content: JSON.stringify({ text: 'hello relay' }),
+          },
+        },
+      }),
+    })
+
+    const json = await resp.json()
+    state.streamHub.publish(json.sessionId, {
+      type: 'message.completed',
+      data: {
+        sessionId: json.sessionId,
+        role: 'assistant',
+        text: 'relay back to feishu',
+      },
+    })
+
+    const outboundCount = Number(
+      state.db
+        .prepare("SELECT COUNT(*) AS count FROM audit_events WHERE event_type = 'feishu.outbound.text'")
+        .get()?.count ?? 0,
+    )
+    expect(outboundCount).toBeGreaterThan(0)
   })
 
   test('rejects feishu event when signature verification fails', async () => {

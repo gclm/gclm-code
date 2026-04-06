@@ -2,6 +2,7 @@ import type { Database } from 'bun:sqlite'
 import type { AuditRepository } from '../audit/auditRepository.js'
 import type { IdempotencyRepository } from '../channels/shared/idempotencyRepository.js'
 import type { FeishuPublisher } from '../channels/feishu/feishuPublisher.js'
+import type { FeishuSessionRelay } from '../channels/feishu/feishuSessionRelay.js'
 import type { SessionExecutionBridge } from '../execution/types.js'
 import type { ChannelIdentityRepository } from '../identity/channelIdentityRepository.js'
 import type { PermissionRepository } from '../permissions/permissionRepository.js'
@@ -29,5 +30,6 @@ export type GclmCodeServerAppState = {
   executionBridge: SessionExecutionBridge
   channels: {
     feishuPublisher: FeishuPublisher
+    feishuRelay: FeishuSessionRelay
   }
 }

@@ -9,6 +9,7 @@ import { PermissionRepository } from '../permissions/permissionRepository.js'
 import { IdempotencyRepository } from '../channels/shared/idempotencyRepository.js'
 import { AuditRepository } from '../audit/auditRepository.js'
 import { FeishuPublisher } from '../channels/feishu/feishuPublisher.js'
+import { FeishuSessionRelay } from '../channels/feishu/feishuSessionRelay.js'
 import { StreamHub } from '../transport/streamHub.js'
 import { StreamInfoService } from '../transport/streamInfoService.js'
 import { createApp } from './createApp.js'
@@ -50,24 +51,24 @@ export function createAppState(
     config: env.feishu,
     audit: repositories.audit,
   })
-
-  return {
-    env,
-    db,
-    repositories,
+  const state = {} as GclmCodeServerAppState
+  state.env = env
+  state.db = db
+  state.repositories = repositories
+  state.streamHub = streamHub
+  state.streamInfoService = new StreamInfoService(
+    options.signingSecret ?? env.GCLM_CODE_SERVER_SIGNING_SECRET,
+  )
+  state.executionBridge = new LocalCliExecutionBridge({
+    sessions: repositories.sessions,
+    permissions: repositories.permissions,
     streamHub,
-    streamInfoService: new StreamInfoService(
-      options.signingSecret ?? env.GCLM_CODE_SERVER_SIGNING_SECRET,
-    ),
-    executionBridge: new LocalCliExecutionBridge({
-      sessions: repositories.sessions,
-      permissions: repositories.permissions,
-      streamHub,
-    }),
-    channels: {
-      feishuPublisher,
-    },
+  })
+  state.channels = {
+    feishuPublisher,
+    feishuRelay: new FeishuSessionRelay(state),
   }
+  return state
 }
 
 export function startGclmCodeServer(options: StartGclmCodeServerOptions = {}) {
@@ -152,6 +153,7 @@ export function startGclmCodeServer(options: StartGclmCodeServerOptions = {}) {
     server,
     state,
     stop() {
+      state.channels.feishuRelay.stop()
       server.stop(true)
     },
   }

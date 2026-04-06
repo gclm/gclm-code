@@ -136,6 +136,7 @@ export class FeishuAdapter {
       text,
       title: `Feishu ${providerUserId}`,
     })
+    this.state.channels.feishuRelay.ensureSubscribedForSession(sessionId)
 
     await this.state.channels.feishuPublisher.sendStatusReceipt({
       providerUserId,
@@ -291,6 +292,7 @@ export class FeishuAdapter {
         title: `Feishu ${providerUserId}`,
         mode: actionKind === 'resume_session' ? 'resume_or_create' : 'create',
       })
+      this.state.channels.feishuRelay.ensureSubscribedForSession(binding.sessionId)
 
       await this.state.channels.feishuPublisher.sendStatusReceipt({
         providerUserId,
