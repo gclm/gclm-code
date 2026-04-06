@@ -1,6 +1,6 @@
 {
   "name": "gclm-code",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Gclm Code - an AI-powered CLI coding assistant that understands your codebase, edits files, runs terminal commands, and handles entire workflows for you.",
   "type": "module",
   "bin": {
