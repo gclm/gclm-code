@@ -17,20 +17,6 @@
 
 - `docs/overview/install-and-upgrade.md`
   - 区分 npm 全局安装版与仓库本地构建版的安装、升级与判断方式
-- `docs/overview/hello2cc-capability-orchestration.md`
-  - 解释 hello2cc 如何通过能力快照、路由提示、工具前纠偏与 session state 记忆提升第三方模型对宿主能力的感知
-- `docs/overview/hello2cc-gateway-integration-plan.md`
-  - 给出 hello2cc 能力内建到当前 Gateway 的推荐架构、模块边界、接线位置与分阶段实施顺序
-- `docs/overview/hello2cc-gateway-lifecycle-sequence.md`
-  - 通过生命周期时序图拆解 SessionStart、UserPromptSubmit、PreToolUse、PostToolUse 的闭环关系
-- `docs/overview/hello2cc-gateway-diagnostics.md`
-  - 面向开发者说明 hello2cc 编排层的 debug 信号、session state 持久化方式与 `/resume` 后的排查路径
-- `docs/overview/hello2cc-gateway-status-and-resume.md`
-  - 说明 `/status`、`/resume` 与 `hello2cc-state` 的关系，以及 `resumeSummaryStyle` 配置方式
-- `docs/overview/hello2cc-plugin-vs-deep-integration.md`
-  - 对比 hello2cc 插件式、深度集成式与混合式方案，解释为什么当前项目更适合深度集成内核
-- `docs/overview/hello2cc-strategy-development.md`
-  - 面向开发者说明如何新增 hello2cc strategy、如何使用 provider policy / quality gate / extraStrategies 设置项，以及如何排查策略命中
 - `docs/gclm-code-server/README.md`
   - `gclm-code-server` 专题索引，集中管理远程控制、Web、飞书、API 与 `SQLite` 设计文档
 - `docs/gclm-code-server/remote-capabilities.md`
@@ -49,3 +35,22 @@
   - 自建 Web 控制台方案、`references/tlive` Web 的复用边界，以及 `gclm-code-server` 统一中台建议
 - `docs/overview/roadmap.md`
   - 当前阶段状态与后续动作
+
+## 3. hello2cc（能力集成与使用）
+
+- `docs/hello2cc/README.md`
+  - hello2cc 专题索引，包含当前项目的推荐阅读顺序、默认配置入口和日常使用建议
+- `docs/hello2cc/capability-orchestration.md`
+  - 解释 hello2cc 如何通过能力快照、路由提示、工具前纠偏与 session state 记忆提升第三方模型对宿主能力的感知
+- `docs/hello2cc/gateway-integration-plan.md`
+  - 给出 hello2cc 能力内建到当前 Gateway 的推荐架构、模块边界、接线位置与分阶段实施顺序
+- `docs/hello2cc/gateway-lifecycle-sequence.md`
+  - 通过生命周期时序图拆解 SessionStart、UserPromptSubmit、PreToolUse、PostToolUse 的闭环关系
+- `docs/hello2cc/gateway-diagnostics.md`
+  - 面向开发者说明 hello2cc 编排层的 debug 信号、session state 持久化方式与 `/resume` 后的排查路径
+- `docs/hello2cc/gateway-status-and-resume.md`
+  - 说明 `/status`、`/resume` 与 `hello2cc-state` 的关系，以及 `resumeSummaryStyle` 配置方式
+- `docs/hello2cc/plugin-vs-deep-integration.md`
+  - 对比 hello2cc 插件式、深度集成式与混合式方案，解释为什么当前项目更适合深度集成内核
+- `docs/hello2cc/strategy-development.md`
+  - 面向开发者说明如何新增 hello2cc strategy、如何使用 provider policy / quality gate / extraStrategies 设置项，以及如何排查策略命中

@@ -17,7 +17,7 @@
 
 如果你要继续排查“为什么恢复了但行为还是不对”或“模型为什么像没感知到能力”，请继续看：
 
-- [docs/overview/hello2cc-gateway-diagnostics.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/overview/hello2cc-gateway-diagnostics.md)
+- [docs/hello2cc/gateway-diagnostics.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-diagnostics.md)
 
 ## 三者关系总览
 
@@ -189,7 +189,7 @@ Restored hello2cc orchestration memory: intent=implement · 4 capabilities · te
 
 遇到这些情况，建议回到诊断文档继续排查：
 
-- [docs/overview/hello2cc-gateway-diagnostics.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/overview/hello2cc-gateway-diagnostics.md)
+- [docs/hello2cc/gateway-diagnostics.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-diagnostics.md)
 
 ## 一句话理解
 

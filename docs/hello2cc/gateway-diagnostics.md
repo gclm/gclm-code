@@ -15,7 +15,7 @@
 
 如果你要看的不是排查路径，而是日常使用里的 `/status`、`/resume` 提示和配置项，请先看：
 
-- [docs/overview/hello2cc-gateway-status-and-resume.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/overview/hello2cc-gateway-status-and-resume.md)
+- [docs/hello2cc/gateway-status-and-resume.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-status-and-resume.md)
 
 ## 当前可观测范围
 

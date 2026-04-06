@@ -4,7 +4,7 @@
 
 ## 目的
 
-这篇文档补充 [hello2cc-gateway-integration-plan.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/overview/hello2cc-gateway-integration-plan.md) 中提到的生命周期接线，把 Gateway 编排增强层在一次会话中的时序拆开说明。
+这篇文档补充 [hello2cc-gateway-integration-plan.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-integration-plan.md) 中提到的生命周期接线，把 Gateway 编排增强层在一次会话中的时序拆开说明。
 
 本文重点回答：
 
@@ -249,9 +249,9 @@ user asks for implementation
 
 三篇文档的职责可以这样区分：
 
-- [hello2cc-capability-orchestration.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/overview/hello2cc-capability-orchestration.md)
+- [hello2cc-capability-orchestration.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/capability-orchestration.md)
   - 解释原理，回答“为什么它有效”
-- [hello2cc-gateway-integration-plan.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/overview/hello2cc-gateway-integration-plan.md)
+- [hello2cc-gateway-integration-plan.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-integration-plan.md)
   - 解释架构与模块边界，回答“应该怎么集成”
 - 当前这篇文档
   - 解释生命周期时序，回答“它在一次请求里具体怎么流动”

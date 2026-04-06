@@ -1,10 +1,10 @@
-‘# hello2cc Gateway Integration Plan
+# hello2cc Gateway Integration Plan
 
 更新时间：2026-04-06
 
 ## 目的
 
-这篇文档承接 [hello2cc-capability-orchestration.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/overview/hello2cc-capability-orchestration.md)，把 `hello2cc` 的能力从“原理说明”进一步落成适用于当前项目的 Gateway 集成方案。
+这篇文档承接 [hello2cc-capability-orchestration.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/capability-orchestration.md)，把 `hello2cc` 的能力从“原理说明”进一步落成适用于当前项目的 Gateway 集成方案。
 
 本文重点回答：
 
@@ -53,8 +53,8 @@
 
 如果你要先看已落地后的日常使用与排查方式，可以直接跳到：
 
-- [docs/overview/hello2cc-gateway-status-and-resume.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/overview/hello2cc-gateway-status-and-resume.md)
-- [docs/overview/hello2cc-gateway-diagnostics.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/overview/hello2cc-gateway-diagnostics.md)
+- [docs/hello2cc/gateway-status-and-resume.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-status-and-resume.md)
+- [docs/hello2cc/gateway-diagnostics.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-diagnostics.md)
 
 ## 设计目标
 

@@ -1,0 +1,62 @@
+{
+  "hello2cc": {
+    "resumeSummaryStyle": "compact",
+    "strategyProfile": "balanced",
+    "qualityGateMode": "advisory",
+    "enableProviderPolicies": true,
+    "extraStrategies": [
+      {
+        "id": "gclm-code-default-long-task",
+        "priority": 90,
+        "scope": {
+          "cwdPrefixes": [
+            "/Users/gclm/workspace/lab/ai/gclm-code"
+          ],
+          "strategyProfiles": [
+            "balanced",
+            "strict"
+          ],
+          "qualityGateModes": [
+            "advisory",
+            "strict"
+          ]
+        },
+        "activation": {
+          "intents": [
+            "implement",
+            "verify",
+            "plan"
+          ],
+          "minRetryPressure": 2
+        },
+        "sessionStartLines": [
+          "- project default: keep Gateway long tasks phase-oriented, resume-friendly, and biased toward execution-surface reuse."
+        ],
+        "routeRecommendations": [
+          "Prefer SendMessage or reuse of the active team/worktree before creating another parallel branch.",
+          "If retries are accumulating, switch to diagnosis or verification before another implementation hop."
+        ],
+        "subagentGuidance": {
+          "toolNames": [
+            "Agent"
+          ],
+          "shapingNotes": [
+            "For this repository, long-running Agent tasks should stay phase-scoped and always report touched files plus validation evidence."
+          ]
+        },
+        "preconditions": [
+          {
+            "toolNames": [
+              "SendMessage"
+            ],
+            "requireActiveTeam": true,
+            "block": false,
+            "notes": [
+              "Project default: an active team already exists, so prefer reusing it rather than spinning up another parallel group."
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
