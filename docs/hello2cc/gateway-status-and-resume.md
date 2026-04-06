@@ -178,6 +178,126 @@ Restored hello2cc orchestration memory: intent=implement · 4 capabilities · te
 - 第二眼确认“恢复内容是否完整”
 - 第三眼才进入开发者排查路径
 
+## 当前项目长任务续跑演练
+
+下面这段演练基于当前仓库已经启用的默认 hello2cc 配置：
+
+- `resumeSummaryStyle = "compact"`
+- `strategyProfile = "balanced"`
+- `qualityGateMode = "advisory"`
+
+适用场景：
+
+- 你正在推进一个 Gateway 实现类长任务
+- 过程中已经创建过 team 或 worktree
+- 中途退出后，希望下一次进入时继续沿着旧执行面工作
+
+### 1. 开始长任务
+
+先正常发起任务，例如：
+
+```text
+请继续并行推进这个 Gateway 实现
+```
+
+这一步之后，hello2cc 会逐步记住：
+
+- 当前 intent
+- 当前 surfaced capabilities
+- active team
+- active worktree
+- recent successes / failures
+
+如果你在这个阶段已经创建过 `gateway-workers`，或者已经进入过某个 worktree，后面这些信息就会成为续跑依据。
+
+### 2. 中途查看当前记忆
+
+在任务进行中，先看：
+
+```text
+/status
+```
+
+如果链路正常，当前项目里你应该能看到类似信号：
+
+```text
+Orchestration health: intent=implement · 4 capabilities · team=gateway-workers · worktree=active · 1 success · 1 failure · 2 total retries
+```
+
+这表示 hello2cc 已经不只是“知道你在做实现任务”，还记住了：
+
+- 已存在的 team
+- 已存在的 worktree
+- 最近已有一次成功和一次失败
+- 当前 session 已经存在 retry pressure
+
+如果你想看得更细，再运行：
+
+```text
+/hello2cc
+```
+
+此时建议重点看三块：
+
+- `Severity`
+- `Detected anomalies`
+- `Suggested actions`
+
+在当前项目的长任务里，如果已经有 active team / worktree，通常会看到“优先复用已有执行面”的建议，而不是鼓励再新开一层并行。
+
+### 3. 中断任务后恢复
+
+当你退出后再次进入，先运行：
+
+```text
+/resume
+```
+
+当前仓库默认是 `compact` 风格，所以恢复提示更接近：
+
+```text
+Restored hello2cc orchestration memory: intent=implement · 4 capabilities · 2 MCP connected · team=gateway-workers · worktree=active · 1 success · 1 failure · 2 total retries
+```
+
+这一步最重要的不是看文案好不好看，而是确认这几个锚点有没有回来：
+
+- `intent=implement`
+- `team=gateway-workers`
+- `worktree=active`
+- `1 success`
+- `1 failure`
+- `2 total retries`
+
+如果这些锚点都在，说明 transcript 里的 `hello2cc-state` 已经成功恢复回当前内存态。
+
+### 4. 恢复后继续推进，而不是重新起盘
+
+恢复后再次给任务，例如：
+
+```text
+请继续并行推进这个 Gateway 实现
+```
+
+在当前项目里，预期 hello2cc 会把模型往下面这个方向引导：
+
+- 已有 active team，优先复用 `gateway-workers`
+- 已有 active worktree，优先复用当前 worktree
+- 如果前面某条路径刚失败过，要显式提醒避免重复同一路径
+
+换句话说，恢复后的目标不是“重新开始一轮”，而是“沿着旧的执行面继续推进”。
+
+### 5. 如何判断这次续跑是成功的
+
+最实用的判断标准有三条：
+
+1. `/resume` 恢复提示里还能看到 team / worktree / success / failure / retries
+2. `/status` 里的 `Orchestration health` 没有退回到像“全新 session”那样的空状态
+3. 继续提问后，route guidance 仍然体现：
+   - active team already present
+   - recent failures to avoid repeating
+
+只要这三条同时成立，就说明 hello2cc 在当前项目里的长任务续跑主链是接上的。
+
 ## 什么时候该怀疑恢复不完整
 
 以下情况值得警惕：

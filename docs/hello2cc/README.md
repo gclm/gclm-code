@@ -13,7 +13,7 @@
 3. [gateway-lifecycle-sequence.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-lifecycle-sequence.md)
    - 用生命周期视角看 hello2cc 能力在 Gateway 主链里的挂点
 4. [gateway-status-and-resume.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-status-and-resume.md)
-   - 日常使用时先看这里，了解 `/status`、`/resume` 与 `hello2cc-state`
+   - 日常使用时先看这里，了解 `/status`、`/resume` 与 `hello2cc-state`，以及“当前项目长任务续跑演练”
 5. [gateway-diagnostics.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-diagnostics.md)
    - 遇到“模型像没感知到能力”时的排查顺序
 6. [plugin-vs-deep-integration.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/plugin-vs-deep-integration.md)

@@ -222,6 +222,7 @@
   - 已完成 hello2cc 焦点回归验证：`bun test tests/orchestration/hello2cc.test.ts tests/orchestration/hello2cc.resume.test.ts` 当前为 `25 pass / 0 fail`
   - 已将 hello2cc 文档归档到 `docs/hello2cc/` 并新增专题索引 `docs/hello2cc/README.md`，便于按原理、方案、使用、排障、扩展顺序查看
   - 已为当前仓库落盘 `.claude/hello2cc.json` 默认配置，当前项目开箱即用采用 `balanced + advisory + compact resume summary` 组合，优先保证长任务续跑和执行面复用体验，而不是提前收紧到 strict
+  - 已补当前项目的 hello2cc 长任务续跑演练文档：`docs/hello2cc/gateway-status-and-resume.md` 现明确说明开始任务、查看 `/status`、查看 `/hello2cc`、执行 `/resume`、以及恢复后继续复用 team/worktree 的推荐操作顺序
   - 全仓补扫后，当前未发现第二套独立 logo 图形实现；`Onboarding`、`setup-token`、主消息页均已落到 `WelcomeV2` / `LogoV2` / `CondensedLogo` -> `Clawd` 共享链路
   - 仍可见的其余品牌入口主要是文案或小图标，例如 `IdeOnboardingDialog` 的欢迎文案与 `GuestPassesUpsell` 的 `[✻]` 装饰，不属于独立 logo 样式分叉
   - 已继续补扫欢迎态 / 弹窗头部：`IdeOnboardingDialog` 标题前缀 `✻` 已统一改为 `startupAccent`，与欢迎页品牌 accent 一致
