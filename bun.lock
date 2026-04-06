@@ -109,8 +109,19 @@
         "zod": "^4.3.6",
       },
       "devDependencies": {
-        "@types/bun": "^1.3.11",
+        "bun-types": "^1.3.11",
         "typescript": "^6.0.2",
+      },
+      "optionalDependencies": {
+        "@img/sharp-darwin-arm64": "^0.34.2",
+        "@img/sharp-darwin-x64": "^0.34.2",
+        "@img/sharp-linux-arm": "^0.34.2",
+        "@img/sharp-linux-arm64": "^0.34.2",
+        "@img/sharp-linux-x64": "^0.34.2",
+        "@img/sharp-linuxmusl-arm64": "^0.34.2",
+        "@img/sharp-linuxmusl-x64": "^0.34.2",
+        "@img/sharp-win32-arm64": "^0.34.2",
+        "@img/sharp-win32-x64": "^0.34.2",
       },
     },
     "packages/audio-capture-napi": {
@@ -531,8 +542,6 @@
     "@smithy/util-utf8": ["@smithy/util-utf8@4.2.2", "", { "dependencies": { "@smithy/util-buffer-from": "^4.2.2", "tslib": "^2.6.2" } }, "sha512-75MeYpjdWRe8M5E3AW0O4Cx3UadweS+cwdXjwYGBW5h/gxxnbeZ877sLPX/ZJA9GVTlL/qG0dXP29JWFCD1Ayw=="],
 
     "@smithy/uuid": ["@smithy/uuid@1.1.2", "", { "dependencies": { "tslib": "^2.6.2" } }, "sha512-O/IEdcCUKkubz60tFbGA7ceITTAJsty+lBjNoorP4Z6XRqaFb/OjQjZODophEcuq68nKm6/0r+6/lLQ+XVpk8g=="],
-
-    "@types/bun": ["@types/bun@1.3.11", "", { "dependencies": { "bun-types": "1.3.11" } }, "sha512-5vPne5QvtpjGpsGYXiFyycfpDF2ECyPcTSsFBMa0fraoxiQyMJ3SmuQIGhzPg2WJuWxVBoxWJ2kClYTcw/4fAg=="],
 
     "@types/lodash": ["@types/lodash@4.17.24", "", {}, "sha512-gIW7lQLZbue7lRSWEFql49QJJWThrTFFeIMJdp3eH4tKoxm1OvEPg02rm4wCCSHS0cL3/Fizimb35b7k8atwsQ=="],
 

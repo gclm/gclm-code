@@ -10,6 +10,7 @@ import {
   logEvent,
 } from 'src/services/analytics/index.js'
 import { getModelStrings } from 'src/utils/model/modelStrings.js'
+import { getAPIProvider } from './model/providers.js'
 import {
   getIsNonInteractiveSession,
   preferThirdPartyAuthentication,

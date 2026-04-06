@@ -71,22 +71,22 @@ This PR adds a GitHub Actions workflow that enables Gclm Code integration in our
 
 ### How it works
 
-Once this PR is merged, we'll be able to interact with Claude by mentioning @claude in a pull request or issue comment.
-Once the workflow is triggered, Claude will analyze the comment and surrounding context, and execute on the request in a GitHub action.
+Once this PR is merged, we'll be able to interact with Gclm Code by mentioning @claude in a pull request or issue comment.
+Once the workflow is triggered, Gclm Code will analyze the comment and surrounding context, and execute on the request in a GitHub action.
 
 ### Important Notes
 
 - **This workflow won't take effect until this PR is merged**
 - **@claude mentions won't work until after the merge is complete**
-- The workflow runs automatically whenever Claude is mentioned in PR or issue comments
-- Claude gets access to the entire PR or issue context including files, diffs, and previous comments
+- The workflow runs automatically whenever Gclm Code is mentioned in PR or issue comments
+- Gclm Code gets access to the entire PR or issue context including files, diffs, and previous comments
 
 ### Security
 
 - Our Anthropic API key is securely stored as a GitHub Actions secret
 - Only users with write access to the repository can trigger the workflow
-- All Claude runs are stored in the GitHub Actions run history
-- Claude's default tools are limited to reading/writing files and interacting with our repo by creating comments, branches, and commits.
+- All Gclm Code runs are stored in the GitHub Actions run history
+- Gclm Code's default tools are limited to reading/writing files and interacting with our repo by creating comments, branches, and commits.
 - We can add more allowed tools by adding them to the workflow file like:
 
 \`\`\`

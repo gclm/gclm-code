@@ -255,7 +255,7 @@ const externalTips: Tip[] = [
   {
     id: 'prompt-queue',
     content: async () =>
-      'Hit Enter to queue up additional messages while Claude is working.',
+      'Hit Enter to queue up additional messages while Gclm Code is working.',
     cooldownSessions: 5,
     async isRelevant() {
       const config = getGlobalConfig()

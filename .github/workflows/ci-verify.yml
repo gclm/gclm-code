@@ -10,10 +10,14 @@ concurrency:
   group: ci-verify-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  preflight:
-    name: Preflight
+  build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,23 +25,12 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.3.11'
+          bun-version: 1.3.11
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: preflight
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          bun-version: '1.3.11'
+          node-version: 22
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -48,88 +41,14 @@ jobs:
       - name: Build
         run: bun run build
 
-  smoke-packages:
-    name: Smoke packages (${{ matrix.smoke_label }})
-    runs-on: ubuntu-latest
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - smoke_id: core
-            smoke_label: core
-            command: bun run smoke:packages:core
-          - smoke_id: gateway
-            smoke_label: gateway
-            command: bun run smoke:packages:gateway
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Run unit and integration tests
+        run: bun run test
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.3.11'
+      - name: Run smoke test
+        run: bun run smoke
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Pack npm
+        run: node scripts/pack-npm.mjs
 
-      - name: Run smoke
-        env:
-          SMOKE_GATEWAY_BASE_URL: ${{ secrets.SMOKE_GATEWAY_BASE_URL }}
-          SMOKE_GATEWAY_API_KEY: ${{ secrets.SMOKE_GATEWAY_API_KEY }}
-        run: ${{ matrix.command }}
-
-  smoke-single-package-staging:
-    name: Smoke single-package staging
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node (npm)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Run single-package staging smoke
-        run: node ./scripts/smoke-single-package-npm.mjs
-
-  smoke-single-package-runtime:
-    name: Smoke single-package runtime (${{ matrix.platform_id }})
-    runs-on: ${{ matrix.runner }}
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform_id: darwin-x64
-            runner: macos-15-intel
-          - platform_id: darwin-arm64
-            runner: macos-15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.3.11'
-
-      - name: Setup Node (npm)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build
-        run: bun run build
-
-      - name: Run single-package tarball install smoke
-        run: node ./scripts/smoke-single-package-npm-install.mjs
-
-      - name: Run single-package vendor modules smoke
-        run: node ./scripts/smoke-single-package-vendor-modules.mjs
+      - name: Smoke npm package
+        run: node scripts/smoke-npm-package.mjs

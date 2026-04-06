@@ -20,16 +20,6 @@ on:
         required: true
         default: 'latest'
         type: string
-      attach_release_assets:
-        description: 'Upload built CLI artifacts to GitHub Release'
-        required: true
-        default: true
-        type: boolean
-      run_registry_smoke:
-        description: 'Run private registry smoke even when publish/assets are disabled'
-        required: true
-        default: false
-        type: boolean
 
 concurrency:
   group: release-npm-${{ github.ref }}
@@ -43,10 +33,6 @@ jobs:
       tag: ${{ steps.meta.outputs.tag }}
       npm_tag: ${{ steps.meta.outputs.npm_tag }}
       publish_npm: ${{ steps.meta.outputs.publish_npm }}
-      attach_assets: ${{ steps.meta.outputs.attach_assets }}
-      registry_smoke_enabled: ${{ steps.meta.outputs.registry_smoke_enabled }}
-      platform_matrix: ${{ steps.meta.outputs.platform_matrix }}
-      runtime_base_url: ${{ steps.meta.outputs.runtime_base_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -55,13 +41,10 @@ jobs:
         id: meta
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          PLATFORM_MATRIX=$(node ./scripts/release-platform-matrix.mjs)
           if [ "${{ github.event_name }}" = "push" ]; then
             TAG="${GITHUB_REF_NAME}"
             NPM_TAG="latest"
             PUBLISH_NPM="true"
-            ATTACH_ASSETS="true"
-            RUN_REGISTRY_SMOKE="true"
             if [ "$TAG" != "v${VERSION}" ]; then
               echo "Tag ${TAG} does not match package.json version v${VERSION}" >&2
               exit 1
@@ -75,34 +58,14 @@ jobs:
             fi
             NPM_TAG="${{ inputs.npm_tag }}"
             PUBLISH_NPM="${{ inputs.publish_to_npm }}"
-            ATTACH_ASSETS="${{ inputs.attach_release_assets }}"
-            RUN_REGISTRY_SMOKE="${{ inputs.run_registry_smoke }}"
           fi
-
-          if [ "${PUBLISH_NPM}" = "true" ] && [ "${ATTACH_ASSETS}" != "true" ]; then
-            echo "publish_to_npm=true requires attach_release_assets=true for single-package runtime downloads" >&2
-            exit 1
-          fi
-
-          if [ "${PUBLISH_NPM}" = "true" ] || [ "${ATTACH_ASSETS}" = "true" ]; then
-            REGISTRY_SMOKE_ENABLED="true"
-          else
-            REGISTRY_SMOKE_ENABLED="${RUN_REGISTRY_SMOKE}"
-          fi
-
-          RUNTIME_BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/"
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "npm_tag=${NPM_TAG}" >> "$GITHUB_OUTPUT"
           echo "publish_npm=${PUBLISH_NPM}" >> "$GITHUB_OUTPUT"
-          echo "attach_assets=${ATTACH_ASSETS}" >> "$GITHUB_OUTPUT"
-          echo "registry_smoke_enabled=${REGISTRY_SMOKE_ENABLED}" >> "$GITHUB_OUTPUT"
-          echo "platform_matrix=${PLATFORM_MATRIX}" >> "$GITHUB_OUTPUT"
-          echo "runtime_base_url=${RUNTIME_BASE_URL}" >> "$GITHUB_OUTPUT"
 
-  preflight:
-    name: Preflight
+  build-and-test:
     runs-on: ubuntu-latest
     needs: meta
     steps:
@@ -117,19 +80,41 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Brand guard
-        run: bun run brand:guard
+      - name: Build
+        run: bun run build
 
-  build-binary:
-    name: Build binary (${{ matrix.platform_id }})
-    runs-on: ${{ matrix.runner }}
-    needs: [meta, preflight]
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.meta.outputs.platform_matrix) }}
+      - name: Run tests
+        run: bun run test
+
+      - name: Run smoke
+        run: bun run smoke
+
+      - name: Pack npm
+        run: node scripts/pack-npm.mjs
+
+      - name: Smoke npm package
+        run: node scripts/smoke-npm-package.mjs
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish-npm:
+    runs-on: ubuntu-latest
+    needs: [meta, build-and-test]
+    if: ${{ needs.meta.outputs.publish_npm == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node (npm)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -139,210 +124,17 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build binary
-        run: bun run build
-
-      - name: Prepare artifact
+      - name: Build and pack
         run: |
-          mkdir -p dist/release
-          cp gc "dist/release/${{ matrix.binary_artifact }}"
-          chmod +x "dist/release/${{ matrix.binary_artifact }}"
-          "./dist/release/${{ matrix.binary_artifact }}" --version
+          bun install --frozen-lockfile
+          bun run build
+          node scripts/pack-npm.mjs
 
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.binary_artifact }}
-          path: dist/release/${{ matrix.binary_artifact }}
-          if-no-files-found: error
-
-  package-single-npm:
-    name: Package single npm artifact
-    runs-on: ubuntu-latest
-    needs: [meta, build-binary]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node (npm)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Download binary artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: gc-*
-          path: dist/release-inputs
-          merge-multiple: true
-
-      - name: Prepare GitHub release assets
-        run: |
-          node ./scripts/prepare-mac-release-assets.mjs \
-            --output-dir release-assets \
-            --version "${{ needs.meta.outputs.version }}" \
-            --binary-input-dir dist/release-inputs
-
-      - name: Prepare staged single-package npm artifact
-        run: |
-          node ./scripts/prepare-single-package-npm.mjs \
-            --output-dir dist/npm-release \
-            --version "${{ needs.meta.outputs.version }}" \
-            --release-tag "${{ needs.meta.outputs.tag }}" \
-            --runtime-base-url "${{ needs.meta.outputs.runtime_base_url }}"
-
-      - name: Pack staged npm package
-        run: |
-          node ./scripts/pack-single-package-npm.mjs \
-            --staging-dir dist/npm-release \
-            --output-dir dist/npm-tarballs
-
-      - name: Upload staged npm package
-        uses: actions/upload-artifact@v4
-        with:
-          name: single-package-staging
-          path: dist/npm-release
-          if-no-files-found: error
-
-      - name: Upload packed npm tarball
-        uses: actions/upload-artifact@v4
-        with:
-          name: single-package-tarballs
-          path: dist/npm-tarballs
-          if-no-files-found: error
-
-      - name: Upload release assets
-        uses: actions/upload-artifact@v4
-        with:
-          name: single-package-release-assets
-          path: release-assets
-          if-no-files-found: error
-
-  smoke-tarball:
-    name: Tarball smoke (${{ matrix.platform_id }})
-    runs-on: ${{ matrix.runner }}
-    needs: [meta, package-single-npm]
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.meta.outputs.platform_matrix) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node (npm)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Download packed npm tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: single-package-tarballs
-          path: dist/npm-tarballs
-
-      - name: Download release assets
-        uses: actions/download-artifact@v4
-        with:
-          name: single-package-release-assets
-          path: release-assets
-
-      - name: Smoke tarball install
-        run: |
-          node ./scripts/smoke-single-package-npm-install.mjs \
-            --skip-pack \
-            --tarballs-dir dist/npm-tarballs \
-            --release-assets-dir release-assets \
-            --version "${{ needs.meta.outputs.version }}"
-
-  smoke-registry:
-    name: Registry smoke (${{ matrix.platform_id }})
-    runs-on: ${{ matrix.runner }}
-    needs: [meta, package-single-npm, smoke-tarball]
-    if: ${{ needs.meta.outputs.registry_smoke_enabled == 'true' }}
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.meta.outputs.platform_matrix) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node (npm)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Download packed npm tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: single-package-tarballs
-          path: dist/npm-tarballs
-
-      - name: Download release assets
-        uses: actions/download-artifact@v4
-        with:
-          name: single-package-release-assets
-          path: release-assets
-
-      - name: Smoke private registry install
-        run: |
-          node ./scripts/smoke-single-package-npm-registry.mjs \
-            --skip-pack \
-            --tarballs-dir dist/npm-tarballs \
-            --release-assets-dir release-assets \
-            --version "${{ needs.meta.outputs.version }}" \
-            --upstream-registry https://registry.npmjs.org/
-
-  publish-release-assets:
-    runs-on: ubuntu-latest
-    needs: [meta, package-single-npm, smoke-tarball, smoke-registry]
-    if: ${{ needs.meta.outputs.attach_assets == 'true' }}
-    permissions:
-      contents: write
-    steps:
-      - name: Download release assets
-        uses: actions/download-artifact@v4
-        with:
-          name: single-package-release-assets
-          path: release-assets
-
-      - name: Publish GitHub Release assets
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.meta.outputs.tag }}
-          target_commitish: ${{ github.sha }}
-          generate_release_notes: true
-          files: |
-            release-assets/*.tar.gz
-            release-assets/*.sha256
-
-  publish-npm:
-    runs-on: ubuntu-latest
-    needs: [meta, package-single-npm, smoke-tarball, smoke-registry, publish-release-assets]
-    if: ${{ needs.meta.outputs.publish_npm == 'true' }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node (npm)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Download packed npm tarball
-        uses: actions/download-artifact@v4
-        with:
-          name: single-package-tarballs
-          path: dist/npm-tarballs
-
-      - name: Publish single package
-        run: |
-          node ./scripts/publish-single-package-npm-tarball.mjs \
-            --tarballs-dir dist/npm-tarballs \
-            --version "${{ needs.meta.outputs.version }}" \
-            --npm-tag "${{ needs.meta.outputs.npm_tag }}"
+      - name: Publish
+        run: npm publish dist/npm-package/ --access public --tag ${{ needs.meta.outputs.npm_tag }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          AUTHORIZED: '1'
 
   tag-stable:
     runs-on: ubuntu-latest
@@ -352,7 +144,7 @@ jobs:
       - name: Setup Node (npm)
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Tag current version as stable

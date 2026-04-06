@@ -1,43 +1,39 @@
 {
   "name": "gclm-code",
   "version": "1.0.1",
-  "private": true,
-  "description": "Customized Bun CLI workspace for the Gclm Code build.",
+  "description": "Gclm Code - an AI-powered CLI coding assistant that understands your codebase, edits files, runs terminal commands, and handles entire workflows for you.",
   "type": "module",
-  "packageManager": "bun@1.3.11",
   "bin": {
-    "gc": "./gc",
-    "claude": "./gc"
+    "gclm": "bin/gclm.js",
+    "gc": "bin/gclm.js",
+    "claude": "bin/gclm.js"
   },
-  "engines": {
-    "bun": ">=1.3.11"
+  "homepage": "https://github.com/gclm/gclm-code",
+  "bugs": {
+    "url": "https://github.com/gclm/gclm-code/issues"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "brand:guard": "./scripts/brand-guard.sh",
     "typecheck": "bunx tsc --noEmit",
-    "verify": "bun run brand:guard && bun run build",
-    "build": "bun run ./scripts/build.ts",
+    "brand:guard": "bash scripts/brand-guard.sh",
+    "verify": "bun run build && bun run smoke",
+    "clean": "node ./scripts/clean.mjs",
+    "build": "bun scripts/build.mjs",
     "build:dev": "bun run ./scripts/build.ts --dev",
     "build:dev:full": "bun run ./scripts/build.ts --dev --feature-set=dev-full",
     "compile": "bun run ./scripts/build.ts --compile",
-    "dev": "bun run ./src/entrypoints/cli.tsx",
-    "smoke": "bun run ./scripts/smoke-test.mjs",
-    "smoke:gui": "bun run ./scripts/gui-smoke-test.mjs",
-    "smoke:packages": "bun run ./scripts/smoke-packages.mjs all",
-    "smoke:packages:core": "bun run ./scripts/smoke-packages.mjs core",
-    "smoke:packages:gui": "bun run ./scripts/smoke-packages.mjs gui",
-    "smoke:packages:gateway": "bun run ./scripts/smoke-packages.mjs gateway",
-    "smoke:login-gateway": "bun run ./scripts/smoke-login-gateway.mjs",
-    "smoke:login-gateway:matrix": "bun run ./scripts/smoke-login-gateway-matrix.mjs",
-    "prepare:release-assets": "node ./scripts/prepare-mac-release-assets.mjs",
-    "prepare:single-package-npm": "node ./scripts/prepare-single-package-npm.mjs",
-    "pack:single-package-npm": "node ./scripts/pack-single-package-npm.mjs",
-    "publish:single-package-npm": "node ./scripts/publish-single-package-npm-tarball.mjs",
-    "smoke:single-package": "node ./scripts/smoke-single-package-all.mjs",
-    "smoke:single-package-npm": "node ./scripts/smoke-single-package-npm.mjs",
-    "smoke:single-package-install": "node ./scripts/smoke-single-package-npm-install.mjs",
-    "smoke:single-package-registry": "node ./scripts/smoke-single-package-npm-registry.mjs",
-    "smoke:single-package-vendor": "node ./scripts/smoke-single-package-vendor-modules.mjs"
+    "dev": "bun --preload ./scripts/dev-preload.mjs ./src/entrypoints/cli.tsx",
+    "dev:watch": "bun scripts/dev.mjs --watch-only",
+    "test": "bun test --preload ./tests/preload.ts tests/",
+    "test:watch": "bun test --watch --preload ./tests/preload.ts tests/",
+    "test:coverage": "bun test --coverage --preload ./tests/preload.ts tests/",
+    "smoke": "bun scripts/smoke-test.mjs",
+    "pack:npm": "node scripts/pack-npm.mjs",
+    "smoke:npm": "node scripts/smoke-npm-package.mjs",
+    "release:npm": "bun run build && bun run pack:npm && bun run smoke:npm",
+    "prepublishOnly": "node -e \"if (!process.env.AUTHORIZED) { console.error('ERROR: Direct publishing is not allowed.\\nPlease see the release workflow documentation to publish this package.'); process.exit(1); }\""
   },
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.3.0",
@@ -79,6 +75,7 @@
     "@smithy/node-http-handler": "^4.5.1",
     "ajv": "^8.18.0",
     "asciichart": "^1.5.25",
+    "audio-capture-napi": "workspace:*",
     "auto-bind": "^5.0.1",
     "axios": "^1.14.0",
     "bidi-js": "^1.0.3",
@@ -100,12 +97,14 @@
     "highlight.js": "^11.11.1",
     "https-proxy-agent": "^8.0.0",
     "ignore": "^7.0.5",
+    "image-processor-napi": "workspace:*",
     "indent-string": "^5.0.0",
     "ink": "^6.8.0",
     "jsonc-parser": "^3.3.1",
     "lodash-es": "^4.17.23",
     "lru-cache": "^11.2.7",
     "marked": "^17.0.5",
+    "modifiers-napi": "workspace:*",
     "p-map": "^7.0.4",
     "picomatch": "^4.0.4",
     "plist": "^3.1.0",
@@ -124,36 +123,43 @@
     "turndown": "^7.2.2",
     "type-fest": "^5.5.0",
     "undici": "^7.24.6",
+    "url-handler-napi": "workspace:*",
     "usehooks-ts": "^3.1.1",
     "vscode-jsonrpc": "^8.2.1",
     "vscode-languageserver-protocol": "^3.17.5",
     "vscode-languageserver-types": "^3.17.5",
     "wrap-ansi": "^10.0.0",
     "ws": "^8.20.0",
-    "xss": "^1.0.15",
-    "xxhash-wasm": "^1.1.0",
-    "yaml": "^2.8.3",
-    "zod": "^4.3.6",
-    "audio-capture-napi": "workspace:*",
-    "image-processor-napi": "workspace:*",
-    "modifiers-napi": "workspace:*",
-    "url-handler-napi": "workspace:*",
     "@ant/claude-for-chrome-mcp": "workspace:*",
     "@ant/computer-use-input": "workspace:*",
     "@ant/computer-use-mcp": "workspace:*",
-    "@ant/computer-use-swift": "workspace:*"
+    "@ant/computer-use-swift": "workspace:*",
+    "xss": "^1.0.15",
+    "xxhash-wasm": "^1.1.0",
+    "yaml": "^2.8.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.11",
+    "bun-types": "^1.3.11",
     "typescript": "^6.0.2"
   },
+  "optionalDependencies": {
+    "@img/sharp-darwin-arm64": "^0.34.2",
+    "@img/sharp-darwin-x64": "^0.34.2",
+    "@img/sharp-linux-arm": "^0.34.2",
+    "@img/sharp-linux-arm64": "^0.34.2",
+    "@img/sharp-linux-x64": "^0.34.2",
+    "@img/sharp-linuxmusl-arm64": "^0.34.2",
+    "@img/sharp-linuxmusl-x64": "^0.34.2",
+    "@img/sharp-win32-arm64": "^0.34.2",
+    "@img/sharp-win32-x64": "^0.34.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "files": [
-    "gc",
-    "README.md",
-    "install.sh",
-    "packages"
-  ],
-  "workspaces": [
-    "packages/*"
+    "bin",
+    "dist",
+    "README.md"
   ]
 }

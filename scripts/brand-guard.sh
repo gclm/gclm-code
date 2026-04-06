@@ -1,29 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Brand word guard (excluding references/)
-# Fails if forbidden legacy brand words are present.
+# Brand guard — ensures no legacy upstream brand words leak into our codebase.
+# Excludes references/ (frozen upstream snapshots) and this script itself.
 
-PATTERN='Free Code|Claude Code'
+PATTERNS=(
+  'Free Code'
+  'Claude Code'
+)
 
-if rg -n --glob '!references/**' --glob '!scripts/brand-guard.sh' -S "$PATTERN" .; then
-  echo ""
-  echo "Brand guard failed: found legacy brand words (Free Code / Claude Code)."
-  echo "Please replace them with Gclm Code, or move historical material under references/."
-  exit 1
-fi
+for pat in "${PATTERNS[@]}"; do
+  if rg -n --glob '!references/**' --glob '!scripts/brand-guard.sh' -S "$pat" .; then
+    echo ""
+    echo "Brand guard failed: found legacy brand word '$pat'."
+    echo "Replace with 'Gclm Code', or move historical material under references/."
+    exit 1
+  fi
+done
 
-# Command hint guard (user-visible guidance should default to gc)
-# We intentionally target only instruction-like phrases to avoid false
-# positives in internal identifiers, file names, compatibility code, and
-# provider/model names.
-COMMAND_HINT_PATTERN='(Run|Usage:|Resume with:|Resume this session with:|Try[[:space:]]+`?)\s*claude([[:space:]]|`)' 
+# Command hint guard — user-visible guidance should default to 'gc'.
+# Targets instruction-like phrases to avoid false positives in internal
+# identifiers, file names, compatibility code, and provider/model names.
+COMMAND_HINT_PATTERN='(Run|Usage:|Resume with:|Resume this session with:|Try[[:space:]]+`?)\s*claude([[:space:]]|`)'
 
 if rg -n --glob '!references/**' --glob '!scripts/brand-guard.sh' -S "$COMMAND_HINT_PATTERN" src docs README.md; then
   echo ""
   echo "Brand guard failed: found legacy command hints using 'claude'."
-  echo "Please switch user-facing command examples to 'gc' (keep 'claude' only as compatibility entrypoint)."
+  echo "Switch user-facing command examples to 'gc' (keep 'claude' only as compatibility entrypoint)."
   exit 1
 fi
 
-echo "Brand guard passed: no legacy brand words or legacy command hints found outside references/."
+echo "Brand guard passed."
