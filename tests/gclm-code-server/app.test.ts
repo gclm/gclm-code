@@ -77,6 +77,19 @@ function createState(executionBridge = createFakeExecutionBridge()): GclmCodeSer
 }
 
 describe('gclm-code-server app', () => {
+  test('serves the self-hosted web console shell', async () => {
+    const app = createApp(createState())
+
+    const resp = await app.request('/console')
+
+    expect(resp.status).toBe(200)
+    expect(resp.headers.get('content-type')).toContain('text/html')
+    const html = await resp.text()
+    expect(html).toContain('gclm-code-server')
+    expect(html).toContain('Self-hosted Console')
+    expect(html).toContain('/sessions')
+  })
+
   test('creates a session and returns stream info', async () => {
     const fakeBridge = createFakeExecutionBridge()
     const app = createApp(createState(fakeBridge))

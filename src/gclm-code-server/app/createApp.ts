@@ -4,6 +4,7 @@ import { z } from 'zod/v4'
 import type { Context } from 'hono'
 import type { ChannelProvider } from '../identity/types.js'
 import type { GclmCodeServerAppState } from './types.js'
+import { renderConsolePage } from './consolePage.js'
 
 const createSessionSchema = z.object({
   title: z.string().optional(),
@@ -67,6 +68,12 @@ export function createApp(state: GclmCodeServerAppState) {
 
   app.get('/health', c => {
     return c.json({ ok: true, service: 'gclm-code-server' })
+  })
+
+  app.get('/', c => c.redirect('/console'))
+
+  app.get('/console', c => {
+    return c.html(renderConsolePage())
   })
 
   app.get('/sessions', c => {
