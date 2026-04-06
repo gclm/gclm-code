@@ -1,8 +1,21 @@
 import type { LocalCommandCall } from '../../types/command.js'
 import { getGatewayOrchestrationState } from '../../orchestration/hello2cc/index.js'
-import { buildHello2ccDebugDump } from '../../orchestration/hello2cc/observability.js'
+import {
+  buildHello2ccDebugDump,
+  buildHello2ccDiagnosticSummary,
+} from '../../orchestration/hello2cc/observability.js'
 
-export const call: LocalCommandCall = async () => {
+function usage(): string {
+  return [
+    'Usage: /hello2cc [summary|json|both]',
+    '',
+    '  summary  Show a human-friendly diagnostic summary (default)',
+    '  json     Show the raw JSON snapshot for AI-assisted diagnosis',
+    '  both     Show the summary first, then the raw JSON snapshot',
+  ].join('\n')
+}
+
+export const call: LocalCommandCall = async args => {
   const state = getGatewayOrchestrationState()
   if (!state) {
     return {
@@ -12,8 +25,24 @@ export const call: LocalCommandCall = async () => {
     }
   }
 
+  const mode = (args.trim() || 'summary').toLowerCase()
+  if (['help', '--help', '-h'].includes(mode)) {
+    return {
+      type: 'text',
+      value: usage(),
+    }
+  }
+
+  const summary = buildHello2ccDiagnosticSummary(state)
+  const json = buildHello2ccDebugDump(state)
+
   return {
     type: 'text',
-    value: buildHello2ccDebugDump(state),
+    value:
+      mode === 'json'
+        ? json
+        : mode === 'both'
+          ? `${summary}\n\nRaw JSON snapshot\n${json}`
+          : summary,
   }
 }

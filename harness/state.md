@@ -209,6 +209,7 @@
   - 已补 hello2cc declarative config 策略入口：当前支持在 `settings.json -> hello2cc.extraStrategies` 中声明额外 route strategy，并通过 scope 挂到特定 session / project / provider / model
   - 已补 `/status` 的 hello2cc `Debug snapshot`：当前可一次性看到 host facts、active strategies、memory pressure、recent success/failure 与 toolFailureCounts，更适合线上排查
   - 已补独立 `/hello2cc` 命令入口：当前无需进入 `/status` 也可直接拿到 hello2cc 结构化 debug snapshot，更适合长任务排障与 `/resume` 后的快速确认
+  - 已把 `/hello2cc` 升级成双视图排障入口：默认输出人工友好的 summary，也支持 `json` 与 `both`，适配“人工看结构化、AI 看原始 JSON”的联合排障方式
   - 已把 hello2cc declarative strategy 扩成更强的 declarative policy：`settings.json -> hello2cc.extraStrategies` 现支持 `activation`、`sessionStartLines`、`subagentGuidance`、`preconditions`，并支持按 `strategyProfiles` / `qualityGateModes` 做 scope 选择
   - 已补当前项目的 hello2cc 推荐默认配置片段，并同步写入策略开发文档，便于直接落到项目 `settings.json`
   - 已补 hello2cc 约定式项目配置：当前会自动加载 `~/.claude/hello2cc/<project>.json` 与 `<repo>/.claude/hello2cc.json`，不必每次手改主 `settings.json`

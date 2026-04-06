@@ -159,3 +159,70 @@ export function buildHello2ccDebugDump(
     2,
   )
 }
+
+function summarizeRecords(
+  records: Hello2ccSessionState['recentSuccesses'] | Hello2ccSessionState['recentFailures'],
+): string[] {
+  return records
+    .slice(0, 3)
+    .map(
+      record => `- ${record.toolName}: ${record.summary} (x${record.count})`,
+    )
+}
+
+export function buildHello2ccDiagnosticSummary(
+  state: Hello2ccSessionState,
+): string {
+  const snapshot = buildHello2ccObservabilitySnapshot(state)
+  const lines = [
+    'hello2cc diagnostic summary',
+    '',
+    'Session',
+    `- sessionId=${state.sessionId}`,
+    `- intent=${snapshot.sessionAnchors.intent ?? 'unknown'}`,
+    snapshot.sessionAnchors.activeTeamName
+      ? `- activeTeam=${snapshot.sessionAnchors.activeTeamName}`
+      : '- activeTeam=none',
+    snapshot.sessionAnchors.activeWorktreePath
+      ? `- activeWorktree=${snapshot.sessionAnchors.activeWorktreePath}`
+      : '- activeWorktree=none',
+    '',
+    'Host facts',
+    ...formatHello2ccHostFacts(state).map(line => `- ${line}`),
+    '',
+    'Routing posture',
+    ...formatHello2ccRoutingPosture(state).map(line => `- ${line}`),
+    '',
+    'Recent successes',
+    ...(state.recentSuccesses.length > 0
+      ? summarizeRecords(state.recentSuccesses)
+      : ['- none']),
+    '',
+    'Recent failures',
+    ...(state.recentFailures.length > 0
+      ? summarizeRecords(state.recentFailures)
+      : ['- none']),
+    '',
+    'Suggested next check',
+  ]
+
+  if (snapshot.memoryPressure.totalRetries >= 3) {
+    lines.push(
+      '- retry pressure is elevated, so compare recent failures against current preconditions before starting another implementation hop.',
+    )
+  } else if (snapshot.sessionAnchors.activeTeamName) {
+    lines.push(
+      '- an active team is already present, so verify whether SendMessage reuse is enough before creating new workers.',
+    )
+  } else if (snapshot.hostFacts.mcp.needsAuth > 0) {
+    lines.push(
+      '- MCP auth is still pending for some servers, so avoid depending on those routes until they are ready.',
+    )
+  } else {
+    lines.push(
+      '- use `/hello2cc both` if you want the structured summary plus the raw JSON snapshot for AI-assisted diagnosis.',
+    )
+  }
+
+  return lines.join('\n')
+}

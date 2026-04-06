@@ -225,7 +225,8 @@ type: "hello2cc-state"
 3. 再看成功或失败后有没有 `remembered tool success/failure`
 4. 如果是 `/resume` 后异常，再检查恢复后的第一轮是否还能延续旧的 success/failure memory
 5. 最后看 `/status` 里的 `Host facts` 和 `Routing posture`，确认 provider、quality gate、active strategies 是否符合预期
-6. 需要完整结构化快照时，直接运行 `/hello2cc`
+6. 需要人工可读的摘要时，直接运行 `/hello2cc`
+7. 需要给 AI 或脚本消费的原始数据时，运行 `/hello2cc json`
 
 这个顺序有一个好处：
 
@@ -256,15 +257,16 @@ type: "hello2cc-state"
 
 - 还没有独立 metric 或 event taxonomy
 - 还没有把 route guidance 文本本身做结构化采样
-- 已有专用 `/hello2cc` debug 命令，但还没有独立 metric 面板或结构化观测后台
+- 已有专用 `/hello2cc` debug 命令，并支持 `summary/json/both` 三种视图，但还没有独立 metric 面板或结构化观测后台
 
 所以当前最可靠的方式仍然是：
 
 1. 看 debug 日志
 2. 先看 `/resume` 提示与 `/status`
-3. 需要完整快照时运行 `/hello2cc`
-4. 再看恢复后行为是否延续
-5. 必要时直接查看 transcript 中的 `hello2cc-state` entry
+3. 需要人工摘要时运行 `/hello2cc`
+4. 需要原始 JSON 时运行 `/hello2cc json`
+5. 再看恢复后行为是否延续
+6. 必要时直接查看 transcript 中的 `hello2cc-state` entry
 
 如果你希望当前项目默认就带 hello2cc 策略，而不是每次手改主 `settings.json`，现在还可以：
 
@@ -276,6 +278,6 @@ type: "hello2cc-state"
 
 如果后面继续做 Phase 2，最值得补的是：
 
-1. 把 `/hello2cc` 从纯文本 dump 进一步升级成更友好的结构化观测面板
+1. 把 `/hello2cc` 的 summary 视图继续升级成更强的结构化观测面板
 2. 为 route guidance / normalization / memory hit 单独打 metric
 3. 为 `/status` 与 `/resume` 的 hello2cc 摘要补更多可操作字段，例如最近一次失败时间与最近命中的 route guidance 片段

@@ -467,13 +467,20 @@ describe('hello2cc orchestration', () => {
     restoreGatewayOrchestrationState(snapshotHello2ccSessionState(state))
 
     const result = await hello2ccCommandCall('', {} as never)
+    const jsonResult = await hello2ccCommandCall('json', {} as never)
+    const bothResult = await hello2ccCommandCall('both', {} as never)
     const orchestrationState = getGatewayOrchestrationState()
 
     expect(hello2ccCommand.name).toBe('hello2cc')
     expect(hello2ccCommand.aliases).toContain('hello2cc-debug')
     expect(result.type).toBe('text')
-    expect(result.value).toContain(`"sessionId": "${state.sessionId}"`)
-    expect(result.value).toContain('"activeTeamName": "gateway-workers"')
+    expect(result.value).toContain('hello2cc diagnostic summary')
+    expect(result.value).toContain('Host facts')
+    expect(result.value).toContain('activeTeam=gateway-workers')
+    expect(jsonResult.value).toContain(`"sessionId": "${state.sessionId}"`)
+    expect(jsonResult.value).toContain('"activeTeamName": "gateway-workers"')
+    expect(bothResult.value).toContain('Raw JSON snapshot')
+    expect(bothResult.value).toContain(`"sessionId": "${state.sessionId}"`)
     expect(orchestrationState?.activeTeamName).toBe('gateway-workers')
   })
 

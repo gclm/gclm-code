@@ -311,6 +311,21 @@
 - `paths`
   - 查看当前项目解析出来的两个约定路径
 
+当前 `/hello2cc` 也已支持多视图：
+
+```bash
+/hello2cc
+/hello2cc summary
+/hello2cc json
+/hello2cc both
+```
+
+推荐用法：
+
+- 人工排障默认看 `/hello2cc`
+- AI 辅助排障时看 `/hello2cc json`
+- 同时需要两者时看 `/hello2cc both`
+
 ## 新增策略的步骤
 
 1. 在 [defaultStrategies.ts](/Users/gclm/workspace/lab/ai/gclm-code/src/orchestration/hello2cc/defaultStrategies.ts) 新增策略对象
