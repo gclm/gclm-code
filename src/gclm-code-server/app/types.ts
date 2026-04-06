@@ -1,6 +1,7 @@
 import type { Database } from 'bun:sqlite'
 import type { AuditRepository } from '../audit/auditRepository.js'
 import type { IdempotencyRepository } from '../channels/shared/idempotencyRepository.js'
+import type { FeishuPublisher } from '../channels/feishu/feishuPublisher.js'
 import type { SessionExecutionBridge } from '../execution/types.js'
 import type { ChannelIdentityRepository } from '../identity/channelIdentityRepository.js'
 import type { PermissionRepository } from '../permissions/permissionRepository.js'
@@ -8,6 +9,7 @@ import type { SessionBindingRepository } from '../sessions/sessionBindingReposit
 import type { SessionRepository } from '../sessions/sessionRepository.js'
 import type { StreamHub } from '../transport/streamHub.js'
 import type { StreamInfoService } from '../transport/streamInfoService.js'
+import type { GclmCodeServerEnv } from '../config/env.js'
 
 export type GclmCodeServerAppRepositories = {
   channelIdentities: ChannelIdentityRepository
@@ -19,9 +21,13 @@ export type GclmCodeServerAppRepositories = {
 }
 
 export type GclmCodeServerAppState = {
+  env: GclmCodeServerEnv
   db: Database
   repositories: GclmCodeServerAppRepositories
   streamHub: StreamHub
   streamInfoService: StreamInfoService
   executionBridge: SessionExecutionBridge
+  channels: {
+    feishuPublisher: FeishuPublisher
+  }
 }

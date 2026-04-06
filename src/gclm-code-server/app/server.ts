@@ -1,12 +1,14 @@
 import { randomUUID } from 'crypto'
 import { createGclmCodeServerDatabase } from '../db/client.js'
 import { LocalCliExecutionBridge } from '../execution/localCliExecutionBridge.js'
+import { readGclmCodeServerEnv, type GclmCodeServerEnv } from '../config/env.js'
 import { ChannelIdentityRepository } from '../identity/channelIdentityRepository.js'
 import { SessionRepository } from '../sessions/sessionRepository.js'
 import { SessionBindingRepository } from '../sessions/sessionBindingRepository.js'
 import { PermissionRepository } from '../permissions/permissionRepository.js'
 import { IdempotencyRepository } from '../channels/shared/idempotencyRepository.js'
 import { AuditRepository } from '../audit/auditRepository.js'
+import { FeishuPublisher } from '../channels/feishu/feishuPublisher.js'
 import { StreamHub } from '../transport/streamHub.js'
 import { StreamInfoService } from '../transport/streamInfoService.js'
 import { createApp } from './createApp.js'
@@ -16,10 +18,25 @@ export type StartGclmCodeServerOptions = {
   port?: number
   host?: string
   signingSecret?: string
+  env?: Partial<GclmCodeServerEnv>
 }
 
-export function createAppState(signingSecret = 'gclm-code-server-dev-secret'): GclmCodeServerAppState {
-  const { db } = createGclmCodeServerDatabase()
+export function createAppState(
+  options: {
+    env?: Partial<GclmCodeServerEnv>
+    signingSecret?: string
+  } = {},
+): GclmCodeServerAppState {
+  const baseEnv = readGclmCodeServerEnv()
+  const env = {
+    ...baseEnv,
+    ...options.env,
+    feishu: {
+      ...baseEnv.feishu,
+      ...options.env?.feishu,
+    },
+  }
+  const { db } = createGclmCodeServerDatabase(env)
   const repositories = {
     channelIdentities: new ChannelIdentityRepository(db),
     sessions: new SessionRepository(db),
@@ -29,27 +46,40 @@ export function createAppState(signingSecret = 'gclm-code-server-dev-secret'): G
     audit: new AuditRepository(db),
   }
   const streamHub = new StreamHub()
+  const feishuPublisher = new FeishuPublisher({
+    config: env.feishu,
+    audit: repositories.audit,
+  })
 
   return {
+    env,
     db,
     repositories,
     streamHub,
-    streamInfoService: new StreamInfoService(signingSecret),
+    streamInfoService: new StreamInfoService(
+      options.signingSecret ?? env.GCLM_CODE_SERVER_SIGNING_SECRET,
+    ),
     executionBridge: new LocalCliExecutionBridge({
       sessions: repositories.sessions,
       permissions: repositories.permissions,
       streamHub,
     }),
+    channels: {
+      feishuPublisher,
+    },
   }
 }
 
 export function startGclmCodeServer(options: StartGclmCodeServerOptions = {}) {
-  const state = createAppState(options.signingSecret)
+  const state = createAppState({
+    env: options.env,
+    signingSecret: options.signingSecret,
+  })
   const app = createApp(state)
 
   const server = Bun.serve<{ sessionId?: string; unsubscribe?: () => void }>({
-    hostname: options.host ?? '127.0.0.1',
-    port: options.port ?? 4317,
+    hostname: options.host ?? state.env.GCLM_CODE_SERVER_HOST,
+    port: options.port ?? state.env.GCLM_CODE_SERVER_PORT,
     fetch(req, server) {
       const url = new URL(req.url)
       const match = url.pathname.match(/^\/sessions\/([^/]+)\/stream$/)

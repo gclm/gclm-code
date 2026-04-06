@@ -20,6 +20,7 @@ import { AuditRepository } from '../../src/gclm-code-server/audit/auditRepositor
 import { StreamHub } from '../../src/gclm-code-server/transport/streamHub.js'
 import { StreamInfoService } from '../../src/gclm-code-server/transport/streamInfoService.js'
 import type { SessionRecord } from '../../src/gclm-code-server/sessions/types.js'
+import { FeishuPublisher } from '../../src/gclm-code-server/channels/feishu/feishuPublisher.js'
 
 const tempDirs: string[] = []
 
@@ -61,6 +62,18 @@ function createState(executionBridge = createFakeExecutionBridge()): GclmCodeSer
   })
   runMigrations(db, join(import.meta.dir, '../../src/gclm-code-server/db/migrations'))
   return {
+    env: {
+      GCLM_CODE_SERVER_HOST: '127.0.0.1',
+      GCLM_CODE_SERVER_PORT: 4317,
+      GCLM_CODE_SERVER_SIGNING_SECRET: 'test-secret',
+      GCLM_CODE_SERVER_DB_PATH: join(dir, 'server.db'),
+      GCLM_CODE_SERVER_DB_BUSY_TIMEOUT_MS: 250,
+      feishu: {
+        enabled: false,
+        baseUrl: 'https://open.feishu.cn',
+        bypassSignatureVerification: false,
+      },
+    },
     db,
     repositories: {
       channelIdentities: new ChannelIdentityRepository(db),
@@ -73,6 +86,17 @@ function createState(executionBridge = createFakeExecutionBridge()): GclmCodeSer
     streamHub: new StreamHub(),
     streamInfoService: new StreamInfoService('test-secret', 300),
     executionBridge,
+    channels: {
+      feishuPublisher: new FeishuPublisher({
+        config: {
+          enabled: false,
+          baseUrl: 'https://open.feishu.cn',
+          bypassSignatureVerification: false,
+        },
+        audit: new AuditRepository(db),
+        fetchImpl: fetch,
+      }),
+    },
   }
 }
 

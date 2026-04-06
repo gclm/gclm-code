@@ -19,7 +19,7 @@
 7. [sqlite-schema-design.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/gclm-code-server/sqlite-schema-design.md)
    - 一期 `SQLite` schema、索引、状态流转与 migration 设计
 8. [dev-quickstart.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/gclm-code-server/dev-quickstart.md)
-   - 当前代码实现对应的本地启动、Console 访问方式与飞书入口说明
+   - 当前代码实现对应的本地启动、Console 访问方式、飞书配置与签名校验说明
 
 ## 当前已修正的关键设计问题
 

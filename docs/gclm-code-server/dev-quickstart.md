@@ -36,6 +36,13 @@ GCLM_CODE_SERVER_PORT=4317
 GCLM_CODE_SERVER_SIGNING_SECRET=local-dev-secret
 GCLM_CODE_SERVER_DB_PATH=./.local/gclm-code-server/dev.db
 GCLM_CODE_SERVER_DB_BUSY_TIMEOUT_MS=5000
+GCLM_CODE_SERVER_FEISHU_ENABLED=false
+GCLM_CODE_SERVER_FEISHU_BASE_URL=https://open.feishu.cn
+GCLM_CODE_SERVER_FEISHU_APP_ID=cli_app_id
+GCLM_CODE_SERVER_FEISHU_APP_SECRET=cli_app_secret
+GCLM_CODE_SERVER_FEISHU_VERIFICATION_TOKEN=verification_token
+GCLM_CODE_SERVER_FEISHU_ENCRYPT_KEY=encrypt_key
+GCLM_CODE_SERVER_FEISHU_BYPASS_SIGNATURE_VERIFICATION=false
 ```
 
 示例：
@@ -58,6 +65,7 @@ GCLM_CODE_SERVER_PORT=4320 bun run dev:gclm-code-server
 - prompt 通过 argv 传入，后续轮次通过 `--resume` 续接会话
 - permission response API 虽已保留，但在当前真实 CLI 模式下暂未接通稳定的远程回写控制通道
 - 飞书 adapter 目前只覆盖入口归一化、会话绑定、入站文本投递和交互 action 骨架，尚未接真实飞书回发渲染
+- 飞书回发层当前只实现最小文本消息回执，不包含卡片流式刷新、消息更新或复杂交互态
 
 ## 飞书入口
 
@@ -71,6 +79,18 @@ GCLM_CODE_SERVER_PORT=4320 bun run dev:gclm-code-server
 - `permission_response`
 - `open_session`
 - `resume_session`
+
+## 飞书签名校验
+
+- 当设置了 `GCLM_CODE_SERVER_FEISHU_VERIFICATION_TOKEN` 时，会校验 payload 中的 `token`
+- 当设置了 `GCLM_CODE_SERVER_FEISHU_ENCRYPT_KEY` 时，会校验 `x-lark-request-timestamp`、`x-lark-request-nonce`、`x-lark-signature`
+- 本地联调时如果确实需要跳过 header 签名校验，可以显式设置：
+
+```bash
+GCLM_CODE_SERVER_FEISHU_BYPASS_SIGNATURE_VERIFICATION=true
+```
+
+建议只在纯本地调试时使用，接入真实飞书应用后关闭
 
 ## 推荐验证顺序
 

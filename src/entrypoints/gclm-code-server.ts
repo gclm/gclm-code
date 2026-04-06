@@ -1,23 +1,16 @@
+import { readGclmCodeServerEnv } from '../gclm-code-server/config/env.js'
 import { startGclmCodeServer } from '../gclm-code-server/app/server.js'
 
-function readPort(value: string | undefined, fallback: number): number {
-  if (!value) {
-    return fallback
-  }
+const env = readGclmCodeServerEnv()
+const host = env.GCLM_CODE_SERVER_HOST
+const port = env.GCLM_CODE_SERVER_PORT
 
-  const parsed = Number.parseInt(value, 10)
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error(`Invalid GCLM_CODE_SERVER_PORT: ${value}`)
-  }
-  return parsed
-}
-
-const host = process.env.GCLM_CODE_SERVER_HOST ?? '127.0.0.1'
-const port = readPort(process.env.GCLM_CODE_SERVER_PORT, 4317)
-const signingSecret =
-  process.env.GCLM_CODE_SERVER_SIGNING_SECRET ?? 'gclm-code-server-dev-secret'
-
-const runtime = startGclmCodeServer({ host, port, signingSecret })
+const runtime = startGclmCodeServer({
+  host,
+  port,
+  signingSecret: env.GCLM_CODE_SERVER_SIGNING_SECRET,
+  env,
+})
 
 console.log(
   `[gclm-code-server] listening on http://${host}:${port} (console: http://${host}:${port}/console)`,
