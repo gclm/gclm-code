@@ -25,6 +25,7 @@ function spawnCli(args: string[], env: Record<string, string>) {
       cwd: root,
       env,
       stdin: 'ignore',
+      timeout: 15_000,
     },
   )
 
