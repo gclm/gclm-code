@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   meta:
-    runs-on: ubuntu-latest
+    runs-on: macos-15-intel
     outputs:
       version: ${{ steps.meta.outputs.version }}
       tag: ${{ steps.meta.outputs.tag }}
@@ -66,7 +66,7 @@ jobs:
           echo "publish_npm=${PUBLISH_NPM}" >> "$GITHUB_OUTPUT"
 
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     needs: meta
     steps:
       - name: Checkout
@@ -103,7 +103,7 @@ jobs:
           if-no-files-found: error
 
   publish-npm:
-    runs-on: ubuntu-latest
+    runs-on: macos-15-intel
     needs: [meta, build-and-test]
     if: ${{ needs.meta.outputs.publish_npm == 'true' }}
     steps:
@@ -137,7 +137,7 @@ jobs:
           AUTHORIZED: '1'
 
   tag-stable:
-    runs-on: ubuntu-latest
+    runs-on: macos-15-intel
     needs: [meta, publish-npm]
     if: ${{ needs.meta.outputs.publish_npm == 'true' && needs.meta.outputs.npm_tag == 'latest' }}
     steps:
