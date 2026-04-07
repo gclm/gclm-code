@@ -80,6 +80,9 @@
   - 但标准 auth 读取链对 `ANTHROPIC_API_KEY` 仍要求 `customApiKeyResponses.approved`
   - 导致“`/login` 提示成功，但重启后仍显示 Not logged in 且无法正常请求”
   - 当前修复方向：Gateway 保存成功后同步批准该 API key，并补最小回归测试覆盖
+- 已补 REPL 登录体验收口：
+  - 对于“已完成 onboarding 但当前 `apiKeyStatus` 为 `missing/invalid`”的会话，REPL 现在会自动弹出 `ConsoleOAuthFlow`
+  - 不再只在底部提示 `Not logged in · Run /login`，避免用户误以为主界面可正常对话但实际无法发请求
 - 发布侧当前进入 `ship / release-check`：等待下一次正式发版时验证单包主链的公网发布闭环
 - 已完成一轮 CI 稳定性修复：
   - `tests/integration/cliTestUtils.ts` 将 CLI 子进程超时从 `15s` 提高到 `30s`
