@@ -266,6 +266,8 @@ Here's an example of how your output should be structured:
 Please provide your summary following this structure, ensuring precision and thoroughness in your response.
 `
 
+const LANGUAGE_PRESERVATION_INSTRUCTION = `\nIMPORTANT: Write the summary in the SAME LANGUAGE as the user's messages. If the user wrote primarily in Chinese, Japanese, Korean, or any other non-English language, the summary MUST be in that language. Always preserve original technical terms, function names, variable names, file paths, and code snippets verbatim without translation.\n`
+
 const NO_TOOLS_TRAILER =
   '\n\nREMINDER: Do NOT call any tools. Respond with plain text only — ' +
   'an <analysis> block followed by a <summary> block. ' +
@@ -279,7 +281,7 @@ export function getPartialCompactPrompt(
     direction === 'up_to'
       ? PARTIAL_COMPACT_UP_TO_PROMPT
       : PARTIAL_COMPACT_PROMPT
-  let prompt = NO_TOOLS_PREAMBLE + template
+  let prompt = NO_TOOLS_PREAMBLE + LANGUAGE_PRESERVATION_INSTRUCTION + template
 
   if (customInstructions && customInstructions.trim() !== '') {
     prompt += `\n\nAdditional Instructions:\n${customInstructions}`
@@ -291,7 +293,7 @@ export function getPartialCompactPrompt(
 }
 
 export function getCompactPrompt(customInstructions?: string): string {
-  let prompt = NO_TOOLS_PREAMBLE + BASE_COMPACT_PROMPT
+  let prompt = NO_TOOLS_PREAMBLE + LANGUAGE_PRESERVATION_INSTRUCTION + BASE_COMPACT_PROMPT
 
   if (customInstructions && customInstructions.trim() !== '') {
     prompt += `\n\nAdditional Instructions:\n${customInstructions}`

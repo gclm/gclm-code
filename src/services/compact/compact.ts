@@ -1658,17 +1658,29 @@ const SKILL_TRUNCATION_MARKER =
   '\n\n[... skill content truncated for compaction; use Read on the skill path if you need the full text]'
 
 /**
- * Truncate content to roughly maxTokens, keeping the head. roughTokenCountEstimation
- * uses ~4 chars/token (its default bytesPerToken), so char budget = maxTokens * 4
- * minus the marker so the result stays within budget. Marker tells the model it
- * can Read the full file if needed.
+ * Truncate content to roughly maxTokens, keeping the head.
+ * Uses roughTokenCountEstimation (which is CJK-aware) for accurate budgeting.
+ * Binary search finds the largest prefix whose estimated tokens ≤ maxTokens.
+ * Marker tells the model it can Read the full file if needed.
  */
 function truncateToTokens(content: string, maxTokens: number): string {
   if (roughTokenCountEstimation(content) <= maxTokens) {
     return content
   }
-  const charBudget = maxTokens * 4 - SKILL_TRUNCATION_MARKER.length
-  return content.slice(0, charBudget) + SKILL_TRUNCATION_MARKER
+  // Binary search for the right cut point — linear char-budget doesn't work
+  // because roughTokenCountEstimation is content-dependent (CJK vs ASCII).
+  let lo = 0
+  let hi = content.length
+  while (lo < hi) {
+    const mid = lo + Math.ceil((hi - lo) / 2)
+    const est = roughTokenCountEstimation(content.slice(0, mid))
+    if (est <= maxTokens) {
+      lo = mid
+    } else {
+      hi = mid - 1
+    }
+  }
+  return content.slice(0, lo) + SKILL_TRUNCATION_MARKER
 }
 
 function shouldExcludeFromPostCompactRestore(

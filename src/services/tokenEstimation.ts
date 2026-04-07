@@ -200,11 +200,64 @@ export async function countMessagesTokensWithAPI(
   })
 }
 
+/**
+ * CJK character ranges for token-density estimation.
+ * CJK characters tokenize at ~1.5 chars/token vs ~4 chars/token for ASCII,
+ * so a content-length heuristic that ignores CJK underestimates token count
+ * by 2-3x for Chinese/Japanese/Korean text.
+ */
+const CJK_RANGES: ReadonlyArray<[number, number]> = [
+  [0x4e00, 0x9fff], // CJK Unified Ideographs
+  [0x3400, 0x4dbf], // CJK Extension A
+  [0x3040, 0x309f], // Hiragana
+  [0x30a0, 0x30ff], // Katakana
+  [0xac00, 0xd7af], // Hangul Syllables
+  [0xf900, 0xfaff], // CJK Compatibility Ideographs
+]
+
+function isCJK(charCode: number): boolean {
+  for (const [lo, hi] of CJK_RANGES) {
+    if (charCode >= lo && charCode <= hi) return true
+  }
+  return false
+}
+
+/**
+ * Sample size for CJK ratio detection.
+ * Kept small to avoid O(n) overhead on large content;
+ * 2000 chars is enough for a stable ratio estimate.
+ */
+const CJK_SAMPLE_SIZE = 2000
+
 export function roughTokenCountEstimation(
   content: string,
   bytesPerToken: number = 4,
 ): number {
-  return Math.round(content.length / bytesPerToken)
+  // Fast path: explicit low bytesPerToken (e.g. JSON) — skip CJK detection
+  if (bytesPerToken < 3 || content.length === 0) {
+    return Math.round(content.length / bytesPerToken)
+  }
+
+  // Sample the beginning of the content to estimate CJK ratio
+  const sample = content.length > CJK_SAMPLE_SIZE ? content.slice(0, CJK_SAMPLE_SIZE) : content
+  let cjkCount = 0
+  for (let i = 0; i < sample.length; i++) {
+    if (isCJK(sample.charCodeAt(i))) {
+      cjkCount++
+    }
+  }
+  const cjkRatio = cjkCount / sample.length
+
+  // No CJK content — use the original bytesPerToken unchanged
+  if (cjkRatio === 0) {
+    return Math.round(content.length / bytesPerToken)
+  }
+
+  // CJK content tokenizes at ~1.5 chars/token; interpolate linearly.
+  // e.g. bytesPerToken=4, cjkRatio=1.0 → effectiveBpt = 1.5
+  //      bytesPerToken=4, cjkRatio=0.5 → effectiveBpt = 2.75
+  const effectiveBpt = bytesPerToken - cjkRatio * (bytesPerToken - 1.5)
+  return Math.round(content.length / Math.max(effectiveBpt, 1.5))
 }
 
 /**
