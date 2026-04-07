@@ -83,6 +83,8 @@
 - 已补 REPL 登录体验收口：
   - 对于“已完成 onboarding 但当前 `apiKeyStatus` 为 `missing/invalid`”的会话，REPL 现在会自动弹出 `ConsoleOAuthFlow`
   - 不再只在底部提示 `Not logged in · Run /login`，避免用户误以为主界面可正常对话但实际无法发请求
+- 已补 Gateway 登录回归测试：
+  - 新增 `tests/utils/auth.test.ts`，覆盖未审批 `ANTHROPIC_API_KEY` 不可用、批准后恢复可用两条关键路径
 - 发布侧当前进入 `ship / release-check`：等待下一次正式发版时验证单包主链的公网发布闭环
 - 已完成一轮 CI 稳定性修复：
   - `tests/integration/cliTestUtils.ts` 将 CLI 子进程超时从 `15s` 提高到 `30s`
