@@ -85,6 +85,9 @@
   - 不再只在底部提示 `Not logged in · Run /login`，避免用户误以为主界面可正常对话但实际无法发请求
 - 已补 Gateway 登录回归测试：
   - 新增 `tests/utils/auth.test.ts`，覆盖未审批 `ANTHROPIC_API_KEY` 不可用、批准后恢复可用两条关键路径
+- 已修复一条 CI 测试稳定性问题：
+  - `tests/utils/log.test.ts` 之前通过 `mock.module(cachePaths)` 注入错误日志目录，在 GitHub Actions 并行跑测试时偶发退回 runner 真实 cache 路径
+  - 现已改为 `loadErrorLogs(path?)` / `getErrorLogByIndex(index, path?)` 显式传入测试目录，消除模块 mock 带来的路径抖动
 - 发布侧当前进入 `ship / release-check`：等待下一次正式发版时验证单包主链的公网发布闭环
 - 已完成一轮 CI 稳定性修复：
   - `tests/integration/cliTestUtils.ts` 将 CLI 子进程超时从 `15s` 提高到 `30s`

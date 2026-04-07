@@ -18,13 +18,8 @@ import {
 const originalEnv = { ...process.env }
 const originalCwd = process.cwd()
 const tempDirs: string[] = []
-const cachePathsModuleUrl = new URL(
-  '../../src/utils/cachePaths.js',
-  import.meta.url,
-).href
 const logModuleUrl = new URL('../../src/utils/log.ts', import.meta.url).href
 let logModuleImportCounter = 0
-let currentErrorsDir = join(tmpdir(), 'gclm-code-log-default-errors')
 
 function restoreEnv() {
   for (const key of Object.keys(process.env)) {
@@ -48,13 +43,6 @@ function makeTempDir(): string {
 }
 
 async function loadFreshLogModule(errorsDir?: string) {
-  currentErrorsDir = errorsDir ?? join(makeTempDir(), 'errors')
-  mock.module(cachePathsModuleUrl, () => ({
-    CACHE_PATHS: {
-      errors: () => currentErrorsDir,
-    },
-  }))
-
   logModuleImportCounter += 1
   const module = (await import(
     `${logModuleUrl}?case=${logModuleImportCounter}`
@@ -346,7 +334,7 @@ describe('log utils', () => {
       new Date('2024-01-01T00:20:00.000Z'),
     )
 
-    const logs = await logModule.loadErrorLogs()
+    const logs = await logModule.loadErrorLogs(errorsDir)
 
     expect(logs).toHaveLength(3)
     expect(logs[0]).toMatchObject({
@@ -375,18 +363,18 @@ describe('log utils', () => {
       value: 2,
       messageCount: 2,
     })
-    expect(await logModule.getErrorLogByIndex(0)).toMatchObject({
+    expect(await logModule.getErrorLogByIndex(0, errorsDir)).toMatchObject({
       fullPath: newerPath,
     })
-    expect(await logModule.getErrorLogByIndex(99)).toBeNull()
+    expect(await logModule.getErrorLogByIndex(99, errorsDir)).toBeNull()
   })
 
   test('returns an empty list when no error logs exist yet', async () => {
     const errorsDir = join(makeTempDir(), 'missing-errors')
     const logModule = await loadFreshLogModule(errorsDir)
 
-    expect(await logModule.loadErrorLogs()).toEqual([])
-    expect(await logModule.getErrorLogByIndex(0)).toBeNull()
+    expect(await logModule.loadErrorLogs(errorsDir)).toEqual([])
+    expect(await logModule.getErrorLogByIndex(0, errorsDir)).toBeNull()
     expect(logModule.getInMemoryErrors()[0]?.error).toContain(errorsDir)
   })
 })

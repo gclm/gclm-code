@@ -206,8 +206,8 @@ export function getInMemoryErrors(): { error: string; timestamp: string }[] {
  * Loads the list of error logs
  * @returns List of error logs sorted by date
  */
-export function loadErrorLogs(): Promise<LogOption[]> {
-  return loadLogList(CACHE_PATHS.errors())
+export function loadErrorLogs(path: string = CACHE_PATHS.errors()): Promise<LogOption[]> {
+  return loadLogList(path)
 }
 
 /**
@@ -217,8 +217,9 @@ export function loadErrorLogs(): Promise<LogOption[]> {
  */
 export async function getErrorLogByIndex(
   index: number,
+  path?: string,
 ): Promise<LogOption | null> {
-  const logs = await loadErrorLogs()
+  const logs = await loadErrorLogs(path)
   return logs[index] || null
 }
 
