@@ -10,7 +10,15 @@ import { getSSLErrorHint } from '../services/api/errorUtils.js'
 import { refreshProviderModelOptions } from '../services/api/providerModelDiscovery.js'
 import { sendNotification } from '../services/notifier.js'
 import { OAuthService } from '../services/oauth/index.js'
-import { getOauthAccountInfo, validateForceLoginOrg } from '../utils/auth.js'
+import {
+  approveCustomApiKey,
+  getOauthAccountInfo,
+  validateForceLoginOrg,
+} from '../utils/auth.js'
+import {
+  hasGatewayVersionSuffix,
+  trimGatewayBaseUrl,
+} from '../utils/gatewayBaseUrl.js'
 import { logError } from '../utils/log.js'
 import { settingsChangeDetector } from '../utils/settings/changeDetector.js'
 import {
@@ -45,7 +53,7 @@ type PlatformStep = 'base_url' | 'api_key'
 const PASTE_HERE_MSG = 'Paste code here if prompted > '
 
 function normalizeBaseUrl(raw: string): string {
-  return raw.trim().replace(/\/+$/, '')
+  return trimGatewayBaseUrl(raw)
 }
 
 function saveGatewayEnv(baseUrl: string, apiKey: string): void {
@@ -78,6 +86,10 @@ function saveGatewayEnv(baseUrl: string, apiKey: string): void {
   delete process.env.CLAUDE_CODE_USE_BEDROCK
   delete process.env.CLAUDE_CODE_USE_VERTEX
   delete process.env.CLAUDE_CODE_USE_FOUNDRY
+
+  // Gateway /login stores an env-style key, so it must be explicitly approved
+  // to pass the standard ANTHROPIC_API_KEY auth source checks after restart.
+  approveCustomApiKey(trimmedApiKey)
 }
 
 export function ConsoleOAuthFlow({
@@ -283,6 +295,11 @@ export function ConsoleOAuthFlow({
         const normalized = normalizeBaseUrl(platformBaseUrl)
         // eslint-disable-next-line no-new
         new URL(normalized)
+        if (hasGatewayVersionSuffix(normalized)) {
+          throw new Error(
+            'ANTHROPIC_BASE_URL should not end with /v1 or /vN. Please enter the gateway base URL without the trailing version segment.',
+          )
+        }
         setPlatformBaseUrl(normalized)
         setPlatformStep('api_key')
         setCursorOffset(0)

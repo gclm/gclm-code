@@ -75,6 +75,11 @@
 ## 进行中
 
 - 功能侧处于持续维护模式
+- 已定位一条 Gateway 登录链路缺口：
+  - Gateway `/login` 会把 `ANTHROPIC_BASE_URL` / `ANTHROPIC_API_KEY` 保存到 `userSettings.env`
+  - 但标准 auth 读取链对 `ANTHROPIC_API_KEY` 仍要求 `customApiKeyResponses.approved`
+  - 导致“`/login` 提示成功，但重启后仍显示 Not logged in 且无法正常请求”
+  - 当前修复方向：Gateway 保存成功后同步批准该 API key，并补最小回归测试覆盖
 - 发布侧当前进入 `ship / release-check`：等待下一次正式发版时验证单包主链的公网发布闭环
 - 已完成一轮 CI 稳定性修复：
   - `tests/integration/cliTestUtils.ts` 将 CLI 子进程超时从 `15s` 提高到 `30s`
@@ -228,3 +233,6 @@
   - 已继续补扫欢迎态 / 弹窗头部：`IdeOnboardingDialog` 标题前缀 `✻` 已统一改为 `startupAccent`，与欢迎页品牌 accent 一致
   - `ResumeTask`、`HelpV2`、权限弹窗等其余页面当前未发现旧 logo 图形入口；剩余差异主要是功能文案或业务色彩，不属于 logo 样式问题
 - 备注：真实公网 npm 发布后的最终消费者闭环仍需在下一次正式单包版本发布时补齐
+
+- 2026-04-07: fixed print/debug runtime regressions: query currentModel TDZ, gateway base URL normalization (avoid /v1/v1/messages), and debug log directory bootstrap; added debug + gateway URL regression tests.
+- 2026-04-07: removed gateway startup self-heal for legacy approved keys; keep only explicit /login approval + gateway URL validation, with debug/gateway helper tests green.

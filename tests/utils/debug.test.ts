@@ -269,10 +269,33 @@ describe('debug utils', () => {
     logForDebugging('api: sync message')
     await flushDebugLogs()
 
-    expect(mkdirCalls).toEqual([nestedDir])
+    expect(mkdirCalls).toEqual([])
     expect(appendCalls[0]?.path).toBe(explicitPath)
     expect(appendCalls[0]?.content).toContain('api: sync message')
     expect(readFileSync(explicitPath, 'utf8')).toContain('api: sync message')
+  })
+
+  test('creates missing default debug directories before sync writes', async () => {
+    const configRoot = makeTempDir()
+    const configDir = join(configRoot, 'nested', 'claude-home')
+
+    process.env.NODE_ENV = 'production'
+    process.env.USER_TYPE = 'external'
+    process.env.CLAUDE_CONFIG_DIR = configDir
+    process.argv = ['bun', 'test', '--debug']
+    resetDebugCaches()
+
+    const debugLogPath = getDebugLogPath()
+    expect(existsSync(join(configDir, 'debug'))).toBe(false)
+
+    logForDebugging('api: create debug dir first')
+    await flushDebugLogs()
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(existsSync(join(configDir, 'debug'))).toBe(true)
+    expect(readFileSync(debugLogPath, 'utf8')).toContain(
+      'api: create debug dir first',
+    )
   })
 
   test('enableDebugLogging reports whether debug mode was already active', () => {

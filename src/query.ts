@@ -455,6 +455,16 @@ async function* queryLoop(
       messagesForQuery = collapseResult.messages
     }
 
+    const appState = toolUseContext.getAppState()
+    const initialPermissionMode = appState.toolPermissionContext.mode
+    let currentModel = getRuntimeMainLoopModel({
+      permissionMode: initialPermissionMode,
+      mainLoopModel: toolUseContext.options.mainLoopModel,
+      exceeds200kTokens:
+        initialPermissionMode === 'plan' &&
+        doesMostRecentAssistantMessageExceed200k(messagesForQuery),
+    })
+
     const {
       userContext: effectiveUserContext,
       systemContext: effectiveSystemContext,
@@ -611,16 +621,6 @@ async function* queryLoop(
           toolUseContext,
         )
       : null
-
-    const appState = toolUseContext.getAppState()
-    const permissionMode = appState.toolPermissionContext.mode
-    let currentModel = getRuntimeMainLoopModel({
-      permissionMode,
-      mainLoopModel: toolUseContext.options.mainLoopModel,
-      exceeds200kTokens:
-        permissionMode === 'plan' &&
-        doesMostRecentAssistantMessageExceed200k(messagesForQuery),
-    })
 
     queryCheckpoint('query_setup_end')
 

@@ -152,6 +152,22 @@ async function appendAsync(
 
 function noop(): void {}
 
+function ensureDirectoryExistsSync(dir: string): void {
+  const fs = getFsImplementation()
+  if (fs.existsSync(dir)) {
+    return
+  }
+  const parent = dirname(dir)
+  if (parent !== dir && !fs.existsSync(parent)) {
+    ensureDirectoryExistsSync(parent)
+  }
+  try {
+    fs.mkdirSync(dir)
+  } catch {
+    // Directory may have been created concurrently.
+  }
+}
+
 function getDebugWriter(): BufferedWriter {
   if (!debugWriter) {
     let ensuredDir: string | null = null
@@ -165,12 +181,8 @@ function getDebugWriter(): BufferedWriter {
           // immediateMode: must stay sync. Async writes are lost on direct
           // process.exit() and keep the event loop alive in beforeExit
           // handlers (infinite loop with Perfetto tracing). See #22257.
-          if (needMkdir) {
-            try {
-              getFsImplementation().mkdirSync(dir)
-            } catch {
-              // Directory already exists
-            }
+          if (needMkdir && !getFsImplementation().existsSync(dir)) {
+            ensureDirectoryExistsSync(dir)
           }
           getFsImplementation().appendFileSync(path, content)
           void updateLatestDebugLogSymlink()

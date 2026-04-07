@@ -1135,13 +1135,12 @@ export async function saveApiKey(apiKey: string): Promise<void> {
     logEvent('tengu_api_key_saved_to_config', {})
   }
 
-  const normalizedKey = normalizeApiKeyForConfig(apiKey)
-
   // Save config with all updates
   saveGlobalConfig(current => {
     const approved = current.customApiKeyResponses?.approved ?? []
+    const normalizedKey = normalizeApiKeyForConfig(apiKey)
     return {
-      ...current,
+      ...approveCustomApiKeyInConfig(current, normalizedKey),
       // Only save to config if keychain save failed or not on darwin
       primaryApiKey: savedToKeychain ? current.primaryApiKey : apiKey,
       customApiKeyResponses: {
@@ -1149,7 +1148,9 @@ export async function saveApiKey(apiKey: string): Promise<void> {
         approved: approved.includes(normalizedKey)
           ? approved
           : [...approved, normalizedKey],
-        rejected: current.customApiKeyResponses?.rejected ?? [],
+        rejected: (current.customApiKeyResponses?.rejected ?? []).filter(
+          key => key !== normalizedKey,
+        ),
       },
     }
   })
@@ -1165,6 +1166,30 @@ export function isCustomApiKeyApproved(apiKey: string): boolean {
   return (
     config.customApiKeyResponses?.approved?.includes(normalizedKey) ?? false
   )
+}
+
+function approveCustomApiKeyInConfig(
+  current: GlobalConfig,
+  normalizedKey: string,
+): GlobalConfig {
+  const approved = current.customApiKeyResponses?.approved ?? []
+  return {
+    ...current,
+    customApiKeyResponses: {
+      ...current.customApiKeyResponses,
+      approved: approved.includes(normalizedKey)
+        ? approved
+        : [...approved, normalizedKey],
+      rejected: (current.customApiKeyResponses?.rejected ?? []).filter(
+        key => key !== normalizedKey,
+      ),
+    },
+  }
+}
+
+export function approveCustomApiKey(apiKey: string): void {
+  const normalizedKey = normalizeApiKeyForConfig(apiKey)
+  saveGlobalConfig(current => approveCustomApiKeyInConfig(current, normalizedKey))
 }
 
 export async function removeApiKey(): Promise<void> {
