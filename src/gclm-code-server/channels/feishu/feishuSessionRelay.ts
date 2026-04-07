@@ -182,6 +182,47 @@ export class FeishuSessionRelay {
       return
     }
 
+    if (event.type === 'message.delta') {
+      const data = this.asRecord(event.data)
+      if (data?.role !== 'assistant' || typeof data.text !== 'string' || !data.text.trim()) {
+        return
+      }
+
+      let streaming = this.getCardState(input.sessionId).streaming
+      if (!streaming) {
+        streaming = await this.state.channels.feishuPublisher.createStreamingCardSession({
+          providerUserId: input.providerUserId,
+          sessionId: input.sessionId,
+          card: {
+            title: 'gclm-code-server',
+            stage: 'running',
+            summary:
+              data.phase === 'thinking'
+                ? '正在整理思路。'
+                : '正在生成 assistant 输出。',
+            sessionId: input.sessionId,
+            updatedAt: new Date().toISOString(),
+            bodyMarkdown: data.text,
+            actions: [
+              {
+                label: '中断执行',
+                action: 'interrupt_session',
+                style: 'danger',
+                value: {
+                  sessionId: input.sessionId,
+                },
+              },
+            ],
+          },
+        })
+        this.setStreamingCard(input.sessionId, streaming ?? undefined)
+        return
+      }
+
+      await streaming.update(data.text)
+      return
+    }
+
     if (event.type === 'permission.requested') {
       const data = this.asRecord(event.data)
       if (!data) {

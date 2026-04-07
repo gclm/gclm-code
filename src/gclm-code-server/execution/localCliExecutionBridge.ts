@@ -44,8 +44,44 @@ function collectTextFromContent(content: unknown): string {
     .join('')
 }
 
+function collectThinkingFromContent(content: unknown): string {
+  if (!Array.isArray(content)) {
+    return ''
+  }
+
+  return content
+    .filter(isJsonMap)
+    .filter(block => block.type === 'thinking' && typeof block.thinking === 'string')
+    .map(block => String(block.thinking))
+    .join('\n\n')
+}
+
+function collectAssistantPreview(content: unknown): {
+  text: string
+  phase: 'thinking' | 'assistant'
+} | null {
+  const text = collectTextFromContent(content).trim()
+  if (text) {
+    return {
+      text,
+      phase: 'assistant',
+    }
+  }
+
+  const thinking = collectThinkingFromContent(content).trim()
+  if (thinking) {
+    return {
+      text: thinking,
+      phase: 'thinking',
+    }
+  }
+
+  return null
+}
+
 export class LocalCliExecutionBridge implements SessionExecutionBridge {
   private readonly activeProcesses = new Map<string, ActiveSessionProcess>()
+  private readonly lastAssistantPreview = new Map<string, string>()
   private readonly repoRoot: string
   private readonly cliEntry: string
   private readonly spawnProcess: typeof spawn
@@ -159,6 +195,7 @@ export class LocalCliExecutionBridge implements SessionExecutionBridge {
 
     child.on('error', error => {
       this.activeProcesses.delete(session.id)
+      this.lastAssistantPreview.delete(session.id)
       this.finalizeTurn(session, 'failed', {
         sessionId: session.id,
         error: error.message,
@@ -167,6 +204,7 @@ export class LocalCliExecutionBridge implements SessionExecutionBridge {
 
     child.on('exit', (code, signal) => {
       this.activeProcesses.delete(session.id)
+      this.lastAssistantPreview.delete(session.id)
       this.options.streamHub.publish(session.id, {
         type: 'session.process.exited',
         data: { sessionId: session.id, exitCode: code, signal },
@@ -197,8 +235,26 @@ export class LocalCliExecutionBridge implements SessionExecutionBridge {
 
     if (parsed.type === 'assistant') {
       const message = isJsonMap(parsed.message) ? parsed.message : undefined
+      const preview = collectAssistantPreview(message?.content)
+      if (preview && this.lastAssistantPreview.get(session.id) !== preview.text) {
+        this.lastAssistantPreview.set(session.id, preview.text)
+        this.options.streamHub.publish(session.id, {
+          type: 'message.delta',
+          data: {
+            sessionId: session.id,
+            messageId:
+              typeof parsed.uuid === 'string' ? parsed.uuid : `msg_${randomUUID()}`,
+            role: 'assistant',
+            text: preview.text,
+            phase: preview.phase,
+            createdAt: new Date().toISOString(),
+            raw: parsed,
+          },
+        })
+      }
+
       const text = collectTextFromContent(message?.content)
-      if (text) {
+      if (text.trim()) {
         this.options.streamHub.publish(session.id, {
           type: 'message.completed',
           data: {
@@ -211,6 +267,7 @@ export class LocalCliExecutionBridge implements SessionExecutionBridge {
             raw: parsed,
           },
         })
+        this.lastAssistantPreview.delete(session.id)
       }
       return
     }

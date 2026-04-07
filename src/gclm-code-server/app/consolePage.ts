@@ -546,7 +546,7 @@ export function renderConsolePage(): string {
               pushEvent('console.error', { scope: 'permissions-refresh', message: error.message })
             })
           }
-          if (payload.type === 'message.completed') {
+          if (payload.type === 'message.completed' || payload.type === 'message.delta') {
             pushEvent(payload.type, payload.data && payload.data.text ? payload.data.text : payload.data)
             return
           }

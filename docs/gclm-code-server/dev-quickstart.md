@@ -9,6 +9,7 @@
 - 通过飞书长连接接收入站消息与卡片动作
 - 通过飞书 interactive card 持续更新会话状态
 - 通过飞书 `CardKit streaming` 渲染 assistant 输出卡片
+- 通过 bridge 的 `message.delta` 事件把 thinking / 分段输出持续推给 Web Console 与飞书
 
 ## 启动方式
 
@@ -96,6 +97,10 @@ GCLM_CODE_SERVER_FEISHU_USE_LONG_CONNECTION=true
 - assistant 输出链路已进一步接入 `CardKit streaming`：session 进入运行态时会先创建流式卡，assistant 内容到达后更新同一张卡，turn 结束后再关闭 streaming mode
 - 当前权限待处理会被提示到飞书，但真正的远程审批回写在真实 CLI 模式下仍未打通
 - 当前真实 CLI bridge 还没有 token 级增量输出事件，因此飞书 streaming 现阶段是“会话级流式卡体验”，不是逐 token 打字机式渲染
+- 当前 bridge 已补 `message.delta`：
+  - 会优先把 thinking 内容作为早期增量推送
+  - 如果后续收到 assistant 文本块，也会把最新完整文本作为增量继续推送
+  - `message.completed` 仍然保留，作为本轮 assistant 最终完成信号
 
 ## 飞书入口
 
