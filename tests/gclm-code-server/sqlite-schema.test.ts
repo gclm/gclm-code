@@ -81,7 +81,7 @@ describe('gclm-code-server sqlite bootstrap', () => {
 
     const idem = buildIdempotencyKey({
       provider: 'feishu',
-      payloadHash: 'abc123',
+      eventId: 'evt_abc123',
     })
 
     idempotencyRepository.upsert({
@@ -113,8 +113,8 @@ describe('gclm-code-server sqlite bootstrap', () => {
     expect(
       idempotencyRepository.findByProviderAndKey({
         provider: 'feishu',
-        idempotencyKey: 'feishu:payload:abc123',
+        idempotencyKey: 'evt_abc123',
       })?.keySource,
-    ).toBe('payload_hash_derived')
+    ).toBe('event_id')
   })
 })

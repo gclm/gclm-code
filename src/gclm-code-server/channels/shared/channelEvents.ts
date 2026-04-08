@@ -5,7 +5,7 @@ export type IdempotencyKeySource =
   | 'payload_hash_derived'
 
 export type ChannelInboundEvent = {
-  provider: 'feishu' | 'dingtalk'
+  provider: 'feishu' | 'dingtalk' | 'wecom'
   eventId: string
   eventType: 'message.created' | 'session.resume' | 'unknown'
   providerUserId: string
@@ -17,7 +17,7 @@ export type ChannelInboundEvent = {
 }
 
 export type ChannelActionCommand = {
-  provider: 'feishu' | 'dingtalk'
+  provider: 'feishu' | 'dingtalk' | 'wecom'
   actionId: string
   actionType: 'permission_response' | 'open_session' | 'resume_session'
   providerUserId: string
@@ -29,9 +29,9 @@ export type ChannelActionCommand = {
   receivedAt: string
 }
 
-export type WebhookIdempotencyRecord = {
+export type ChannelEventIdempotencyRecord = {
   id: string
-  provider: 'feishu' | 'dingtalk'
+  provider: 'feishu' | 'dingtalk' | 'wecom'
   idempotencyKey: string
   payloadHash?: string
   keySource: IdempotencyKeySource
@@ -44,11 +44,11 @@ export type WebhookIdempotencyRecord = {
 }
 
 export function buildIdempotencyKey(input: {
-  provider: 'feishu' | 'dingtalk'
+  provider: 'feishu' | 'dingtalk' | 'wecom'
   eventId?: string
   actionId?: string
   token?: string
-  payloadHash?: string
+  payloadHashDerivedKey?: string
 }): { idempotencyKey: string; keySource: IdempotencyKeySource } {
   if (input.eventId) {
     return { idempotencyKey: input.eventId, keySource: 'event_id' }
@@ -59,11 +59,11 @@ export function buildIdempotencyKey(input: {
   if (input.token) {
     return { idempotencyKey: input.token, keySource: 'token' }
   }
-  if (input.payloadHash) {
+  if (input.payloadHashDerivedKey) {
     return {
-      idempotencyKey: `${input.provider}:payload:${input.payloadHash}`,
+      idempotencyKey: input.payloadHashDerivedKey,
       keySource: 'payload_hash_derived',
     }
   }
-  throw new Error('Unable to build idempotency key without event/action/token/payload hash')
+  throw new Error('Unable to build idempotency key without event/action/token/hash')
 }

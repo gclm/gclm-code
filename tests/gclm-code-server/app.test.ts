@@ -56,7 +56,10 @@ function createFakeExecutionBridge(): SessionExecutionBridge & {
   }
 }
 
-function createState(executionBridge = createFakeExecutionBridge()): GclmCodeServerAppState {
+function createState(
+  executionBridge = createFakeExecutionBridge(),
+  options: { authEnabled?: boolean } = {},
+): GclmCodeServerAppState {
   const dir = mkdtempSync(join(tmpdir(), 'gclm-code-server-app-'))
   tempDirs.push(dir)
   const db = createSqliteDatabase({
@@ -69,6 +72,7 @@ function createState(executionBridge = createFakeExecutionBridge()): GclmCodeSer
       GCLM_CODE_SERVER_HOST: '127.0.0.1',
       GCLM_CODE_SERVER_PORT: 4317,
       GCLM_CODE_SERVER_SIGNING_SECRET: 'test-secret',
+      GCLM_CODE_SERVER_AUTH_ENABLED: options.authEnabled ?? false,
       GCLM_CODE_SERVER_DB_PATH: join(dir, 'server.db'),
       GCLM_CODE_SERVER_DB_BUSY_TIMEOUT_MS: 250,
       feishu: {
@@ -78,6 +82,7 @@ function createState(executionBridge = createFakeExecutionBridge()): GclmCodeSer
         bypassSignatureVerification: false,
       },
     },
+    accessToken: 'test-secret',
     db,
     repositories: {
       channelIdentities: new ChannelIdentityRepository(db),
@@ -116,24 +121,57 @@ function createState(executionBridge = createFakeExecutionBridge()): GclmCodeSer
 }
 
 describe('gclm-code-server app', () => {
-  test('serves the self-hosted web console shell', async () => {
+  test('serves the dashboard shell at / when auth is disabled', async () => {
     const app = createApp(createState())
 
-    const resp = await app.request('/console')
+    const resp = await app.request('/')
 
     expect(resp.status).toBe(200)
     expect(resp.headers.get('content-type')).toContain('text/html')
     const html = await resp.text()
     expect(html).toContain('gclm-code-server')
-    expect(html).toContain('Self-hosted Console')
-    expect(html).toContain('/sessions')
+    expect(html).toContain('Sessions')
+  })
+
+  test('requires auth for the dashboard and accepts token via query', async () => {
+    const app = createApp(createState(createFakeExecutionBridge(), { authEnabled: true }))
+
+    const unauthorized = await app.request('/', {
+      headers: { accept: 'text/html' },
+    })
+    expect(unauthorized.status).toBe(401)
+    expect(await unauthorized.text()).toContain('Authentication Required')
+
+    const authorized = await app.request('/?token=test-secret', {
+      headers: { accept: 'text/html' },
+    })
+    expect(authorized.status).toBe(200)
+    expect(authorized.headers.get('set-cookie')).toContain('gclm_token=test-secret')
+  })
+
+  test('preserves terminal deep-link query params on auth challenge', async () => {
+    const app = createApp(createState(createFakeExecutionBridge(), { authEnabled: true }))
+
+    const unauthorized = await app.request('/terminal.html?id=sess_terminal_1', {
+      headers: { accept: 'text/html' },
+    })
+    expect(unauthorized.status).toBe(401)
+    const html = await unauthorized.text()
+    expect(html).toContain("const url=new URL(location.href)")
+    expect(html).toContain("url.searchParams.set('token',v)")
+
+    const authorized = await app.request('/terminal.html?id=sess_terminal_1&token=test-secret', {
+      headers: { accept: 'text/html' },
+    })
+    expect(authorized.status).toBe(200)
   })
 
   test('creates a session and returns stream info', async () => {
     const fakeBridge = createFakeExecutionBridge()
-    const app = createApp(createState(fakeBridge))
+    const state = createState(fakeBridge)
+    const app = createApp(state)
 
-    const createResp = await app.request('/sessions', {
+    const createResp = await app.request('/api/v1/sessions', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -150,12 +188,13 @@ describe('gclm-code-server app', () => {
 
     expect(createResp.status).toBe(200)
     const createJson = await createResp.json()
-    expect(createJson.session.id).toContain('sess_')
-    expect(createJson.session.executionSessionRef).toBeString()
+    expect(createJson.ok).toBe(true)
+    expect(createJson.data.session.id).toContain('sess_')
+    expect(createJson.data.session.executionSessionRef).toBeString()
     expect(fakeBridge.submitted).toHaveLength(0)
 
     const streamResp = await app.request(
-      `/sessions/${createJson.session.id}/stream-info`,
+      `/api/v1/sessions/${createJson.data.session.id}/stream-info`,
       {
         headers: {
           'x-gclm-user-id': 'user_1',
@@ -165,15 +204,18 @@ describe('gclm-code-server app', () => {
       },
     )
     const streamJson = await streamResp.json()
-    expect(streamJson.stream.path).toBe(`/sessions/${createJson.session.id}/stream`)
-    expect(streamJson.stream.tokenType).toBe('signed-ephemeral')
+    expect(streamJson.data.stream.path).toBe(`/ws/v1/session/${createJson.data.session.id}/stream`)
+    expect(streamJson.data.stream.tokenType).toBe('signed-ephemeral')
+    const tokenPayload = state.streamInfoService.verifyWebSocketToken(streamJson.data.stream.token)
+    expect(tokenPayload.sessionId).toBe(createJson.data.session.id)
+    expect(tokenPayload.userId).toBe('user_1')
   })
 
   test('submits input through the execution bridge and lists sessions', async () => {
     const fakeBridge = createFakeExecutionBridge()
     const app = createApp(createState(fakeBridge))
 
-    const createResp = await app.request('/sessions', {
+    const createResp = await app.request('/api/v1/sessions', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -185,7 +227,7 @@ describe('gclm-code-server app', () => {
     })
     const createJson = await createResp.json()
 
-    const inputResp = await app.request(`/sessions/${createJson.session.id}/input`, {
+    const inputResp = await app.request(`/api/v1/sessions/${createJson.data.session.id}/input`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -202,14 +244,14 @@ describe('gclm-code-server app', () => {
     expect(fakeBridge.submitted).toHaveLength(1)
     expect(fakeBridge.submitted[0]?.prompt).toBe('hello server')
 
-    const listResp = await app.request('/sessions', {
+    const listResp = await app.request('/api/v1/sessions', {
       headers: {
         'x-gclm-user-id': 'user_2',
       },
     })
     const listJson = await listResp.json()
-    expect(listJson.items).toHaveLength(1)
-    expect(listJson.items[0].ownerUserId).toBe('user_2')
+    expect(listJson.data.items).toHaveLength(1)
+    expect(listJson.data.items[0].ownerUserId).toBe('user_2')
   })
 
   test('starts initial input and resolves permission requests via the bridge', async () => {
@@ -217,7 +259,7 @@ describe('gclm-code-server app', () => {
     const state = createState(fakeBridge)
     const app = createApp(state)
 
-    const createResp = await app.request('/sessions', {
+    const createResp = await app.request('/api/v1/sessions', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -235,7 +277,7 @@ describe('gclm-code-server app', () => {
     expect(fakeBridge.submitted).toHaveLength(1)
     expect(fakeBridge.submitted[0]?.prompt).toBe('boot session')
 
-    const session = state.repositories.sessions.findById(createJson.session.id) as SessionRecord
+    const session = state.repositories.sessions.findById(createJson.data.session.id) as SessionRecord
     state.repositories.permissions.insert({
       id: 'req_perm_1',
       sessionId: session.id,
@@ -250,7 +292,7 @@ describe('gclm-code-server app', () => {
     })
 
     const resolveResp = await app.request(
-      `/sessions/${session.id}/permissions/req_perm_1/respond`,
+      `/api/v1/sessions/${session.id}/permissions/req_perm_1/respond`,
       {
         method: 'POST',
         headers: {
@@ -265,10 +307,105 @@ describe('gclm-code-server app', () => {
     expect(fakeBridge.resolved).toHaveLength(1)
     expect(fakeBridge.resolved[0]?.requestId).toBe('req_perm_1')
 
-    const interruptResp = await app.request(`/sessions/${session.id}/interrupt`, {
+    const interruptResp = await app.request(`/api/v1/sessions/${session.id}/interrupt`, {
       method: 'POST',
+      headers: {
+        'x-gclm-user-id': 'user_3',
+      },
     })
     expect(interruptResp.status).toBe(200)
     expect(fakeBridge.interrupted).toContain(session.id)
+  })
+
+  test('rejects cross-user session access and mutation', async () => {
+    const fakeBridge = createFakeExecutionBridge()
+    const state = createState(fakeBridge)
+    const app = createApp(state)
+
+    const createResp = await app.request('/api/v1/sessions', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-gclm-user-id': 'user_owner',
+        'x-gclm-provider-user-id': 'web_owner',
+        'x-gclm-channel': 'web',
+      },
+      body: JSON.stringify({ sourceChannel: 'web', mode: 'create' }),
+    })
+    const createJson = await createResp.json()
+    const sessionId = createJson.data.session.id as string
+
+    const detailResp = await app.request(`/api/v1/sessions/${sessionId}`, {
+      headers: {
+        'x-gclm-user-id': 'user_other',
+      },
+    })
+    expect(detailResp.status).toBe(404)
+
+    const streamResp = await app.request(`/api/v1/sessions/${sessionId}/stream-info`, {
+      headers: {
+        'x-gclm-user-id': 'user_other',
+      },
+    })
+    expect(streamResp.status).toBe(404)
+
+    const inputResp = await app.request(`/api/v1/sessions/${sessionId}/input`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-gclm-user-id': 'user_other',
+      },
+      body: JSON.stringify({
+        content: [{ type: 'text', text: 'should be rejected' }],
+      }),
+    })
+    expect(inputResp.status).toBe(404)
+    expect(fakeBridge.submitted).toHaveLength(0)
+
+    const archiveResp = await app.request(`/api/v1/sessions/${sessionId}/archive`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-gclm-user-id': 'user_other',
+      },
+      body: JSON.stringify({}),
+    })
+    expect(archiveResp.status).toBe(404)
+    expect(state.repositories.sessions.findById(sessionId)?.archivedAt).toBeUndefined()
+  })
+
+  test('status endpoint reports visible sessions without auth', async () => {
+    const app = createApp(createState())
+
+    const createResp = await app.request('/api/v1/sessions', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-gclm-user-id': 'user_4',
+        'x-gclm-provider-user-id': 'web_user_4',
+        'x-gclm-channel': 'web',
+      },
+      body: JSON.stringify({ sourceChannel: 'web', mode: 'create' }),
+    })
+    const createJson = await createResp.json()
+
+    let statusResp = await app.request('/api/v1/status')
+    let statusJson = await statusResp.json()
+    expect(statusJson.data.service).toBe('gclm-code-server')
+    expect(statusJson.data.status).toBe('running')
+    expect(statusJson.data.sessions).toBe(1)
+
+    await app.request(`/api/v1/sessions/${createJson.data.session.id}/archive`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-gclm-user-id': 'user_4',
+      },
+      body: JSON.stringify({}),
+    })
+
+    statusResp = await app.request('/api/v1/status')
+    statusJson = await statusResp.json()
+    expect(statusJson.data.sessions).toBe(0)
   })
 })

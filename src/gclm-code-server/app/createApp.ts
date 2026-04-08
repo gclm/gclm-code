@@ -3,15 +3,17 @@ import { Hono } from 'hono'
 import { z } from 'zod/v4'
 import type { Context } from 'hono'
 import type { ChannelProvider } from '../identity/types.js'
+import type { SessionRecord } from '../sessions/types.js'
 import type { GclmCodeServerAppState } from './types.js'
-import { renderConsolePage } from './consolePage.js'
-import { handleFeishuAction, handleFeishuEvent } from '../channels/feishu/feishuController.js'
+import { createAuthMiddleware } from './middleware/auth.js'
+import { success, error } from './middleware/unifiedResponse.js'
+import { createRecordId } from '../ids.js'
 
 const createSessionSchema = z.object({
   title: z.string().optional(),
   projectId: z.string().optional(),
   workspaceId: z.string().optional(),
-  sourceChannel: z.enum(['web', 'feishu', 'dingtalk', 'api']),
+  sourceChannel: z.enum(['web', 'feishu', 'dingtalk', 'wecom', 'api']),
   mode: z.enum(['create', 'resume_or_create']).optional(),
   initialInput: z
     .array(z.object({ type: z.literal('text'), text: z.string() }))
@@ -38,10 +40,12 @@ const resolvePermissionSchema = z.discriminatedUnion('behavior', [
 
 const archiveSchema = z.object({}).optional()
 
+const SERVER_START_TIME = new Date()
+
 function getRequestIdentity(c: Context): {
   userId: string
   providerUserId: string
-  channel: ChannelProvider
+  provider: ChannelProvider
   tenantScope: string
 } {
   return {
@@ -50,13 +54,17 @@ function getRequestIdentity(c: Context): {
       c.req.header('x-gclm-provider-user-id') ??
       c.req.header('x-gclm-user-id') ??
       'local-dev-user',
-    channel: (c.req.header('x-gclm-channel') as ChannelProvider | undefined) ?? 'web',
+    provider: (c.req.header('x-gclm-provider') as ChannelProvider | undefined) ?? 'web',
     tenantScope: c.req.header('x-gclm-tenant-scope') ?? '',
   }
 }
 
 function jsonRecord(input: Record<string, unknown> | undefined): string | undefined {
   return input ? JSON.stringify(input) : undefined
+}
+
+function sessionNotFoundResponse(c: Context): Response {
+  return c.json(error('SESSION_NOT_FOUND', 'Session not found'), 404)
 }
 
 export function createApp(state: GclmCodeServerAppState) {
@@ -67,17 +75,39 @@ export function createApp(state: GclmCodeServerAppState) {
     await next()
   })
 
-  app.get('/health', c => {
-    return c.json({ ok: true, service: 'gclm-code-server' })
+  const authEnabled = state.env.GCLM_CODE_SERVER_AUTH_ENABLED
+  const auth = createAuthMiddleware(state.accessToken, authEnabled)
+  const ensureAuthorized = async (c: Context): Promise<Response | null> => {
+    const result = await auth(c, async () => {})
+    return result instanceof Response ? result : null
+  }
+  const findOwnedSession = (c: Context): SessionRecord | Response => {
+    const identity = getRequestIdentity(c)
+    const session = state.repositories.sessions.findById(c.req.param('id'))
+    if (!session || session.ownerUserId !== identity.userId) {
+      return sessionNotFoundResponse(c)
+    }
+    return session
+  }
+
+  // --- Status endpoint (no auth) ---
+  app.get('/api/v1/status', c => {
+    return c.json(
+      success({
+        service: 'gclm-code-server',
+        status: 'running',
+        uptime: Math.floor((Date.now() - SERVER_START_TIME.getTime()) / 1000),
+        sessions: state.repositories.sessions.countVisible(),
+        version: '0.1.0',
+      }),
+    )
   })
 
-  app.get('/', c => c.redirect('/console'))
+  // --- API v1 routes (auth protected) ---
+  const api = new Hono<{ Bindings: { state: GclmCodeServerAppState } }>()
+  api.use('*', auth)
 
-  app.get('/console', c => {
-    return c.html(renderConsolePage())
-  })
-
-  app.get('/sessions', c => {
+  api.get('/sessions', c => {
     const identity = getRequestIdentity(c)
     const status = c.req.query('status') as
       | 'running'
@@ -96,10 +126,10 @@ export function createApp(state: GclmCodeServerAppState) {
       limit: Number.isFinite(limit) ? limit : 20,
     })
 
-    return c.json({ items })
+    return c.json(success({ items }))
   })
 
-  app.post('/sessions', async c => {
+  api.post('/sessions', async c => {
     const identity = getRequestIdentity(c)
     const body = createSessionSchema.parse(await c.req.json())
 
@@ -113,9 +143,14 @@ export function createApp(state: GclmCodeServerAppState) {
 
     if (!session) {
       const now = new Date().toISOString()
-      const channelIdentityId = randomUUID()
+      const existingIdentity = state.repositories.channelIdentities.findByProviderIdentity({
+        provider: identity.provider,
+        providerUserId: identity.providerUserId,
+        tenantScope: identity.tenantScope,
+      })
+      const channelIdentityId = existingIdentity?.id ?? createRecordId('chid')
       session = {
-        id: `sess_${randomUUID()}`,
+        id: createRecordId('sess'),
         title: body.title,
         status: 'waiting_input' as const,
         projectId: body.projectId,
@@ -133,16 +168,16 @@ export function createApp(state: GclmCodeServerAppState) {
         state.repositories.channelIdentities.upsert({
           id: channelIdentityId,
           userId: identity.userId,
-          provider: identity.channel,
+          provider: identity.provider,
           providerUserId: identity.providerUserId,
           tenantScope: identity.tenantScope,
           tenantId: identity.tenantScope || undefined,
-          createdAt: now,
+          createdAt: existingIdentity?.createdAt ?? now,
           updatedAt: now,
         })
         state.repositories.sessions.insert(session)
         state.repositories.sessionBindings.insert({
-          id: `bind_${randomUUID()}`,
+          id: createRecordId('bind'),
           sessionId: session.id,
           channelIdentityId,
           userId: identity.userId,
@@ -164,60 +199,63 @@ export function createApp(state: GclmCodeServerAppState) {
       await state.executionBridge.submitInput({
         session,
         prompt,
-        requestId: `req_${randomUUID()}`,
+        requestId: createRecordId('req'),
       })
     }
 
-    return c.json({
-      session,
-      initialPermissionRequests: state.repositories.permissions.findPendingBySession(
-        session.id,
-      ),
-    })
+    return c.json(
+      success({
+        session,
+        initialPermissionRequests:
+          state.repositories.permissions.findPendingBySession(session.id),
+      }),
+    )
   })
 
-  app.get('/sessions/:id', c => {
-    const session = state.repositories.sessions.findById(c.req.param('id'))
-    if (!session) {
-      return c.json({ error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } }, 404)
+  api.get('/sessions/:id', c => {
+    const session = findOwnedSession(c)
+    if (session instanceof Response) {
+      return session
     }
 
     const pendingPermissions = state.repositories.permissions.findPendingBySession(session.id)
-    return c.json({ session, pendingPermissions })
+    return c.json(success({ session, pendingPermissions }))
   })
 
-  app.get('/sessions/:id/stream-info', c => {
+  api.get('/sessions/:id/stream-info', c => {
     const identity = getRequestIdentity(c)
-    const session = state.repositories.sessions.findById(c.req.param('id'))
-    if (!session) {
-      return c.json({ error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } }, 404)
+    const session = findOwnedSession(c)
+    if (session instanceof Response) {
+      return session
     }
 
     const token = state.streamInfoService.issueWebSocketToken({
       sessionId: session.id,
       userId: identity.userId,
-      channel: identity.channel,
+      provider: identity.provider,
     })
 
-    return c.json({
-      transport: 'websocket',
-      stream: {
-        path: `/sessions/${session.id}/stream`,
-        token: token.token,
-        expiresAt: token.expiresAt,
-        tokenType: 'signed-ephemeral',
-      },
-    })
+    return c.json(
+      success({
+        transport: 'websocket',
+        stream: {
+          path: `/ws/v1/session/${session.id}/stream`,
+          token: token.token,
+          expiresAt: token.expiresAt,
+          tokenType: 'signed-ephemeral',
+        },
+      }),
+    )
   })
 
-  app.post('/sessions/:id/input', async c => {
-    const session = state.repositories.sessions.findById(c.req.param('id'))
-    if (!session) {
-      return c.json({ error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } }, 404)
+  api.post('/sessions/:id/input', async c => {
+    const session = findOwnedSession(c)
+    if (session instanceof Response) {
+      return session
     }
 
     const body = sendInputSchema.parse(await c.req.json())
-    const requestId = body.clientRequestId ?? `req_${randomUUID()}`
+    const requestId = body.clientRequestId ?? createRecordId('req')
     const prompt = body.content
       .filter(item => item.type === 'text')
       .map(item => item.text)
@@ -229,40 +267,39 @@ export function createApp(state: GclmCodeServerAppState) {
       requestId,
     })
 
-    return c.json({ accepted: true, sessionId: session.id, requestId })
+    return c.json(success({ accepted: true, sessionId: session.id, requestId }))
   })
 
-  app.post('/sessions/:id/interrupt', async c => {
-    const session = state.repositories.sessions.findById(c.req.param('id'))
-    if (!session) {
-      return c.json({ error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } }, 404)
+  api.post('/sessions/:id/interrupt', async c => {
+    const session = findOwnedSession(c)
+    if (session instanceof Response) {
+      return session
     }
 
     const accepted = await state.executionBridge.interrupt(session)
-    return c.json({ accepted, sessionId: session.id })
+    return c.json(success({ accepted, sessionId: session.id }))
   })
 
-  app.get('/sessions/:id/permissions/pending', c => {
-    const session = state.repositories.sessions.findById(c.req.param('id'))
-    if (!session) {
-      return c.json({ error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } }, 404)
+  api.get('/sessions/:id/permissions/pending', c => {
+    const session = findOwnedSession(c)
+    if (session instanceof Response) {
+      return session
     }
 
-    return c.json({ items: state.repositories.permissions.findPendingBySession(session.id) })
+    return c.json(
+      success({ items: state.repositories.permissions.findPendingBySession(session.id) }),
+    )
   })
 
-  app.post('/sessions/:id/permissions/:requestId/respond', async c => {
-    const session = state.repositories.sessions.findById(c.req.param('id'))
-    if (!session) {
-      return c.json({ error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } }, 404)
+  api.post('/sessions/:id/permissions/:requestId/respond', async c => {
+    const session = findOwnedSession(c)
+    if (session instanceof Response) {
+      return session
     }
 
     const pending = state.repositories.permissions.findById(c.req.param('requestId'))
     if (!pending || pending.sessionId !== session.id) {
-      return c.json(
-        { error: { code: 'PERMISSION_NOT_FOUND', message: 'Permission request not found' } },
-        404,
-      )
+      return c.json(error('PERMISSION_NOT_FOUND', 'Permission request not found'), 404)
     }
 
     const identity = getRequestIdentity(c)
@@ -283,14 +320,14 @@ export function createApp(state: GclmCodeServerAppState) {
           },
     )
 
-    return c.json({ accepted, requestId: pending.id, behavior: decision.behavior })
+    return c.json(success({ accepted, requestId: pending.id, behavior: decision.behavior }))
   })
 
-  app.post('/sessions/:id/archive', async c => {
+  api.post('/sessions/:id/archive', async c => {
     archiveSchema.parse(await c.req.json().catch(() => ({})))
-    const session = state.repositories.sessions.findById(c.req.param('id'))
-    if (!session) {
-      return c.json({ error: { code: 'SESSION_NOT_FOUND', message: 'Session not found' } }, 404)
+    const session = findOwnedSession(c)
+    if (session instanceof Response) {
+      return session
     }
 
     const now = new Date().toISOString()
@@ -307,15 +344,58 @@ export function createApp(state: GclmCodeServerAppState) {
       data: updated ?? session,
     })
 
-    return c.json({ session: updated ?? session })
+    return c.json(success({ session: updated ?? session }))
   })
 
-  app.post('/channels/feishu/events', async c => {
-    return handleFeishuEvent(c, state)
+  // Mount API v1
+  app.route('/api/v1', api)
+
+  // --- Static web files (served at root) ---
+  app.get('/', async c => {
+    const unauthorized = await ensureAuthorized(c)
+    if (unauthorized) {
+      return unauthorized
+    }
+    const web = Bun.file(new URL('../web/index.html', import.meta.url))
+    if (await web.exists()) {
+      return c.html(await web.text())
+    }
+    return c.redirect('/api/v1/status')
   })
 
-  app.post('/channels/feishu/actions', async c => {
-    return handleFeishuAction(c, state)
+  app.get('/terminal.html', async c => {
+    const unauthorized = await ensureAuthorized(c)
+    if (unauthorized) {
+      return unauthorized
+    }
+    const web = Bun.file(new URL('../web/terminal.html', import.meta.url))
+    if (await web.exists()) {
+      return c.html(await web.text())
+    }
+    return c.notFound()
+  })
+
+  app.get('/css/*', async c => {
+    const path = c.req.path.replace('/css/', 'css/')
+    const web = Bun.file(new URL(`../web/${path}`, import.meta.url))
+    if (await web.exists()) {
+      return new Response(web, {
+        headers: { 'Content-Type': 'text/css; charset=utf-8' },
+      })
+    }
+    return c.notFound()
+  })
+
+  app.get('/js/*', async c => {
+    const path = c.req.path.replace('/js/', 'js/')
+    const web = Bun.file(new URL(`../web/${path}`, import.meta.url))
+    if (await web.exists()) {
+      const ct = path.endsWith('.js') ? 'application/javascript' : 'application/octet-stream'
+      return new Response(web, {
+        headers: { 'Content-Type': `${ct}; charset=utf-8` },
+      })
+    }
+    return c.notFound()
   })
 
   return app

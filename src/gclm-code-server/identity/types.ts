@@ -1,4 +1,4 @@
-export type ChannelProvider = 'web' | 'feishu' | 'dingtalk' | 'api' | 'system'
+export type ChannelProvider = 'web' | 'feishu' | 'dingtalk' | 'wecom' | 'api' | 'system'
 
 export type ChannelIdentity = {
   id: string

@@ -247,11 +247,10 @@ src/gclm-code-server/
       channelEventNormalizer.ts
       idempotencyRepository.ts
     feishu/
-      feishuController.ts
+      feishuLongConnection.ts
       feishuAdapter.ts
-      feishuRenderer.ts
-      feishuActionHandler.ts
-      feishuPayloadTypes.ts
+      feishuPublisher.ts
+      dto.ts
     dingtalk/
       dingtalkController.ts
       dingtalkAdapter.ts
@@ -424,14 +423,12 @@ src/gclm-code-server/
 
 ### Feishu 内部建议拆法
 
-- `feishuController`
-  - 处理事件入口
+- `feishuLongConnection`
+  - 负责平台长连接建立与事件订阅
 - `feishuAdapter`
-  - 负责把平台事件映射到 server contract
-- `feishuRenderer`
-  - 负责文本 / 卡片 / 流式更新渲染
-- `feishuActionHandler`
-  - 处理审批按钮等动作回调
+  - 负责把平台事件映射到 server contract，并处理幂等与 session / permission 路由
+- `feishuPublisher`
+  - 负责文本 / 卡片 / 流式更新渲染与回发
 
 ## `audit`
 

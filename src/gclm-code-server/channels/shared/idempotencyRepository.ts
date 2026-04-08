@@ -1,17 +1,17 @@
 import type { Database } from 'bun:sqlite'
-import type { WebhookIdempotencyRecord } from './channelEvents.js'
+import type { ChannelEventIdempotencyRecord } from './channelEvents.js'
 
-function mapWebhookIdempotency(
+function mapIdempotency(
   row: Record<string, unknown>,
-): WebhookIdempotencyRecord {
+): ChannelEventIdempotencyRecord {
   return {
     id: String(row.id),
-    provider: row.provider as WebhookIdempotencyRecord['provider'],
+    provider: row.provider as ChannelEventIdempotencyRecord['provider'],
     idempotencyKey: String(row.idempotency_key),
     payloadHash: row.payload_hash ? String(row.payload_hash) : undefined,
-    keySource: row.key_source as WebhookIdempotencyRecord['keySource'],
+    keySource: row.key_source as ChannelEventIdempotencyRecord['keySource'],
     eventType: row.event_type ? String(row.event_type) : undefined,
-    status: row.status as WebhookIdempotencyRecord['status'],
+    status: row.status as ChannelEventIdempotencyRecord['status'],
     firstSeenAt: String(row.first_seen_at),
     lastSeenAt: String(row.last_seen_at),
     expiresAt: row.expires_at ? String(row.expires_at) : undefined,
@@ -24,10 +24,10 @@ function mapWebhookIdempotency(
 export class IdempotencyRepository {
   constructor(private readonly db: Database) {}
 
-  upsert(record: WebhookIdempotencyRecord): void {
+  upsert(record: ChannelEventIdempotencyRecord): void {
     this.db
       .prepare(
-        `INSERT INTO webhook_idempotency (
+        `INSERT INTO channel_event_idempotency (
           id, provider, idempotency_key, payload_hash, key_source,
           event_type, status, first_seen_at, last_seen_at, expires_at,
           response_snapshot_json
@@ -57,15 +57,15 @@ export class IdempotencyRepository {
   }
 
   findByProviderAndKey(input: {
-    provider: WebhookIdempotencyRecord['provider']
+    provider: ChannelEventIdempotencyRecord['provider']
     idempotencyKey: string
-  }): WebhookIdempotencyRecord | null {
+  }): ChannelEventIdempotencyRecord | null {
     const row = this.db
       .prepare(
-        'SELECT * FROM webhook_idempotency WHERE provider = ? AND idempotency_key = ?',
+        'SELECT * FROM channel_event_idempotency WHERE provider = ? AND idempotency_key = ?',
       )
       .get(input.provider, input.idempotencyKey)
 
-    return row ? mapWebhookIdempotency(row as Record<string, unknown>) : null
+    return row ? mapIdempotency(row as Record<string, unknown>) : null
   }
 }

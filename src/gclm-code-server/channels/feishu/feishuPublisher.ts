@@ -1,6 +1,6 @@
-import { randomUUID } from 'crypto'
 import type { AuditRepository } from '../../audit/auditRepository.js'
 import type { GclmCodeServerFeishuEnv } from '../../config/env.js'
+import { createRecordId } from '../../ids.js'
 import {
   renderFeishuSessionCard,
   type FeishuCardAction,
@@ -185,12 +185,12 @@ export class FeishuPublisher {
     const ok = response.ok && (json.code === undefined || json.code === 0)
 
     this.deps.audit.insert({
-      id: `audit_${randomUUID()}`,
+      id: createRecordId('audit'),
       eventType: 'feishu.outbound.text',
       sessionId: input.sessionId,
       actorType: 'channel',
       actorId: input.providerUserId,
-      channel: 'feishu',
+      provider: 'feishu',
       requestId: input.requestId,
       payloadJson: JSON.stringify({
         text: input.text,
@@ -249,12 +249,12 @@ export class FeishuPublisher {
     const ok = response.ok && (json.code === undefined || json.code === 0)
 
     this.deps.audit.insert({
-      id: `audit_${randomUUID()}`,
+      id: createRecordId('audit'),
       eventType: 'feishu.outbound.card.update',
       sessionId: input.sessionId,
       actorType: 'channel',
       actorId: input.providerUserId,
-      channel: 'feishu',
+      provider: 'feishu',
       requestId: input.requestId,
       payloadJson: JSON.stringify({
         messageId: input.messageId,
@@ -488,12 +488,12 @@ export class FeishuPublisher {
     payload: Record<string, unknown>
   }): void {
     this.deps.audit.insert({
-      id: `audit_${randomUUID()}`,
+      id: createRecordId('audit'),
       eventType: input.eventType,
       sessionId: input.sessionId,
       actorType: 'channel',
       actorId: input.actorId,
-      channel: 'feishu',
+      provider: 'feishu',
       requestId: input.requestId,
       payloadJson: JSON.stringify(input.payload),
       createdAt: new Date().toISOString(),

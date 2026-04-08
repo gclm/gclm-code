@@ -28,3 +28,4 @@
 - 已补 `stream token` 一期策略：短 TTL 签名 token，不承诺强撤销
 - 已统一技术栈口径为 `Bun + TypeScript + Hono + zod + Bun WebSocket + SQLite`
 - 已修正文档中的层级口径，避免“写五层但列六层”的歧义
+- 已收口内部持久化记录 ID 规范：统一采用 `prefix_<uuidv7hex>`，并在 Bun 运行时边界内使用官方 `randomUUIDv7()` 生成

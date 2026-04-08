@@ -10,14 +10,14 @@ function mapPermission(row: Record<string, unknown>): PermissionRequestRecord {
     status: row.status as PermissionRequestRecord['status'],
     scope: row.scope as PermissionRequestRecord['scope'],
     inputJson: String(row.input_json),
-    requestedByChannel: row.requested_by_channel
-      ? String(row.requested_by_channel)
+    requestedByProvider: row.requested_by_provider
+      ? String(row.requested_by_provider)
       : undefined,
     requestedByUserId: row.requested_by_user_id
       ? String(row.requested_by_user_id)
       : undefined,
-    resolutionChannel: row.resolution_channel
-      ? String(row.resolution_channel)
+    resolvedByProvider: row.resolved_by_provider
+      ? String(row.resolved_by_provider)
       : undefined,
     resolvedBy: row.resolved_by ? String(row.resolved_by) : undefined,
     resolutionMessage: row.resolution_message
@@ -39,7 +39,7 @@ export class PermissionRepository {
       .prepare(
         `INSERT INTO permission_requests (
           id, session_id, tool_name, tool_use_id, status, scope, input_json,
-          requested_by_channel, requested_by_user_id, resolution_channel,
+          requested_by_provider, requested_by_user_id, resolved_by_provider,
           resolved_by, resolution_message, requested_at, expires_at,
           resolved_at, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -52,9 +52,9 @@ export class PermissionRepository {
         record.status,
         record.scope,
         record.inputJson,
-        record.requestedByChannel ?? null,
+        record.requestedByProvider ?? null,
         record.requestedByUserId ?? null,
-        record.resolutionChannel ?? null,
+        record.resolvedByProvider ?? null,
         record.resolvedBy ?? null,
         record.resolutionMessage ?? null,
         record.requestedAt,
@@ -72,7 +72,7 @@ export class PermissionRepository {
     resolvedAt?: string
     resolvedBy?: string
     resolutionMessage?: string
-    resolutionChannel?: string
+    resolvedByProvider?: string
   }): void {
     this.db
       .prepare(
@@ -82,7 +82,7 @@ export class PermissionRepository {
              resolved_at = COALESCE(?, resolved_at),
              resolved_by = COALESCE(?, resolved_by),
              resolution_message = COALESCE(?, resolution_message),
-             resolution_channel = COALESCE(?, resolution_channel)
+             resolved_by_provider = COALESCE(?, resolved_by_provider)
          WHERE id = ?`,
       )
       .run(
@@ -91,7 +91,7 @@ export class PermissionRepository {
         input.resolvedAt ?? null,
         input.resolvedBy ?? null,
         input.resolutionMessage ?? null,
-        input.resolutionChannel ?? null,
+        input.resolvedByProvider ?? null,
         input.id,
       )
   }

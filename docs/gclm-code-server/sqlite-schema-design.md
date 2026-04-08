@@ -1,15 +1,21 @@
 # `gclm-code-server` SQLite Schema / Migration 设计稿
 
-更新时间：2026-04-07（v2 — 渠道全面长连接、webhook_idempotency 重命名、字段与 API v4 对齐）
+更新时间：2026-04-08（v3 — 渠道全面长连接、provider 字段对齐、内部记录 ID 收口到 `prefix_<uuidv7hex>`）
 
 ## 变更记录
+
+### v3 变更（2026-04-08）
+
+1. **内部持久化记录 ID 规范收口**：控制面记录统一使用 `prefix_<uuidv7hex>`，前缀表达记录类型，随机体统一使用去掉 `-` 的小写 UUIDv7
+2. **ID helper 实现收口到 Bun 官方 UUIDv7**：`gclm-code-server` 当前运行在 Bun 边界内，记录 ID 生成统一落到 `Bun.randomUUIDv7()` 再去 `-`
+3. **明确内外部 ID 边界**：仅内部持久化记录采用语义前缀；跨系统引用值、外部协议字段和第三方平台原生 ID 继续保持原契约
 
 ### v2 变更（2026-04-07）
 
 1. **`webhook_idempotency` 重命名为 `channel_event_idempotency`**：全面长连接后不再有 HTTP webhook，该表职责从"webhook 防重放"变为"渠道长连接事件防重放"
 2. **provider 枚举新增 `wecom`**：支持企业微信作为第三渠道
 3. **字段命名与 API DTO v4 对齐**：`channel` -> `provider`，确保数据库字段与 API DTO 语义一致
-4. **`channel_event_idempotency.key_source` 简化**：长连接 SDK 通常提供稳定 eventId，移除 `payload_hash_derived` 作为主要 key 来源
+4. **`channel_event_idempotency.key_source` 简化**：长连接 SDK 通常提供稳定 eventId / actionId，但仍保留 `payload_hash_derived` 作为缺省兜底来源
 
 ## 目的
 
@@ -152,7 +158,10 @@ PRAGMA busy_timeout = 5000;
 
 ## 主键与时间字段约定
 
-- 主键：应用层生成字符串 ID，例如 `sess_`、`perm_`、`evt_`
+- 主键：应用层生成字符串 ID，统一采用 `prefix_<uuidv7hex>`，例如 `sess_019d...`、`perm_019d...`、`idem_019d...`
+- `prefix` 只表达内部记录类型，当前推荐前缀包括：`sess`、`bind`、`chid`、`perm`、`idem`、`audit`、`req`
+- `uuidv7hex` 指“去掉 `-` 的小写 UUIDv7”，当前实现收口到 Bun 官方 `randomUUIDv7()` 后再标准化为 32 位 hex
+- 外部协议已有固定语义的字段继续保持原样，例如 `execution_session_ref`、第三方平台 `message_id` / `open_id` / `event_id`，不强行改成带前缀内部 ID
 - 时间：统一存 `TEXT` 格式的 ISO 8601 UTC 时间
 - JSON 扩展字段：统一存 `TEXT`，内容为 JSON 字符串
 - 布尔值：用 `INTEGER` 的 `0 / 1`
@@ -346,7 +355,7 @@ CREATE INDEX idx_channel_event_idempotency_expires
 
 - `provider`: `feishu/dingtalk/wecom`
 - `idempotency_key`: 控制面的唯一幂等主键
-- `key_source`: `event_id`、`action_id`、`token` 之一（长连接 SDK 通常提供稳定事件 ID）
+- `key_source`: `event_id`、`action_id`、`token`、`payload_hash_derived` 之一
 - `payload_hash`: 保留原始 payload 摘要，便于审计与调试
 - `response_snapshot_json`: 可缓存已处理结果的轻量摘要
 
@@ -357,7 +366,7 @@ CREATE INDEX idx_channel_event_idempotency_expires
 ### v2 变更说明
 
 - 原 `webhook_idempotency` 重命名：全面长连接后不再有 HTTP webhook
-- `key_source` 移除 `payload_hash_derived`：长连接 SDK 通常提供 eventId/actionId，不需要 fallback 到 payload hash
+- `key_source` 默认仍优先 `event_id/action_id/token`；仅在 SDK payload 未提供稳定键时 fallback 到 `payload_hash_derived`
 - 其他字段和索引结构保持不变
 
 ## 6. `audit_events`

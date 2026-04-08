@@ -89,6 +89,12 @@ export class SessionRepository {
     const conditions = ['owner_user_id = ?']
     const params: unknown[] = [input.ownerUserId]
 
+    if (input.status === 'archived') {
+      conditions.push('archived_at IS NOT NULL')
+    } else {
+      conditions.push('archived_at IS NULL')
+    }
+
     if (input.sourceChannel) {
       conditions.push('source_channel = ?')
       params.push(input.sourceChannel)
@@ -109,6 +115,18 @@ export class SessionRepository {
       )
       .all(...params)
       .map(row => mapSession(row as Record<string, unknown>))
+  }
+
+  countVisible(): number {
+    return Number(
+      this.db
+        .prepare(
+          `SELECT COUNT(*) AS count
+           FROM sessions
+           WHERE archived_at IS NULL`,
+        )
+        .get()?.count ?? 0,
+    )
   }
 
   findLatestByOwnerAndChannel(input: {

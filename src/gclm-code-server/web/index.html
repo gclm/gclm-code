@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gclm-code-server</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/xterm.css">
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <span class="logo">&#9654;</span>
+            <h1>gclm-code-server</h1>
+        </div>
+        <span id="status" class="status-badge online">
+            <span class="status-dot"></span>
+            <span class="status-text">Connected</span>
+        </span>
+    </header>
+    <main>
+        <div class="section-header">
+            <h2>Sessions</h2>
+            <span id="session-count" class="count-badge">0</span>
+        </div>
+        <div id="sessions" class="session-grid"></div>
+        <div id="empty-msg" class="empty-state" style="display:none;">
+            <div class="empty-icon">&#9881;</div>
+            <p>No active sessions</p>
+            <p class="empty-hint">Create a session via the API or Feishu</p>
+        </div>
+    </main>
+    <script src="/js/vendor/xterm.min.js"></script>
+    <script src="/js/vendor/xterm-addon-fit.min.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

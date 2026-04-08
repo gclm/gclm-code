@@ -6,7 +6,7 @@ export type AuditEventRecord = {
   sessionId?: string
   actorType: 'user' | 'channel' | 'system'
   actorId: string
-  channel?: ChannelProvider
+  provider?: ChannelProvider
   requestId?: string
   payloadJson?: string
   createdAt: string

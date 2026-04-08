@@ -25,6 +25,7 @@ export type GclmCodeServerAppRepositories = {
 
 export type GclmCodeServerAppState = {
   env: GclmCodeServerEnv
+  accessToken: string
   db: Database
   repositories: GclmCodeServerAppRepositories
   streamHub: StreamHub

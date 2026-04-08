@@ -96,3 +96,19 @@
 - 已确认 `POWERSHELL_AUTO_MODE` 仍不进入默认 feature：external build 下它会放开 PowerShell 进入 auto classifier，但不会注入 PowerShell 专属 deny guidance。
 - 已补 focused guard test：新增 `tests/utils/autoModePromptAssets.test.ts`，固定 `yolo-classifier-prompts/*.txt` 的占位符契约，以及 `defaultFeatures` / `experimentalFeatures` 中 `TRANSCRIPT_CLASSIFIER` 与 `POWERSHELL_AUTO_MODE` 的分层决策。
 - 已完成定向验证：`bun run build`、`./dist/gclm auto-mode defaults`、`./dist/gclm auto-mode config`、`./dist/gclm auto-mode --help`、`./dist/gclm --permission-mode auto --help`、`bun test --preload ./tests/preload.ts tests/utils/autoModePromptAssets.test.ts` 全部通过，说明标准构建产物已包含可见的 `auto` 模式入口与默认规则导出能力。
+
+## 2026-04-08
+
+- 已完成一轮 `gclm-code-server` 收口修复：删除飞书 HTTP webhook 控制器与 `/console` 历史入口，只保留长连接飞书入口与第一方 Web `/`、`/terminal.html`。
+- 已完成 `provider` 命名收口：移除 `x-gclm-channel` fallback，并让权限字段、审计口径与运行时代码统一改用 `provider`。
+- 已完成 `status` 与 ID 规范收口：`GET /api/v1/status` 改为真实可见会话统计，控制面记录 ID 统一收敛到 `prefix_<uuidv7hex>` helper。
+- 已补飞书长连接 action 幂等兜底：当 payload 缺少稳定 action token 时回退到 `payload_hash_derived`，避免长连接事件直接报错。
+- 已完成定向验证：`bun test tests/gclm-code-server/app.test.ts tests/gclm-code-server/feishu-adapter.test.ts tests/gclm-code-server/sqlite-schema.test.ts tests/gclm-code-server/feishu-long-connection.test.ts tests/gclm-code-server/feishu-publisher.test.ts` 通过（`16 pass / 0 fail`）；局部 `bunx tsc --noEmit` 过滤 `gclm-code-server` 范围无匹配错误。
+- 已继续收口剩余尾巴：删除无引用的重复 ID helper `src/gclm-code-server/id.ts`，恢复 `/api/v1/status.activeSessions` 字段，并完成 `bun test tests/gclm-code-server` 全量通过（`21 pass / 0 fail`）。
+- 已将 `src/gclm-code-server/ids.ts` 从自实现轻量 UUIDv7 生成器切换到 Bun 官方 `Bun.randomUUIDv7()`，并统一在 helper 内输出去 `-` 的 32 位 hex；同时新增 `tests/gclm-code-server/ids.test.ts` 固定格式约束。
+- 已修正飞书重复长连接事件测试语义：duplicate event 现在明确断言为“accepted but ignored”，与当前幂等实现保持一致；最新 `bun test tests/gclm-code-server` 结果为 `22 pass / 0 fail`。
+- 已补齐会话级鉴权：`GET /api/v1/sessions/:id`、`/stream-info`、`/input`、`/interrupt`、`/permissions/*`、`/archive` 现在都会校验 `owner_user_id`，避免跨用户读取、写入和签发 stream token。
+- 已收口 Web terminal 鉴权链路：`terminal.html` 现在先调用 `GET /api/v1/sessions/:id/stream-info` 获取短 TTL 签名 token，再连接 `WS /ws/v1/session/:id`；登录页提交 token 时会保留原始 `id` 查询参数，避免 auth deep link 失效。
+- 已同步修正文档剩余尾巴：`architecture.md`、`self-hosted-web-plan.md`、`dev-quickstart.md` 与 `sqlite-schema-design.md` 已对齐 `/api/v1` 路由、长连接 only 模型与 `prefix_<uuidv7hex>` 记录 ID 规范。
+- 最新 `bun test tests/gclm-code-server` 结果更新为 `24 pass / 0 fail`。
+- 已确认当前宿主环境无法把证据升级到真实监听端口 smoke：`Bun.serve` 在本地连 `port: 0` 也直接返回 `EADDRINUSE`；因此本轮最强新增证据仍是 `test`，而不是 `scripted-flow`。

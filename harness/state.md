@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-04-07（v1.0.3 已发布，并补充安装/升级、远程方案与 hello2cc 原理/集成/生命周期/诊断文档）
+更新时间：2026-04-08（v1.0.3 已发布，并补充安装/升级、远程方案与 hello2cc 原理/集成/生命周期/诊断文档；补记 gclm-code-server 收口检查与 ID 规范建议）
 
 ## 当前阶段
 
@@ -204,11 +204,34 @@
   - 远程方案判断已继续收敛：若目标包含 Web、飞书及后续钉钉等多渠道，建议引入第一方 `gclm-code-server` 作为统一会话与渠道中台，但第一阶段保持薄实现，仅承接统一 session、stream、permission 与 channel adapter contract
   - `gclm-code-server` 模块与技术栈建议已补充：当前推荐 `Bun + TypeScript + Hono + zod + Bun WebSocket + SQLite`，目录先落在 `src/gclm-code-server/`，按 app/config/identity/sessions/transport/permissions/channels/web/audit 等九个一级模块推进；当前明确不采用 Rust 作为第一阶段主技术栈
   - `gclm-code-server` API / DTO 设计已补充：第一阶段接口收敛为 Session / Input / Stream / Permission / Channel 五组 contract，Web 与飞书统一复用同一套 session、permission 与 stream 语义
-  - 远程方案文档已进一步收口到 `gclm-code-server + SQLite`：一期正式引入本地 `SQLite` 作为控制面状态存储，覆盖 session metadata、channel binding、pending permission、webhook 幂等与轻量审计；同时明确 `web/` 属于第一方 Presentation，不再与 `channels/*` 混层
-  - `gclm-code-server` API / DTO 边界已继续修正：`CreateSessionResponse` 不再直接返回 Web 专属 `wsUrl`，改为单独 `GET /sessions/:id/stream-info`；飞书 / 钉钉原始 webhook payload 与控制面内部标准 DTO 已明确分层
-  - 已新增 `docs/gclm-code-server/sqlite-schema-design.md`：收敛 `gclm-code-server` 一期 `SQLite` 控制面存储模型，明确 `sessions`、`session_bindings`、`permission_requests`、`webhook_idempotency`、`audit_events` 与 `schema_migrations` 的表结构、索引、状态流转和 migration 策略
+  - 远程方案文档已进一步收口到 `gclm-code-server + SQLite`：一期正式引入本地 `SQLite` 作为控制面状态存储，覆盖 session metadata、channel binding、pending permission、channel event 幂等与轻量审计；同时明确 `web/` 属于第一方 Presentation，不再与 `channels/*` 混层
+  - `gclm-code-server` API / DTO 边界已继续修正：`CreateSessionResponse` 不再直接返回 Web 专属 `wsUrl`，改为单独 `GET /api/v1/sessions/:id/stream-info`；飞书 / 钉钉原始 webhook payload 与控制面内部标准 DTO 已明确分层
+  - 已新增 `docs/gclm-code-server/sqlite-schema-design.md`：收敛 `gclm-code-server` 一期 `SQLite` 控制面存储模型，明确 `sessions`、`session_bindings`、`permission_requests`、`channel_event_idempotency`、`audit_events` 与 `schema_migrations` 的表结构、索引、状态流转和 migration 策略
   - 已新增 `docs/gclm-code-server/README.md`，并将 `gclm-code-server` 相关文档从 `docs/overview/` 归档到独立目录，统一做专题索引与管理
-  - 已继续修正文档设计问题：统一 `webhook idempotency key` 生成规则、明确 `channel_identities` 为身份事实源并让 `session_bindings` 仅承接上下文绑定、补充 `stream token` 一期采用短 TTL 签名令牌的策略、统一技术栈口径为 `Bun + TypeScript + Hono + zod + Bun WebSocket + SQLite`，并修正架构分层口径
+  - 已继续修正文档设计问题：统一 `channel event idempotency key` 生成规则、明确 `channel_identities` 为身份事实源并让 `session_bindings` 仅承接上下文绑定、补充 `stream token` 一期采用短 TTL 签名令牌的策略、统一技术栈口径为 `Bun + TypeScript + Hono + zod + Bun WebSocket + SQLite`，并修正架构分层口径
+  - 已完成一轮 `gclm-code-server` 当前 changeset 收口检查：产品边界已确认不再保留飞书 HTTP webhook 入口兼容，飞书按“长连接 only”收口；`/console` 也视为废弃入口，不再作为兼容目标
+  - 已完成 `gclm-code-server` 本轮收口修复：
+    - 运行时代码已移除飞书 HTTP webhook 入口与 `/console` 历史入口，只保留长连接飞书入口与 `/`、`/terminal.html`
+    - `provider/channel` 语义重命名已收口到运行时代码：`x-gclm-channel` fallback 已删除，`requested_by_*` / `resolved_by_*` 已对齐 `provider` 口径
+    - `GET /api/v1/status` 已改为返回真实可见会话数，并补 `activeSessions`
+    - 内部记录 ID 已统一收敛到 `prefix_<uuidv7hex>` helper，避免业务代码散落 `prefix + randomUUID()`
+    - 飞书 action 幂等键已补 defensive fallback：当长连接 payload 缺少稳定 action token 时，退回 `payload_hash_derived`
+    - 会话级鉴权已补齐到 `GET /api/v1/sessions/:id*` 系列路由：不同 `owner_user_id` 之间不能再互相读取、投递输入、归档或签发 stream token
+    - `terminal.html` 已改为先获取会话级短 TTL 签名 token，再连接 `WS /ws/v1/session/:id`；受保护深链登录页也会保留原始 `id` 查询参数
+  - 最新本地验证（2026-04-08）：
+    - `bun test tests/gclm-code-server/app.test.ts tests/gclm-code-server/feishu-adapter.test.ts tests/gclm-code-server/sqlite-schema.test.ts tests/gclm-code-server/feishu-long-connection.test.ts tests/gclm-code-server/feishu-publisher.test.ts`，通过（`16 pass / 0 fail`）
+    - `bunx tsc --noEmit --pretty false 2>&1 | rg "src/gclm-code-server|tests/gclm-code-server|src/entrypoints/gclm-code-server" || true`，无匹配错误
+    - 已将 `src/gclm-code-server/ids.ts` 从自实现轻量 UUIDv7 生成器收口到 Bun 官方 `Bun.randomUUIDv7()`，并在 helper 内统一做去 `-` 处理，避免继续维护一份近似实现
+    - 已新增 `tests/gclm-code-server/ids.test.ts`，固定 `prefix_<uuidv7hex>` 的长度、version/variant 位和前缀格式约束
+    - 已修正飞书重复长连接事件测试语义：duplicate event 现在明确断言为“accepted but ignored”，与当前幂等设计保持一致
+    - 已新增会话级鉴权与 terminal 深链回归测试，覆盖跨用户访问拒绝与登录页保留 `id` 查询参数
+    - `bun test tests/gclm-code-server`，通过（`24 pass / 0 fail`）
+    - 额外脚本流验证尝试：宿主环境下 `Bun.serve` 连 `port: 0` 也直接返回 `EADDRINUSE`，当前无法在此环境把证据升级到真实监听端口 smoke；这属于环境边界，不是当前 `gclm-code-server` 实现回归
+  - 当前 `gclm-code-server` 残留旧引用已降为说明性内容：
+    - 测试中对旧飞书 HTTP 路由的引用仅用于断言 `404`
+    - 文档与 migration 中出现的 `requested_by_channel` / `resolution_channel` 仅用于描述字段迁移历史，不再属于运行时边界问题
+  - 已收敛 `gclm-code-server` 一期记录 ID 方向：继续保留语义前缀（如 `sess_`、`bind_`、`chid_`、`audit_`、`idem_`、`perm_`、`req_`），随机体建议统一切到“去掉 `-` 的小写 `uuidv7`”；当前实现已直接落到 Bun 官方 `randomUUIDv7()`，这样既保留可读性与 grep 友好，也避免长期维护近似算法，同时获得按时间近似有序、对 SQLite/B-Tree 更友好的插入局部性
+  - 当前对 ID 边界的建议是：持久化控制面记录统一采用 `prefix_<uuidv7hex>`；跨系统引用值或外部协议已固定字段继续保持原契约，不强行加前缀；后续实现上应收成单一 helper，而不是在业务代码里散落 `prefix + randomUUID()`
   - 已新增文档 `docs/hello2cc/capability-orchestration.md`，说明 hello2cc 如何通过会话能力快照、路由提示、工具前纠偏与 session state 记忆，让第三方模型更稳定地感知并使用宿主已暴露能力，并给出映射到当前 Gateway 编排层的集成视角
   - 已新增文档 `docs/hello2cc/gateway-integration-plan.md`，给出将 hello2cc 能力内建到当前 Gateway 的推荐方案，包括模块拆分、生命周期接线、两阶段实施计划、风险与验收建议
   - 已新增文档 `docs/hello2cc/gateway-lifecycle-sequence.md`，通过时序图拆解 `SessionStart -> UserPromptSubmit -> PreToolUse -> PostToolUse/PostToolUseFailure` 的闭环，明确 Gateway 编排增强层在单次会话中的主链流转

@@ -4,7 +4,7 @@ import type { ChannelProvider } from '../identity/types.js'
 export type StreamTokenPayload = {
   sessionId: string
   userId: string
-  channel: ChannelProvider
+  provider: ChannelProvider
   exp: number
 }
 
@@ -17,7 +17,7 @@ export class StreamInfoService {
   issueWebSocketToken(input: {
     sessionId: string
     userId: string
-    channel: ChannelProvider
+    provider: ChannelProvider
     now?: Date
   }): { token: string; expiresAt: string } {
     const now = input.now ?? new Date()
@@ -25,7 +25,7 @@ export class StreamInfoService {
     const payload: StreamTokenPayload = {
       sessionId: input.sessionId,
       userId: input.userId,
-      channel: input.channel,
+      provider: input.provider,
       exp,
     }
     const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url')

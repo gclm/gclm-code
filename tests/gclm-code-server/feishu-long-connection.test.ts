@@ -64,6 +64,7 @@ function createState(): GclmCodeServerAppState & {
       GCLM_CODE_SERVER_HOST: '127.0.0.1',
       GCLM_CODE_SERVER_PORT: 4317,
       GCLM_CODE_SERVER_SIGNING_SECRET: 'test-secret',
+      GCLM_CODE_SERVER_AUTH_ENABLED: false,
       GCLM_CODE_SERVER_DB_PATH: join(dir, 'server.db'),
       GCLM_CODE_SERVER_DB_BUSY_TIMEOUT_MS: 250,
       feishu: {
@@ -71,10 +72,10 @@ function createState(): GclmCodeServerAppState & {
         baseUrl: 'https://open.feishu.cn',
         appId: 'cli_app_id',
         appSecret: 'cli_app_secret',
-        bypassSignatureVerification: false,
         useLongConnection: true,
       },
     },
+    accessToken: 'test-token',
     db,
     repositories: {
       channelIdentities: new ChannelIdentityRepository(db),
@@ -95,7 +96,6 @@ function createState(): GclmCodeServerAppState & {
           baseUrl: 'https://open.feishu.cn',
           appId: 'cli_app_id',
           appSecret: 'cli_app_secret',
-          bypassSignatureVerification: false,
           useLongConnection: true,
         },
         audit: new AuditRepository(db),

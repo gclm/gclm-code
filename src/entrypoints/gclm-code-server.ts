@@ -2,19 +2,13 @@ import { readGclmCodeServerEnv } from '../gclm-code-server/config/env.js'
 import { startGclmCodeServer } from '../gclm-code-server/app/server.js'
 
 const env = readGclmCodeServerEnv()
-const host = env.GCLM_CODE_SERVER_HOST
-const port = env.GCLM_CODE_SERVER_PORT
 
 const runtime = startGclmCodeServer({
-  host,
-  port,
+  host: env.GCLM_CODE_SERVER_HOST,
+  port: env.GCLM_CODE_SERVER_PORT,
   signingSecret: env.GCLM_CODE_SERVER_SIGNING_SECRET,
   env,
 })
-
-console.log(
-  `[gclm-code-server] listening on http://${host}:${port} (console: http://${host}:${port}/console)`,
-)
 
 function shutdown(signal: string) {
   console.log(`[gclm-code-server] received ${signal}, shutting down`)

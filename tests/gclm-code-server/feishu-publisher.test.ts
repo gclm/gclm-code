@@ -40,7 +40,6 @@ describe('FeishuPublisher', () => {
           appId: 'app_id',
           appSecret: 'app_secret',
           useLongConnection: true,
-          bypassSignatureVerification: false,
         },
         audit: new AuditRepository(db),
         fetchImpl: async (input, init) => {
@@ -99,7 +98,6 @@ describe('FeishuPublisher', () => {
           appId: 'app_id',
           appSecret: 'app_secret',
           useLongConnection: true,
-          bypassSignatureVerification: false,
         },
         audit: new AuditRepository(db),
         sdkFactory: async () => ({

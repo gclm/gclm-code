@@ -1,6 +1,10 @@
 import { createHash, randomUUID } from 'crypto'
 import type { GclmCodeServerAppState } from '../../app/types.js'
-import { buildIdempotencyKey } from '../shared/channelEvents.js'
+import { createRecordId } from '../../ids.js'
+import {
+  buildIdempotencyKey,
+  type IdempotencyKeySource,
+} from '../shared/channelEvents.js'
 import {
   feishuActionPayloadSchema,
   feishuMessageEventSchema,
@@ -49,6 +53,17 @@ function getProviderUserIdFromAction(payload: FeishuActionPayload): string | nul
   return payload.open_id ?? payload.user_id ?? null
 }
 
+function buildFeishuActionIdempotency(input: {
+  payload: FeishuActionPayload
+  hash: string
+}): { idempotencyKey: string; keySource: IdempotencyKeySource } {
+  return buildIdempotencyKey({
+    provider: 'feishu',
+    token: input.payload.token,
+    payloadHashDerivedKey: `feishu_action_${input.hash}`,
+  })
+}
+
 export class FeishuAdapter {
   constructor(private readonly state: GclmCodeServerAppState) {}
 
@@ -66,7 +81,6 @@ export class FeishuAdapter {
     const { idempotencyKey, keySource } = buildIdempotencyKey({
       provider: 'feishu',
       eventId: parsed.header.event_id,
-      payloadHash: hash,
     })
     const now = new Date().toISOString()
 
@@ -74,6 +88,8 @@ export class FeishuAdapter {
       provider: 'feishu',
       idempotencyKey,
     })
+    const recordId = existing?.id ?? createRecordId('idem')
+    const firstSeenAt = existing?.firstSeenAt ?? now
     if (existing?.status === 'processed') {
       return {
         type: 'event',
@@ -84,14 +100,14 @@ export class FeishuAdapter {
     }
 
     this.state.repositories.idempotency.upsert({
-      id: existing?.id ?? `idem_${randomUUID()}`,
+      id: recordId,
       provider: 'feishu',
       idempotencyKey,
       payloadHash: hash,
       keySource,
       eventType: parsed.header.event_type,
       status: 'processing',
-      firstSeenAt: existing?.firstSeenAt ?? now,
+      firstSeenAt,
       lastSeenAt: now,
     })
 
@@ -99,9 +115,12 @@ export class FeishuAdapter {
     const text = parseFeishuTextContent(parsed.event.message?.content)
 
     if (parsed.header.event_type !== 'im.message.receive_v1') {
-      this.markIdempotencyProcessed(existing?.id ?? `idem_${randomUUID()}`, {
+      this.markIdempotencyProcessed({
+        recordId,
         idempotencyKey,
         hash,
+        keySource,
+        firstSeenAt,
         now,
         eventType: parsed.header.event_type,
         ignoredReason: 'unsupported_event_type',
@@ -115,9 +134,12 @@ export class FeishuAdapter {
     }
 
     if (!providerUserId || !text) {
-      this.markIdempotencyProcessed(existing?.id ?? `idem_${randomUUID()}`, {
+      this.markIdempotencyProcessed({
+        recordId,
         idempotencyKey,
         hash,
+        keySource,
+        firstSeenAt,
         now,
         eventType: parsed.header.event_type,
         ignoredReason: 'missing_sender_or_text',
@@ -148,14 +170,14 @@ export class FeishuAdapter {
     })
 
     this.state.repositories.idempotency.upsert({
-      id: existing?.id ?? `idem_${randomUUID()}`,
+      id: recordId,
       provider: 'feishu',
       idempotencyKey,
       payloadHash: hash,
       keySource,
       eventType: parsed.header.event_type,
       status: 'processed',
-      firstSeenAt: existing?.firstSeenAt ?? now,
+      firstSeenAt,
       lastSeenAt: now,
       responseSnapshotJson: JSON.stringify({ sessionId, requestId }),
     })
@@ -172,16 +194,17 @@ export class FeishuAdapter {
   async handleAction(payload: unknown): Promise<FeishuActionResponse> {
     const parsed = feishuActionPayloadSchema.parse(payload)
     const hash = payloadHash(parsed)
-    const { idempotencyKey, keySource } = buildIdempotencyKey({
-      provider: 'feishu',
-      token: parsed.token,
-      payloadHash: hash,
+    const { idempotencyKey, keySource } = buildFeishuActionIdempotency({
+      payload: parsed,
+      hash,
     })
     const now = new Date().toISOString()
     const existing = this.state.repositories.idempotency.findByProviderAndKey({
       provider: 'feishu',
       idempotencyKey,
     })
+    const recordId = existing?.id ?? createRecordId('idem')
+    const firstSeenAt = existing?.firstSeenAt ?? now
 
     if (existing?.status === 'processed') {
       return {
@@ -191,7 +214,6 @@ export class FeishuAdapter {
       }
     }
 
-    const recordId = existing?.id ?? `idem_${randomUUID()}`
     this.state.repositories.idempotency.upsert({
       id: recordId,
       provider: 'feishu',
@@ -200,7 +222,7 @@ export class FeishuAdapter {
       keySource,
       eventType: 'interactive.action',
       status: 'processing',
-      firstSeenAt: existing?.firstSeenAt ?? now,
+      firstSeenAt,
       lastSeenAt: now,
     })
 
@@ -217,7 +239,7 @@ export class FeishuAdapter {
         keySource,
         eventType: 'interactive.action',
         status: 'ignored',
-        firstSeenAt: existing?.firstSeenAt ?? now,
+        firstSeenAt,
         lastSeenAt: now,
         responseSnapshotJson: JSON.stringify({ ignoredReason: 'missing_provider_user_id' }),
       })
@@ -241,19 +263,33 @@ export class FeishuAdapter {
             : undefined
 
       if (!sessionId || !requestId || !decision) {
-        return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
-          accepted: true,
-          idempotencyKey,
-          ignoredReason: 'missing_permission_fields',
+        return this.finishAction({
+          recordId,
+          firstSeenAt,
+          now,
+          keySource,
+          payloadHash: hash,
+          response: {
+            accepted: true,
+            idempotencyKey,
+            ignoredReason: 'missing_permission_fields',
+          },
         })
       }
 
       const session = this.state.repositories.sessions.findById(sessionId)
       if (!session) {
-        return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
-          accepted: true,
-          idempotencyKey,
-          ignoredReason: 'session_not_found',
+        return this.finishAction({
+          recordId,
+          firstSeenAt,
+          now,
+          keySource,
+          payloadHash: hash,
+          response: {
+            accepted: true,
+            idempotencyKey,
+            ignoredReason: 'session_not_found',
+          },
         })
       }
 
@@ -276,12 +312,19 @@ export class FeishuAdapter {
           : '当前执行桥接暂未接受远程权限回写。',
       })
 
-      return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
-        accepted,
-        idempotencyKey,
-        sessionId,
-        requestId,
-        ignoredReason: accepted ? undefined : 'bridge_declined_permission_resolution',
+      return this.finishAction({
+        recordId,
+        firstSeenAt,
+        now,
+        keySource,
+        payloadHash: hash,
+        response: {
+          accepted,
+          idempotencyKey,
+          sessionId,
+          requestId,
+          ignoredReason: accepted ? undefined : 'bridge_declined_permission_resolution',
+        },
       })
     }
 
@@ -289,19 +332,33 @@ export class FeishuAdapter {
       const sessionId =
         typeof actionValue.sessionId === 'string' ? actionValue.sessionId : undefined
       if (!sessionId) {
-        return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
-          accepted: true,
-          idempotencyKey,
-          ignoredReason: 'missing_session_id',
+        return this.finishAction({
+          recordId,
+          firstSeenAt,
+          now,
+          keySource,
+          payloadHash: hash,
+          response: {
+            accepted: true,
+            idempotencyKey,
+            ignoredReason: 'missing_session_id',
+          },
         })
       }
 
       const session = this.state.repositories.sessions.findById(sessionId)
       if (!session) {
-        return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
-          accepted: true,
-          idempotencyKey,
-          ignoredReason: 'session_not_found',
+        return this.finishAction({
+          recordId,
+          firstSeenAt,
+          now,
+          keySource,
+          payloadHash: hash,
+          response: {
+            accepted: true,
+            idempotencyKey,
+            ignoredReason: 'session_not_found',
+          },
         })
       }
 
@@ -314,11 +371,18 @@ export class FeishuAdapter {
         summary: accepted ? '已提交中断请求。' : '当前没有正在运行的执行。',
       })
 
-      return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
-        accepted,
-        idempotencyKey,
-        sessionId,
-        ignoredReason: accepted ? undefined : 'session_not_running',
+      return this.finishAction({
+        recordId,
+        firstSeenAt,
+        now,
+        keySource,
+        payloadHash: hash,
+        response: {
+          accepted,
+          idempotencyKey,
+          sessionId,
+          ignoredReason: accepted ? undefined : 'session_not_running',
+        },
       })
     }
 
@@ -342,17 +406,31 @@ export class FeishuAdapter {
             : '会话已创建，可以开始远程操作。',
       })
 
-      return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
-        accepted: true,
-        idempotencyKey,
-        sessionId: binding.sessionId,
+      return this.finishAction({
+        recordId,
+        firstSeenAt,
+        now,
+        keySource,
+        payloadHash: hash,
+        response: {
+          accepted: true,
+          idempotencyKey,
+          sessionId: binding.sessionId,
+        },
       })
     }
 
-    return this.finishAction(recordId, existing?.firstSeenAt ?? now, now, {
-      accepted: true,
-      idempotencyKey,
-      ignoredReason: 'unsupported_action',
+    return this.finishAction({
+      recordId,
+      firstSeenAt,
+      now,
+      keySource,
+      payloadHash: hash,
+      response: {
+        accepted: true,
+        idempotencyKey,
+        ignoredReason: 'unsupported_action',
+      },
     })
   }
 
@@ -373,7 +451,7 @@ export class FeishuAdapter {
       throw new Error(`Bound session ${binding.sessionId} was not found`)
     }
 
-    const requestId = `req_${randomUUID()}`
+    const requestId = createRecordId('req')
     await this.state.executionBridge.submitInput({
       session,
       prompt: input.text,
@@ -403,6 +481,7 @@ export class FeishuAdapter {
     return this.handleEvent({
       schema: '2.0',
       header: {
+        event_id: raw.message?.message_id,
         event_type: 'im.message.receive_v1',
         tenant_key: raw.sender?.tenant_key ?? '',
       },
@@ -461,7 +540,7 @@ export class FeishuAdapter {
       tenantScope: input.tenantScope,
     })
 
-    const identityId = existingIdentity?.id ?? `chid_${randomUUID()}`
+    const identityId = existingIdentity?.id ?? createRecordId('chid')
     const ownerUserId = existingIdentity?.userId ?? `feishu:${input.tenantScope}:${input.providerUserId}`
     const identity = {
       id: identityId,
@@ -487,7 +566,7 @@ export class FeishuAdapter {
       }
     }
 
-    const sessionId = `sess_${randomUUID()}`
+    const sessionId = createRecordId('sess')
     this.state.db.transaction(() => {
       this.state.repositories.sessions.insert({
         id: sessionId,
@@ -501,7 +580,7 @@ export class FeishuAdapter {
         lastActiveAt: now,
       })
       this.state.repositories.sessionBindings.insert({
-        id: `bind_${randomUUID()}`,
+        id: createRecordId('bind'),
         sessionId,
         channelIdentityId: identityId,
         userId: ownerUserId,
@@ -518,46 +597,50 @@ export class FeishuAdapter {
     }
   }
 
-  private finishAction(
-    recordId: string,
-    firstSeenAt: string,
-    now: string,
-    response: FeishuActionResponse,
-  ): FeishuActionResponse {
+  private finishAction(input: {
+    recordId: string
+    firstSeenAt: string
+    now: string
+    keySource: IdempotencyKeySource
+    payloadHash: string
+    response: FeishuActionResponse
+  }): FeishuActionResponse {
+    const response = input.response
     const status = response.ignoredReason ? 'ignored' : 'processed'
     this.state.repositories.idempotency.upsert({
-      id: recordId,
+      id: input.recordId,
       provider: 'feishu',
       idempotencyKey: response.idempotencyKey,
-      keySource: 'token',
+      payloadHash: input.payloadHash,
+      keySource: input.keySource,
       eventType: 'interactive.action',
       status,
-      firstSeenAt,
-      lastSeenAt: now,
+      firstSeenAt: input.firstSeenAt,
+      lastSeenAt: input.now,
       responseSnapshotJson: JSON.stringify(response),
     })
     return response
   }
 
-  private markIdempotencyProcessed(
-    recordId: string,
-    input: {
-      idempotencyKey: string
-      hash: string
-      now: string
-      eventType: string
-      ignoredReason: string
-    },
-  ): void {
+  private markIdempotencyProcessed(input: {
+    recordId: string
+    idempotencyKey: string
+    hash: string
+    keySource: IdempotencyKeySource
+    firstSeenAt: string
+    now: string
+    eventType: string
+    ignoredReason: string
+  }): void {
     this.state.repositories.idempotency.upsert({
-      id: recordId,
+      id: input.recordId,
       provider: 'feishu',
       idempotencyKey: input.idempotencyKey,
       payloadHash: input.hash,
-      keySource: 'payload_hash_derived',
+      keySource: input.keySource,
       eventType: input.eventType,
       status: 'ignored',
-      firstSeenAt: input.now,
+      firstSeenAt: input.firstSeenAt,
       lastSeenAt: input.now,
       responseSnapshotJson: JSON.stringify({ ignoredReason: input.ignoredReason }),
     })

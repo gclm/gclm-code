@@ -284,11 +284,12 @@
 
 建议能力：
 
-- `GET /web/sessions`
-- `GET /web/sessions/:id`
-- `WS /web/terminal/:id`
-- `POST /web/sessions/:id/input`
-- `POST /web/sessions/:id/permission-response`
+- `GET /api/v1/sessions`
+- `GET /api/v1/sessions/:id`
+- `GET /api/v1/sessions/:id/stream-info`
+- `WS /ws/v1/session/:id/stream`
+- `POST /api/v1/sessions/:id/input`
+- `POST /api/v1/sessions/:id/permissions/:requestId/respond`
 
 这一层是我们真正应该自己掌控的“server”。
 
@@ -622,19 +623,19 @@
 
 第一阶段的 `gclm-code-server` 只做这些最小能力：
 
-1. `POST /sessions`
+1. `POST /api/v1/sessions`
    - 创建或恢复一个可路由的会话
-2. `GET /sessions`
+2. `GET /api/v1/sessions`
    - 查询当前用户可见的会话
-3. `WS /sessions/:id/stream`
+3. `WS /ws/v1/session/:id/stream`
    - 订阅输出流
-4. `POST /sessions/:id/input`
+4. `POST /api/v1/sessions/:id/input`
    - 投递用户输入
-5. `POST /sessions/:id/permission-response`
+5. `POST /api/v1/sessions/:id/permissions/:requestId/respond`
    - 回传审批结果
-6. `POST /channels/feishu/events`
-   - 接飞书事件
-7. `POST /channels/dingtalk/events`
+6. 飞书长连接事件入口
+   - 由 `FeishuLongConnection` 在进程内消费 `im.message.receive_v1`、`card.action.trigger`
+7. 钉钉 / 企业微信长连接
    - 后续预留
 
 先不要一上来做：

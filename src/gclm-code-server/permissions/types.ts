@@ -15,9 +15,9 @@ export type PermissionRequestRecord = {
   status: PermissionRequestStatus
   scope: PermissionScope
   inputJson: string
-  requestedByChannel?: string
+  requestedByProvider?: string
   requestedByUserId?: string
-  resolutionChannel?: string
+  resolvedByProvider?: string
   resolvedBy?: string
   resolutionMessage?: string
   requestedAt: string

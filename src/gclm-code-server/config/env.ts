@@ -6,13 +6,13 @@ export type GclmCodeServerFeishuEnv = {
   useLongConnection: boolean
   verificationToken?: string
   encryptKey?: string
-  bypassSignatureVerification: boolean
 }
 
 export type GclmCodeServerEnv = {
   GCLM_CODE_SERVER_HOST: string
   GCLM_CODE_SERVER_PORT: number
   GCLM_CODE_SERVER_SIGNING_SECRET: string
+  GCLM_CODE_SERVER_AUTH_ENABLED: boolean
   GCLM_CODE_SERVER_DB_PATH: string
   GCLM_CODE_SERVER_DB_BUSY_TIMEOUT_MS: number
   feishu: GclmCodeServerFeishuEnv
@@ -53,6 +53,10 @@ export function readGclmCodeServerEnv(
     GCLM_CODE_SERVER_PORT: readPositiveInt(env.GCLM_CODE_SERVER_PORT, 4317),
     GCLM_CODE_SERVER_SIGNING_SECRET:
       env.GCLM_CODE_SERVER_SIGNING_SECRET ?? 'gclm-code-server-dev-secret',
+    GCLM_CODE_SERVER_AUTH_ENABLED: readBoolean(
+      env.GCLM_CODE_SERVER_AUTH_ENABLED,
+      true,
+    ),
     GCLM_CODE_SERVER_DB_PATH:
       env.GCLM_CODE_SERVER_DB_PATH ?? './.local/gclm-code-server/dev.db',
     GCLM_CODE_SERVER_DB_BUSY_TIMEOUT_MS: readPositiveInt(
@@ -70,10 +74,6 @@ export function readGclmCodeServerEnv(
       ),
       verificationToken: env.GCLM_CODE_SERVER_FEISHU_VERIFICATION_TOKEN,
       encryptKey: env.GCLM_CODE_SERVER_FEISHU_ENCRYPT_KEY,
-      bypassSignatureVerification: readBoolean(
-        env.GCLM_CODE_SERVER_FEISHU_BYPASS_SIGNATURE_VERIFICATION,
-        false,
-      ),
     },
   }
 }

@@ -2,7 +2,6 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { createApp } from '../../src/gclm-code-server/app/createApp.js'
 import type { GclmCodeServerAppState } from '../../src/gclm-code-server/app/types.js'
 import type {
   ExecutionPermissionDecision,
@@ -23,7 +22,6 @@ import { FeishuPublisher } from '../../src/gclm-code-server/channels/feishu/feis
 import { FeishuAdapter } from '../../src/gclm-code-server/channels/feishu/feishuAdapter.js'
 import { FeishuSessionRelay } from '../../src/gclm-code-server/channels/feishu/feishuSessionRelay.js'
 import { FeishuLongConnection } from '../../src/gclm-code-server/channels/feishu/feishuLongConnection.js'
-import { createHash } from 'crypto'
 
 const tempDirs: string[] = []
 
@@ -35,15 +33,18 @@ afterEach(() => {
 
 function createFakeExecutionBridge(): SessionExecutionBridge & {
   submitted: ExecutionSubmitInput[]
+  interrupted: string[]
   resolved: Array<{ sessionId: string; requestId: string; decision: ExecutionPermissionDecision }>
 } {
   return {
     submitted: [],
+    interrupted: [],
     resolved: [],
     async submitInput(input) {
       this.submitted.push(input)
     },
-    async interrupt() {
+    async interrupt(session) {
+      this.interrupted.push(session.id)
       return true
     },
     async resolvePermission(session, requestId, decision) {
@@ -54,16 +55,12 @@ function createFakeExecutionBridge(): SessionExecutionBridge & {
 }
 
 function createPublisherRecorder() {
-  const calls: Array<{ url: string; method: string; body: unknown }> = []
   const cardkitCalls: Array<{
     type: 'card.create' | 'message.create' | 'cardElement.content' | 'card.settings'
     body: unknown
   }> = []
-  const fetchImpl: typeof fetch = async (input, init) => {
+  const fetchImpl: typeof fetch = async input => {
     const url = String(input)
-    const method = init?.method ?? 'GET'
-    const body = init?.body ? JSON.parse(String(init.body)) : undefined
-    calls.push({ url, method, body })
 
     if (url.includes('/auth/v3/tenant_access_token/internal')) {
       return new Response(
@@ -112,24 +109,13 @@ function createPublisherRecorder() {
     },
   })
 
-  return { calls, fetchImpl, sdkFactory, cardkitCalls }
-}
-
-function signFeishuPayload(rawBody: string, input: { timestamp: string; nonce: string; encryptKey: string }) {
-  return createHash('sha256')
-    .update(input.timestamp)
-    .update(input.nonce)
-    .update(input.encryptKey)
-    .update(rawBody)
-    .digest('hex')
+  return { fetchImpl, sdkFactory, cardkitCalls }
 }
 
 function createState(
   executionBridge = createFakeExecutionBridge(),
   options?: {
     feishuEnabled?: boolean
-    verificationToken?: string
-    encryptKey?: string
   },
 ): GclmCodeServerAppState {
   const dir = mkdtempSync(join(tmpdir(), 'gclm-code-server-feishu-'))
@@ -145,6 +131,7 @@ function createState(
       GCLM_CODE_SERVER_HOST: '127.0.0.1',
       GCLM_CODE_SERVER_PORT: 4317,
       GCLM_CODE_SERVER_SIGNING_SECRET: 'test-secret',
+      GCLM_CODE_SERVER_AUTH_ENABLED: false,
       GCLM_CODE_SERVER_DB_PATH: join(dir, 'server.db'),
       GCLM_CODE_SERVER_DB_BUSY_TIMEOUT_MS: 250,
       feishu: {
@@ -153,11 +140,10 @@ function createState(
         appId: 'cli_app_id',
         appSecret: 'cli_app_secret',
         useLongConnection: true,
-        verificationToken: options?.verificationToken,
-        encryptKey: options?.encryptKey,
         bypassSignatureVerification: false,
       },
     },
+    accessToken: 'test-secret',
     db,
     repositories: {
       channelIdentities: new ChannelIdentityRepository(db),
@@ -179,8 +165,6 @@ function createState(
           appId: 'cli_app_id',
           appSecret: 'cli_app_secret',
           useLongConnection: true,
-          verificationToken: options?.verificationToken,
-          encryptKey: options?.encryptKey,
           bypassSignatureVerification: false,
         },
         audit: new AuditRepository(db),
@@ -201,57 +185,26 @@ function createState(
 }
 
 describe('gclm-code-server feishu adapter', () => {
-  test('accepts url verification handshake', async () => {
-    const app = createApp(createState())
-
-    const resp = await app.request('/channels/feishu/events', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        type: 'url_verification',
-        challenge: 'hello-feishu',
-      }),
-    })
-
-    expect(resp.status).toBe(200)
-    expect(await resp.json()).toEqual({ challenge: 'hello-feishu' })
-  })
-
-  test('creates or resumes a feishu session from inbound message event', async () => {
+  test('creates or resumes a feishu session from long connection message events', async () => {
     const fakeBridge = createFakeExecutionBridge()
     const state = createState(fakeBridge, { feishuEnabled: true })
-    const app = createApp(state)
 
-    const resp = await app.request('/channels/feishu/events', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        schema: '2.0',
-        header: {
-          event_id: 'evt_1',
-          event_type: 'im.message.receive_v1',
-          tenant_key: 'tenant_1',
+    const resp = await state.channels.feishuAdapter.handleLongConnectionMessageEvent({
+      sender: {
+        sender_id: {
+          open_id: 'ou_123',
         },
-        event: {
-          sender: {
-            sender_id: {
-              open_id: 'ou_123',
-            },
-            tenant_key: 'tenant_1',
-          },
-          message: {
-            message_id: 'om_1',
-            message_type: 'text',
-            content: JSON.stringify({ text: '/cost' }),
-          },
-        },
-      }),
+        tenant_key: 'tenant_1',
+      },
+      message: {
+        message_id: 'om_1',
+        message_type: 'text',
+        content: JSON.stringify({ text: '/cost' }),
+      },
     })
 
-    expect(resp.status).toBe(200)
-    const json = await resp.json()
-    expect(json.accepted).toBe(true)
-    expect(json.sessionId).toContain('sess_')
+    expect(resp.accepted).toBe(true)
+    expect(resp.sessionId).toContain('sess_')
     expect(fakeBridge.submitted).toHaveLength(1)
     expect(fakeBridge.submitted[0]?.prompt).toBe('/cost')
 
@@ -263,41 +216,64 @@ describe('gclm-code-server feishu adapter', () => {
     expect(sessions[0]?.sourceChannel).toBe('feishu')
   })
 
+  test('ignores duplicate long connection events via idempotency tracking', async () => {
+    const fakeBridge = createFakeExecutionBridge()
+    const state = createState(fakeBridge, { feishuEnabled: true })
+
+    const first = await state.channels.feishuAdapter.handleLongConnectionMessageEvent({
+      sender: {
+        sender_id: {
+          open_id: 'ou_dup_1',
+        },
+        tenant_key: 'tenant_dup_1',
+      },
+      message: {
+        message_id: 'om_dup_1',
+        message_type: 'text',
+        content: JSON.stringify({ text: 'hello' }),
+      },
+    })
+    const second = await state.channels.feishuAdapter.handleLongConnectionMessageEvent({
+      sender: {
+        sender_id: {
+          open_id: 'ou_dup_1',
+        },
+        tenant_key: 'tenant_dup_1',
+      },
+      message: {
+        message_id: 'om_dup_1',
+        message_type: 'text',
+        content: JSON.stringify({ text: 'hello' }),
+      },
+    })
+
+    expect(first.accepted).toBe(true)
+    expect(second.accepted).toBe(true)
+    expect(second.ignoredReason).toBe('duplicate_event')
+    expect(fakeBridge.submitted).toHaveLength(1)
+  })
+
   test('routes feishu permission action into execution bridge resolution', async () => {
     const fakeBridge = createFakeExecutionBridge()
     const state = createState(fakeBridge, { feishuEnabled: true })
-    const app = createApp(state)
 
-    const createResp = await app.request('/channels/feishu/events', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        schema: '2.0',
-        header: {
-          event_id: 'evt_2',
-          event_type: 'im.message.receive_v1',
-          tenant_key: 'tenant_2',
+    const created = await state.channels.feishuAdapter.handleLongConnectionMessageEvent({
+      sender: {
+        sender_id: {
+          open_id: 'ou_456',
         },
-        event: {
-          sender: {
-            sender_id: {
-              open_id: 'ou_456',
-            },
-            tenant_key: 'tenant_2',
-          },
-          message: {
-            message_id: 'om_2',
-            message_type: 'text',
-            content: JSON.stringify({ text: 'hello' }),
-          },
-        },
-      }),
+        tenant_key: 'tenant_2',
+      },
+      message: {
+        message_id: 'om_2',
+        message_type: 'text',
+        content: JSON.stringify({ text: 'hello' }),
+      },
     })
-    const createJson = await createResp.json()
 
     state.repositories.permissions.insert({
       id: 'perm_1',
-      sessionId: createJson.sessionId,
+      sessionId: created.sessionId as string,
       toolName: 'Bash',
       toolUseId: 'toolu_perm_1',
       status: 'pending',
@@ -308,27 +284,22 @@ describe('gclm-code-server feishu adapter', () => {
       updatedAt: new Date().toISOString(),
     })
 
-    const actionResp = await app.request('/channels/feishu/actions', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
+    const action = await state.channels.feishuAdapter.handleLongConnectionActionEvent({
+      operator: {
         open_id: 'ou_456',
-        tenant_key: 'tenant_2',
-        token: 'action_token_1',
-        action: {
-          value: {
-            action: 'permission_response',
-            sessionId: createJson.sessionId,
-            requestId: 'perm_1',
-            decision: 'approve',
-          },
+      },
+      tenant_key: 'tenant_2',
+      action: {
+        value: {
+          action: 'permission_response',
+          sessionId: created.sessionId,
+          requestId: 'perm_1',
+          decision: 'approve',
         },
-      }),
+      },
     })
 
-    expect(actionResp.status).toBe(200)
-    const actionJson = await actionResp.json()
-    expect(actionJson.accepted).toBe(true)
+    expect(action.accepted).toBe(true)
     expect(fakeBridge.resolved).toHaveLength(1)
     expect(fakeBridge.resolved[0]?.requestId).toBe('perm_1')
     expect(fakeBridge.resolved[0]?.decision.behavior).toBe('allow')
@@ -337,47 +308,33 @@ describe('gclm-code-server feishu adapter', () => {
   test('relays assistant output from a feishu session back to outbound messages', async () => {
     const fakeBridge = createFakeExecutionBridge()
     const state = createState(fakeBridge, { feishuEnabled: true })
-    const app = createApp(state)
 
-    const resp = await app.request('/channels/feishu/events', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        schema: '2.0',
-        header: {
-          event_id: 'evt_3',
-          event_type: 'im.message.receive_v1',
-          tenant_key: 'tenant_3',
+    const created = await state.channels.feishuAdapter.handleLongConnectionMessageEvent({
+      sender: {
+        sender_id: {
+          open_id: 'ou_789',
         },
-        event: {
-          sender: {
-            sender_id: {
-              open_id: 'ou_789',
-            },
-            tenant_key: 'tenant_3',
-          },
-          message: {
-            message_id: 'om_3',
-            message_type: 'text',
-            content: JSON.stringify({ text: 'hello relay' }),
-          },
-        },
-      }),
+        tenant_key: 'tenant_3',
+      },
+      message: {
+        message_id: 'om_3',
+        message_type: 'text',
+        content: JSON.stringify({ text: 'hello relay' }),
+      },
     })
 
-    const json = await resp.json()
-    state.streamHub.publish(json.sessionId, {
+    state.streamHub.publish(created.sessionId as string, {
       type: 'session.updated',
       data: {
-        id: json.sessionId,
+        id: created.sessionId,
         status: 'running',
       },
     })
 
-    state.streamHub.publish(json.sessionId, {
+    state.streamHub.publish(created.sessionId as string, {
       type: 'message.completed',
       data: {
-        sessionId: json.sessionId,
+        sessionId: created.sessionId,
         role: 'assistant',
         text: 'relay back to feishu',
       },
@@ -428,72 +385,6 @@ describe('gclm-code-server feishu adapter', () => {
     })
 
     expect(interrupt.accepted).toBe(true)
-  })
-
-  test('rejects feishu event when signature verification fails', async () => {
-    const state = createState(createFakeExecutionBridge(), {
-      feishuEnabled: true,
-      verificationToken: 'token_ok',
-      encryptKey: 'encrypt_secret',
-    })
-    const app = createApp(state)
-
-    const payload = {
-      type: 'url_verification',
-      challenge: 'hello-feishu',
-      token: 'token_bad',
-    }
-    const rawBody = JSON.stringify(payload)
-
-    const resp = await app.request('/channels/feishu/events', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-lark-request-timestamp': '1710000000',
-        'x-lark-request-nonce': 'nonce_1',
-        'x-lark-signature': signFeishuPayload(rawBody, {
-          timestamp: '1710000000',
-          nonce: 'nonce_1',
-          encryptKey: 'encrypt_secret',
-        }),
-      },
-      body: rawBody,
-    })
-
-    expect(resp.status).toBe(401)
-  })
-
-  test('accepts signed feishu handshake when token and signature are valid', async () => {
-    const state = createState(createFakeExecutionBridge(), {
-      feishuEnabled: true,
-      verificationToken: 'token_ok',
-      encryptKey: 'encrypt_secret',
-    })
-    const app = createApp(state)
-
-    const payload = {
-      type: 'url_verification',
-      challenge: 'hello-feishu',
-      token: 'token_ok',
-    }
-    const rawBody = JSON.stringify(payload)
-
-    const resp = await app.request('/channels/feishu/events', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-lark-request-timestamp': '1710000000',
-        'x-lark-request-nonce': 'nonce_1',
-        'x-lark-signature': signFeishuPayload(rawBody, {
-          timestamp: '1710000000',
-          nonce: 'nonce_1',
-          encryptKey: 'encrypt_secret',
-        }),
-      },
-      body: rawBody,
-    })
-
-    expect(resp.status).toBe(200)
-    expect(await resp.json()).toEqual({ challenge: 'hello-feishu' })
+    expect(fakeBridge.interrupted).toHaveLength(1)
   })
 })

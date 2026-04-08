@@ -343,55 +343,56 @@
 
 建议暴露：
 
-- `GET /sessions`
-- `GET /sessions/:id`
-- `POST /sessions`
-- `POST /sessions/:id/input`
-- `POST /sessions/:id/permission-response`
-- `GET /sessions/:id/stream-info`
-- `WS /sessions/:id/stream`
+- `GET /api/v1/sessions`
+- `GET /api/v1/sessions/:id`
+- `POST /api/v1/sessions`
+- `POST /api/v1/sessions/:id/input`
+- `POST /api/v1/sessions/:id/interrupt`
+- `POST /api/v1/sessions/:id/archive`
+- `GET /api/v1/sessions/:id/permissions/pending`
+- `POST /api/v1/sessions/:id/permissions/:requestId/respond`
+- `GET /api/v1/sessions/:id/stream-info`
+- `WS /ws/v1/session/:id/stream`
 
 说明：
 
-- `WS /sessions/:id/stream` 仍是统一流式出口
-- Web 所需的连接参数通过 `GET /sessions/:id/stream-info` 获取
+- `WS /ws/v1/session/:id/stream` 仍是统一流式出口
+- Web 所需的连接参数通过 `GET /api/v1/sessions/:id/stream-info` 获取
 - 通用 `CreateSessionResponse` 不再直接泄漏 `wsUrl` 这类 Web 专属传输信息
 - stream token 一期建议采用短 TTL 的签名令牌模型，不依赖数据库持久化；会话归档或用户登出后的强撤销暂不承诺，依赖短 TTL 与重新握手控制
 
 ### `gclm-code-server` 与飞书
 
-建议暴露：
+建议内建：
 
-- `POST /channels/feishu/events`
-- `POST /channels/feishu/actions`
+- `FeishuLongConnection`
+- `FeishuAdapter`
+- `FeishuPublisher`
 
 边界要求：
 
-- `Feishu Adapter` 先处理飞书原始 webhook / 卡片回调 / 长连接事件
+- `Feishu Adapter` 先处理飞书原始长连接事件 / 卡片动作
 - 原始平台 payload 只留在 adapter 内部 DTO 中
 - 进入控制面的统一对象应是标准化后的 `ChannelInboundEvent`、`ChannelActionCommand` 等内部 DTO
 
 ### `gclm-code-server` 与钉钉
 
-建议预留：
-
-- `POST /channels/dingtalk/events`
-- `POST /channels/dingtalk/actions`
+建议预留长连接 adapter 骨架，由 server 启动时内建消费
 
 ## 关键数据流
 
 ### 场景 1：Web 新建会话
 
 1. 用户打开 Web Console
-2. Web 调用 `POST /sessions`
+2. Web 调用 `POST /api/v1/sessions`
 3. `gclm-code-server` 校验用户身份和项目权限
 4. `gclm-code-server` 创建或附着会话
-5. Web 通过 `WS /sessions/:id/stream` 订阅输出
+5. Web 通过 `WS /ws/v1/session/:id/stream` 订阅输出
 
 ### 场景 2：Web 输入消息
 
 1. 用户在 Web terminal 或输入区提交消息
-2. Web 调 `POST /sessions/:id/input`
+2. Web 调 `POST /api/v1/sessions/:id/input`
 3. `gclm-code-server` 将消息路由到对应 `gclm-code` 会话
 4. 输出流继续返回给 Web
 
@@ -408,10 +409,10 @@
 
 1. `gclm-code` 会话产生权限请求
 2. `gclm-code-server` 记录 pending approval
-3. `Feishu Adapter` 拉取或接收 approval event
-4. adapter 生成飞书卡片
+3. `Feishu Session Relay` / `Feishu Publisher` 根据控制面状态更新飞书卡片
+4. adapter 通过平台长连接接收 `card.action.trigger`
 5. 用户点击允许或拒绝
-6. adapter 回调 `POST /sessions/:id/permission-response`
+6. adapter 在进程内解析动作并调用 `POST /api/v1/sessions/:id/permissions/:requestId/respond` 对应的控制面语义
 7. server 将结果回传执行中的会话
 
 ### 场景 5：未来钉钉接入
@@ -464,7 +465,7 @@
 - `tool_name`
 - `tool_use_id`
 - `status`
-- `requested_by_channel`
+- `requested_by_provider`
 - `requested_at`
 - `expires_at`
 - `resolved_at`
@@ -669,41 +670,40 @@
 
 ### Session API
 
-- `POST /sessions`
+- `POST /api/v1/sessions`
   - 创建会话或恢复会话
-- `GET /sessions`
+- `GET /api/v1/sessions`
   - 列出当前用户可见会话
-- `GET /sessions/:id`
+- `GET /api/v1/sessions/:id`
   - 查看会话详情
-- `POST /sessions/:id/input`
+- `POST /api/v1/sessions/:id/input`
   - 投递用户输入
-- `POST /sessions/:id/interrupt`
+- `POST /api/v1/sessions/:id/interrupt`
   - 中断当前执行
-- `POST /sessions/:id/archive`
+- `POST /api/v1/sessions/:id/archive`
   - 归档会话
 
 ### Stream API
 
-- `WS /sessions/:id/stream`
+- `WS /ws/v1/session/:id/stream`
   - 订阅会话输出与状态事件
 
 ### Permission API
 
-- `GET /sessions/:id/permissions/pending`
+- `GET /api/v1/sessions/:id/permissions/pending`
   - 查询待审批项
-- `POST /sessions/:id/permission-response`
+- `POST /api/v1/sessions/:id/permissions/:requestId/respond`
   - 回传允许 / 拒绝 / 范围放行
 
-### Channel API
+### Channel Runtime
 
-- `POST /channels/feishu/events`
-- `POST /channels/feishu/actions`
-- `POST /channels/dingtalk/events`
-- `POST /channels/dingtalk/actions`
+- `FeishuLongConnection`
+- `DingtalkLongConnection`（预留）
+- `WecomLongConnection`（预留）
 
 ### Admin / Health API
 
-- `GET /health`
+- `GET /api/v1/status`
 - `GET /metrics`
 - `GET /audit/events`
 

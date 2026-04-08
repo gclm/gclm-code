@@ -185,7 +185,7 @@ WebSocket 连接通过 query param `?token=xxx` 传递 token。
 ```ts
 type UserIdentityDto = {
   id: string
-  provider: 'web' | 'feishu' | 'dingtalk' | 'system'
+  provider: 'web' | 'feishu' | 'dingtalk' | 'wecom' | 'system'
   providerUserId: string
   displayName?: string
   tenantId?: string
@@ -202,7 +202,7 @@ type SessionDto = {
   projectId?: string
   workspaceId?: string
   ownerUserId: string
-  sourceChannel: 'web' | 'feishu' | 'dingtalk' | 'api'
+  sourceChannel: 'web' | 'feishu' | 'dingtalk' | 'wecom' | 'api'
   createdAt: string
   updatedAt: string
   lastActiveAt?: string
@@ -238,7 +238,7 @@ type AuditEventDto = {
   sessionId?: string
   actorType: 'user' | 'channel' | 'system'
   actorId: string
-  channel?: 'web' | 'feishu' | 'dingtalk'
+  provider?: 'web' | 'feishu' | 'dingtalk' | 'wecom'
   payload?: Record<string, unknown>
   createdAt: string
 }
@@ -857,13 +857,12 @@ type ApiErrorResponse = {
 建议规则：
 
 1. 优先使用平台提供的稳定键，例如 `eventId`、`actionId`、`token`
-2. 若平台未提供稳定键，则生成 `payloadHashDerivedKey`，并同样写入 `idempotency_key`
 
 这样能覆盖：
 
 - SDK 重连后可能的事件重放
 - 进程重启后的重复卡片按钮点击
-- 飞书 / 钉钉审批超时后的人为重试
+- 飞书 / 钉钉 / 企业微信审批超时后的人为重试
 
 ## 完整路由表
 
@@ -872,7 +871,6 @@ type ApiErrorResponse = {
 | Method | Path | 说明 |
 |---|---|---|
 | GET | `/` | Web Console 入口（index.html） |
-| GET | `/console` | 重定向到 `/` |
 
 ### HTTP API（`/api/v1/`）
 
