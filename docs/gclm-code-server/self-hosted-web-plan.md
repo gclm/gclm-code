@@ -21,7 +21,7 @@
 
 1. 可以自建 Web，而且更适合当前这个自定义版本
 2. 可以复用 `references/tlive/core/web` 作为第一版 Web 控制台前端壳，但不能把它当成“直接可用的完整官方远程方案”
-3. 官方托管的 Claude Code Web / server 如果不能自建、不开源，就不纳入我们的正式架构依赖
+3. 官方托管的 Gclm Code Web / server 如果不能自建、不开源，就不纳入我们的正式架构依赖
 
 因此推荐落地形态是：
 
@@ -230,7 +230,7 @@
 
 这个东西是可以自建的，而且从当前仓库代码看，本项目已经具备很强的协议和 session 基础。
 
-### 概念 2：官方托管的 Claude Code Web / server
+### 概念 2：官方托管的 Gclm Code Web / server
 
 这类 server 指的是官方产品体系里，用来承载 Web 远程操作体验的官方后端能力。
 

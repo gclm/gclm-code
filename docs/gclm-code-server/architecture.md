@@ -67,7 +67,7 @@
 - 浏览器里的任意 shell 管理后台
 - 多组织复杂工作流编排平台
 - 独立于 `gclm-code` 的第二套 agent runtime
-- 复刻官方 Claude Code Web 的全部产品形态
+- 复刻官方 Gclm Code Web 的全部产品形态
 
 ## 现状判断
 
