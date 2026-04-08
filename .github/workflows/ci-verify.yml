@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Install ripgrep
+        run: brew install ripgrep
+
       - name: Brand guard
         run: bun run brand:guard
 
