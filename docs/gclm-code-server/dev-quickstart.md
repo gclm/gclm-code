@@ -3,6 +3,7 @@
 ## 当前可直接运行的能力
 
 - 本地启动 `gclm-code-server`
+- 运行独立真实端口 smoke，验证 HTTP / WebSocket / PTY / 会话级签名 token 主链
 - 打开第一版自托管 Web Console
 - 创建会话、发送输入、查看执行流
 - 使用真实 `gclm-code` 子进程执行 turn
@@ -134,11 +135,14 @@ bun run smoke:feishu-long-connection
 
 ## 推荐验证顺序
 
-1. 启动 `bun run dev:gclm-code-server`
-2. 打开 `/`
-3. 新建 session 并发送 `/cost`
-4. 再发 `/context`，确认 resumed turn 正常执行
-5. 执行 `bun run smoke:feishu-openapi`，确认飞书凭证可拿到 `tenant_access_token`
-6. 执行 `bun run smoke:feishu-long-connection`，确认长连接探测未报配额占用
-7. 在飞书开放平台把事件订阅方式设为“长连接（WebSocket）”，并开通 `im.message.receive_v1`、`card.action.trigger`
-8. 给机器人发送消息，确认会收到持续更新的 interactive card
+1. 执行 `bun ./scripts/smoke-gclm-code-server.mjs`
+   - 独立拉起临时实例，验证 `status -> auth -> create session -> stream-info -> WS stream -> PTY -> /cost`
+   - 如果是在受限沙箱里执行，`Bun.serve` 可能无法监听本地端口；这种情况下请直接在宿主终端运行
+2. 启动 `bun run dev:gclm-code-server`
+3. 打开 `/`
+4. 新建 session 并发送 `/cost`
+5. 再发 `/context`，确认 resumed turn 正常执行
+6. 执行 `bun run smoke:feishu-openapi`，确认飞书凭证可拿到 `tenant_access_token`
+7. 执行 `bun run smoke:feishu-long-connection`，确认长连接探测未报配额占用
+8. 在飞书开放平台把事件订阅方式设为“长连接（WebSocket）”，并开通 `im.message.receive_v1`、`card.action.trigger`
+9. 给机器人发送消息，确认会收到持续更新的 interactive card

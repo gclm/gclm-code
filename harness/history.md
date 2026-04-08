@@ -111,4 +111,8 @@
 - 已收口 Web terminal 鉴权链路：`terminal.html` 现在先调用 `GET /api/v1/sessions/:id/stream-info` 获取短 TTL 签名 token，再连接 `WS /ws/v1/session/:id`；登录页提交 token 时会保留原始 `id` 查询参数，避免 auth deep link 失效。
 - 已同步修正文档剩余尾巴：`architecture.md`、`self-hosted-web-plan.md`、`dev-quickstart.md` 与 `sqlite-schema-design.md` 已对齐 `/api/v1` 路由、长连接 only 模型与 `prefix_<uuidv7hex>` 记录 ID 规范。
 - 最新 `bun test tests/gclm-code-server` 结果更新为 `24 pass / 0 fail`。
-- 已确认当前宿主环境无法把证据升级到真实监听端口 smoke：`Bun.serve` 在本地连 `port: 0` 也直接返回 `EADDRINUSE`；因此本轮最强新增证据仍是 `test`，而不是 `scripted-flow`。
+- 已新增独立真实端口 smoke 脚本 `scripts/smoke-gclm-code-server.mjs`，覆盖 `status -> auth -> create session -> stream-info -> WS stream -> PTY -> /cost` 主链，并在 `dev-quickstart.md` 中补入推荐验证顺序。
+- 已定位 smoke 首轮失败的真实原因分成两层：当前 agent 沙箱里本地监听受限，最小 `Bun.serve({ port: 0 })` 也会报 `EADDRINUSE`；而在非沙箱宿主终端里，脚本本身还额外误把 `signingSecret` 当成了访问 token。
+- 已修正 smoke 脚本：访问 token 现改为读取运行时实际 `state.accessToken`，默认优先使用 `port: 0` 申请随机空闲端口，并回填 `runtime.server.port` 作为实际 base URL。
+- 已修正 `startGclmCodeServer()` 随机端口启动日志：当调用方传入 `port: 0` 时，控制台输出现在会显示真实监听端口，不再误导为 `http://127.0.0.1:0/...`。
+- 最新 `bun ./scripts/smoke-gclm-code-server.mjs` 已在非沙箱宿主终端通过，因此这轮 `gclm-code-server` 新增证据已从 `test` 提升到 `scripted-flow`；沙箱内的 `EADDRINUSE` 仍保留为环境边界说明。

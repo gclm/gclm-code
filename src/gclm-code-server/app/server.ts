@@ -222,7 +222,7 @@ export function startGclmCodeServer(options: StartGclmCodeServerOptions = {}) {
   })
 
   const host = options.host ?? state.env.GCLM_CODE_SERVER_HOST
-  const port = options.port ?? state.env.GCLM_CODE_SERVER_PORT
+  const port = server.port
   const webConsoleUrl = `http://${host}:${port}/${state.env.GCLM_CODE_SERVER_AUTH_ENABLED ? `?token=${state.accessToken}` : ''}`
 
   console.log(`\n  gclm-code-server v0.1.0`)

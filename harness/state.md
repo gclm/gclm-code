@@ -226,7 +226,9 @@
     - 已修正飞书重复长连接事件测试语义：duplicate event 现在明确断言为“accepted but ignored”，与当前幂等设计保持一致
     - 已新增会话级鉴权与 terminal 深链回归测试，覆盖跨用户访问拒绝与登录页保留 `id` 查询参数
     - `bun test tests/gclm-code-server`，通过（`24 pass / 0 fail`）
-    - 额外脚本流验证尝试：宿主环境下 `Bun.serve` 连 `port: 0` 也直接返回 `EADDRINUSE`，当前无法在此环境把证据升级到真实监听端口 smoke；这属于环境边界，不是当前 `gclm-code-server` 实现回归
+    - `bun ./scripts/smoke-gclm-code-server.mjs`，在非沙箱宿主终端通过；已覆盖 `status -> auth -> create session -> stream-info -> WS stream -> PTY -> /cost` 主链，当前 `gclm-code-server` 最强新增证据已提升到 `scripted-flow`
+    - 当前 agent 沙箱内仍无法执行同一条真实监听端口 smoke：连最小 `Bun.serve({ port: 0 })` 都会返回 `EADDRINUSE`；这属于执行环境边界，不是当前 `gclm-code-server` 实现回归
+    - 已顺手修正 `startGclmCodeServer()` 的随机端口日志输出：当 smoke 使用 `port: 0` 时，启动日志现在会打印实际监听端口，不再误报为 `:0`
   - 当前 `gclm-code-server` 残留旧引用已降为说明性内容：
     - 测试中对旧飞书 HTTP 路由的引用仅用于断言 `404`
     - 文档与 migration 中出现的 `requested_by_channel` / `resolution_channel` 仅用于描述字段迁移历史，不再属于运行时边界问题
