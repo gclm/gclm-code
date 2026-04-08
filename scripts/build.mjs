@@ -333,7 +333,7 @@ const version = options.dev ? getDevVersion(pkg.version) : pkg.version
 
 // compile-only mode: skip JS bundle, use bun CLI directly
 if (options.compile) {
-  const outputName = options.dev ? 'gclm-dev' : 'gclm'
+  const outputName = options.dev ? 'gc-dev' : 'gc'
   const outfile = join(root, outputName)
   const outDir = dirname(outfile)
   if (outDir !== '.') mkdirSync(outDir, { recursive: true })
@@ -393,7 +393,7 @@ if (options.compile) {
 rmSync(distDir, { recursive: true, force: true })
 mkdirSync(distDir, { recursive: true })
 
-const binaryOut = join(distDir, options.dev ? 'gclm-dev' : 'gclm')
+const binaryOut = join(distDir, options.dev ? 'gc-dev' : 'gc')
 
 if (!(await buildFromSource(pkg, version, options))) {
   fail(`Source build failed. See ${sourceErrorLog} for details.`)

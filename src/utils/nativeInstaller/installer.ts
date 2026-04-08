@@ -49,7 +49,7 @@ import * as lockfile from '../lockfile.js'
 import { logError } from '../log.js'
 import { gt, gte } from '../semver.js'
 import {
-  filterClaudeAliases,
+  filterInstallerAliases,
   getShellConfigPaths,
   readFileLines,
   writeFileLines,
@@ -109,12 +109,17 @@ export function getPlatform(): string {
 }
 
 export function getBinaryName(platform: string): string {
+  return platform.startsWith('win32') ? 'gc.exe' : 'gc'
+}
+
+function getCompatibilityBinaryName(platform: string): string {
   return platform.startsWith('win32') ? 'claude.exe' : 'claude'
 }
 
 function getBaseDirectories() {
   const platform = getPlatform()
   const executableName = getBinaryName(platform)
+  const compatibilityExecutableName = getCompatibilityBinaryName(platform)
 
   return {
     // Data directories (permanent storage)
@@ -128,6 +133,7 @@ function getBaseDirectories() {
 
     // User bin
     executable: join(getUserBinDir(), executableName),
+    compatibilityExecutable: join(getUserBinDir(), compatibilityExecutableName),
   }
 }
 
@@ -444,7 +450,10 @@ async function performVersionUpdate(
 ): Promise<boolean> {
   const { stagingPath: baseStagingPath, installPath } =
     await getVersionPaths(version)
-  const { executable: executablePath } = getBaseDirectories()
+  const {
+    executable: executablePath,
+    compatibilityExecutable: compatibilityExecutablePath,
+  } = getBaseDirectories()
 
   // For lockless updates, use a unique staging path to avoid conflicts between concurrent downloads
   const stagingPath = isEnvTruthy(process.env.ENABLE_LOCKLESS_UPDATES)
@@ -465,9 +474,13 @@ async function performVersionUpdate(
     logForDebugging(`Version ${version} already installed, updating symlink`)
   }
 
-  // Create direct symlink from ~/.local/bin/claude to the version binary
+  // Keep the official gc entrypoint in sync with the installed version.
   await removeDirectoryIfEmpty(executablePath)
   await updateSymlink(executablePath, installPath)
+  await removeDirectoryIfEmpty(compatibilityExecutablePath)
+
+  // Keep the legacy claude alias working as a compatibility entrypoint.
+  await updateSymlink(compatibilityExecutablePath, installPath)
 
   // Verify the executable was actually created/updated
   if (!(await isPossibleClaudeBinary(executablePath))) {
@@ -845,7 +858,7 @@ export async function checkInstall(
     })
   }
 
-  // Check if claude executable exists and is valid.
+  // Check if the official gc executable exists and is valid.
   // On non-Windows, call readlink directly and route errno — ENOENT means
   // the executable is missing, EINVAL means it exists but isn't a symlink.
   // This avoids an access()→readlink() TOCTOU where deletion between the
@@ -856,7 +869,7 @@ export async function checkInstall(
     // On Windows it's a copied executable, not a symlink
     if (!(await isPossibleClaudeBinary(dirs.executable))) {
       messages.push({
-        message: `installMethod is native, but claude command is missing or invalid at ${dirs.executable}`,
+        message: `installMethod is native, but gc command is missing or invalid at ${dirs.executable}`,
         userActionRequired: true,
         type: 'error',
       })
@@ -867,7 +880,7 @@ export async function checkInstall(
       const absoluteTarget = resolve(dirname(dirs.executable), target)
       if (!(await isPossibleClaudeBinary(absoluteTarget))) {
         messages.push({
-          message: `Claude symlink points to missing or invalid binary: ${target}`,
+          message: `Gclm Code symlink points to missing or invalid binary: ${target}`,
           userActionRequired: true,
           type: 'error',
         })
@@ -875,7 +888,7 @@ export async function checkInstall(
     } catch (e) {
       if (isENOENT(e)) {
         messages.push({
-          message: `installMethod is native, but claude command not found at ${dirs.executable}`,
+          message: `installMethod is native, but gc command not found at ${dirs.executable}`,
           userActionRequired: true,
           type: 'error',
         })
@@ -883,7 +896,7 @@ export async function checkInstall(
         // EINVAL (not a symlink) or other — check as regular binary
         if (!(await isPossibleClaudeBinary(dirs.executable))) {
           messages.push({
-            message: `${dirs.executable} exists but is not a valid Claude binary`,
+            message: `${dirs.executable} exists but is not a valid Gclm Code binary`,
             userActionRequired: true,
             type: 'error',
           })
@@ -1458,35 +1471,38 @@ async function isNpmSymlink(executablePath: string): Promise<boolean> {
 }
 
 /**
- * Remove the claude symlink from the executable directory
+ * Remove managed entrypoints from the executable directory
  * This is used when switching away from native installation
- * Will only remove if it's a native binary symlink, not npm-managed JS files
+ * Will only remove native binary entrypoints, not npm-managed JS files
  */
 export async function removeInstalledSymlink(): Promise<void> {
   const dirs = getBaseDirectories()
 
-  try {
-    // Check if this is an npm-managed installation
-    if (await isNpmSymlink(dirs.executable)) {
-      logForDebugging(
-        `Skipping removal of ${dirs.executable} - appears to be npm-managed`,
-      )
-      return
-    }
+  for (const [entryPath, label] of [
+    [dirs.executable, 'gc'],
+    [dirs.compatibilityExecutable, 'claude'],
+  ] as const) {
+    try {
+      if (await isNpmSymlink(entryPath)) {
+        logForDebugging(
+          `Skipping removal of ${entryPath} - appears to be npm-managed`,
+        )
+        continue
+      }
 
-    // It's a native binary symlink, safe to remove
-    await unlink(dirs.executable)
-    logForDebugging(`Removed claude symlink at ${dirs.executable}`)
-  } catch (error) {
-    if (isENOENT(error)) {
-      return
+      await unlink(entryPath)
+      logForDebugging(`Removed ${label} entrypoint at ${entryPath}`)
+    } catch (error) {
+      if (isENOENT(error)) {
+        continue
+      }
+      logError(new Error(`Failed to remove ${label} entrypoint: ${error}`))
     }
-    logError(new Error(`Failed to remove claude symlink: ${error}`))
   }
 }
 
 /**
- * Clean up old claude aliases from shell configuration files
+ * Clean up installer-managed aliases from shell configuration files
  * Only handles alias removal, not PATH setup
  */
 export async function cleanupShellAliases(): Promise<SetupMessage[]> {
@@ -1498,16 +1514,19 @@ export async function cleanupShellAliases(): Promise<SetupMessage[]> {
       const lines = await readFileLines(configFile)
       if (!lines) continue
 
-      const { filtered, hadAlias } = filterClaudeAliases(lines)
+      const { filtered, removedAliases } = filterInstallerAliases(lines)
 
-      if (hadAlias) {
+      if (removedAliases.length > 0) {
         await writeFileLines(configFile, filtered)
+        const unaliasCommand = `unalias ${removedAliases.join(' ')}`
         messages.push({
-          message: `Removed claude alias from ${configFile}. Run: unalias claude`,
+          message: `Removed installer alias(es) ${removedAliases.join(', ')} from ${configFile}. Run: ${unaliasCommand}`,
           userActionRequired: true,
           type: 'alias',
         })
-        logForDebugging(`Cleaned up claude alias from ${shellType} config`)
+        logForDebugging(
+          `Cleaned up installer alias(es) ${removedAliases.join(', ')} from ${shellType} config`,
+        )
       }
     } catch (error) {
       logError(error)
@@ -1557,28 +1576,32 @@ async function manualRemoveNpmPackage(
     }
 
     if (getPlatform().startsWith('win32')) {
-      // Windows - only remove executables, not the package directory
-      const binCmd = join(globalPrefix, 'claude.cmd')
-      const binPs1 = join(globalPrefix, 'claude.ps1')
-      const binExe = join(globalPrefix, 'claude')
+      // Windows - only remove executables, not the package directory.
+      for (const binaryName of ['gc', 'claude']) {
+        const binCmd = join(globalPrefix, `${binaryName}.cmd`)
+        const binPs1 = join(globalPrefix, `${binaryName}.ps1`)
+        const binExe = join(globalPrefix, binaryName)
 
-      if (await tryRemove(binCmd, 'bin script')) {
-        manuallyRemoved = true
-      }
+        if (await tryRemove(binCmd, 'bin script')) {
+          manuallyRemoved = true
+        }
 
-      if (await tryRemove(binPs1, 'PowerShell script')) {
-        manuallyRemoved = true
-      }
+        if (await tryRemove(binPs1, 'PowerShell script')) {
+          manuallyRemoved = true
+        }
 
-      if (await tryRemove(binExe, 'bin executable')) {
-        manuallyRemoved = true
+        if (await tryRemove(binExe, 'bin executable')) {
+          manuallyRemoved = true
+        }
       }
     } else {
-      // Unix/Mac - only remove symlink, not the package directory
-      const binSymlink = join(globalPrefix, 'bin', 'claude')
+      // Unix/Mac - only remove symlinks, not the package directory.
+      for (const binaryName of ['gc', 'claude']) {
+        const binSymlink = join(globalPrefix, 'bin', binaryName)
 
-      if (await tryRemove(binSymlink, 'bin symlink')) {
-        manuallyRemoved = true
+        if (await tryRemove(binSymlink, 'bin symlink')) {
+          manuallyRemoved = true
+        }
       }
     }
 

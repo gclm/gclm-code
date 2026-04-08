@@ -21,12 +21,12 @@ done
 # Command hint guard — user-visible guidance should default to 'gc'.
 # Targets instruction-like phrases to avoid false positives in internal
 # identifiers, file names, compatibility code, and provider/model names.
-COMMAND_HINT_PATTERN='(Run|Usage:|Resume with:|Resume this session with:|Try[[:space:]]+`?)\s*claude([[:space:]]|`)'
+LEGACY_COMMAND_HINT_PATTERN='(Run|Usage:|Resume with:|Resume this session with:|Try[[:space:]]+`?)\s*(claude|gclm)([[:space:]]|`)'
 
-if rg -n --glob '!references/**' --glob '!scripts/brand-guard.sh' -S "$COMMAND_HINT_PATTERN" src docs README.md; then
+if rg -n --glob '!references/**' --glob '!scripts/brand-guard.sh' -S "$LEGACY_COMMAND_HINT_PATTERN" src docs README.md; then
   echo ""
-  echo "Brand guard failed: found legacy command hints using 'claude'."
-  echo "Switch user-facing command examples to 'gc' (keep 'claude' only as compatibility entrypoint)."
+  echo "Brand guard failed: found legacy command hints using 'claude' or 'gclm'."
+  echo "Switch user-facing command examples to 'gc' and keep compatibility aliases out of default guidance."
   exit 1
 fi
 

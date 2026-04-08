@@ -254,10 +254,10 @@ export function registerMcpAddCommand(mcp: Command): void {
               `\nWarning: The command "${actualCommand}" looks like a URL, but is being interpreted as a stdio server as --transport was not specified.\n`,
             )
             process.stderr.write(
-              `If this is an HTTP server, use: claude mcp add --transport http ${name} ${actualCommand}\n`,
+              `If this is an HTTP server, use: gc mcp add --transport http ${name} ${actualCommand}\n`,
             )
             process.stderr.write(
-              `If this is an SSE server, use: claude mcp add --transport sse ${name} ${actualCommand}\n`,
+              `If this is an SSE server, use: gc mcp add --transport sse ${name} ${actualCommand}\n`,
             )
           }
 

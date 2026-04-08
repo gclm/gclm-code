@@ -36,11 +36,12 @@ import { SandboxManager } from './sandbox/sandbox-adapter.js'
 import { getManagedFilePath } from './settings/managedPath.js'
 import { CUSTOMIZATION_SURFACES } from './settings/types.js'
 import {
-  findClaudeAlias,
-  findValidClaudeAlias,
+  findCliAlias,
+  findValidCliAlias,
   getShellConfigPaths,
 } from './shellConfig.js'
 import { jsonParse } from './slowOperations.js'
+import { getCliCommand } from './updateSourceConfig.js'
 import { which } from './which.js'
 
 export type InstallationType =
@@ -148,6 +149,8 @@ export async function getCurrentInstallationType(): Promise<InstallationType> {
 }
 
 async function getInstallationPath(): Promise<string> {
+  const cliCommand = getCliCommand()
+
   if (process.env.NODE_ENV === 'development') {
     return getCwd()
   }
@@ -162,7 +165,7 @@ async function getInstallationPath(): Promise<string> {
     }
 
     try {
-      const path = await which('claude')
+      const path = (await which(cliCommand)) || (await which('claude'))
       if (path) {
         return path
       }
@@ -172,10 +175,17 @@ async function getInstallationPath(): Promise<string> {
 
     // If we can't find it, check common locations
     try {
-      await getFsImplementation().stat(join(homedir(), '.local/bin/claude'))
-      return join(homedir(), '.local/bin/claude')
+      const preferredPath = join(homedir(), '.local', 'bin', cliCommand)
+      await getFsImplementation().stat(preferredPath)
+      return preferredPath
     } catch {
-      // Not found
+      try {
+        const compatibilityPath = join(homedir(), '.local', 'bin', 'claude')
+        await getFsImplementation().stat(compatibilityPath)
+        return compatibilityPath
+      } catch {
+        // Not found
+      }
     }
     return 'native'
   }
@@ -228,13 +238,14 @@ async function detectMultipleInstallations(): Promise<
   if (npmResult.code === 0 && npmResult.stdout) {
     const npmPrefix = npmResult.stdout.trim()
     const isWindows = getPlatform() === 'windows'
+    const globalBinaryName = getCliCommand()
 
-    // First check for active installations via bin/claude
-    // Linux / macOS have prefix/bin/claude and prefix/lib/node_modules
-    // Windows has prefix/claude and prefix/node_modules
+    // First check for active installations via the official gc entrypoint.
+    // Linux / macOS have prefix/bin/<command> and prefix/lib/node_modules.
+    // Windows has prefix/<command> and prefix/node_modules.
     const globalBinPath = isWindows
-      ? join(npmPrefix, 'claude')
-      : join(npmPrefix, 'bin', 'claude')
+      ? join(npmPrefix, globalBinaryName)
+      : join(npmPrefix, 'bin', globalBinaryName)
 
     let globalBinExists = false
     try {
@@ -246,7 +257,7 @@ async function detectMultipleInstallations(): Promise<
 
     if (globalBinExists) {
       // Check if this is actually a Homebrew cask installation, not npm-global
-      // When npm is installed via Homebrew, both can exist at /opt/homebrew/bin/claude
+      // When npm is installed via Homebrew, both can exist at /opt/homebrew/bin/gc
       // We need to resolve the symlink to see where it actually points
       let isCurrentHomebrewInstallation = false
 
@@ -267,7 +278,7 @@ async function detectMultipleInstallations(): Promise<
         installations.push({ type: 'npm-global', path: globalBinPath })
       }
     } else {
-      // If no bin/claude exists, check for orphaned packages (no bin/claude symlink)
+      // If no bin entrypoint exists, check for orphaned packages.
       for (const packageName of packagesToCheck) {
         const globalPackagePath = isWindows
           ? join(npmPrefix, 'node_modules', packageName)
@@ -289,12 +300,23 @@ async function detectMultipleInstallations(): Promise<
   // Check for native installation
 
   // Check common native installation paths
-  const nativeBinPath = join(homedir(), '.local', 'bin', 'claude')
+  const nativeBinPath = join(homedir(), '.local', 'bin', getCliCommand())
   try {
     await fs.stat(nativeBinPath)
     installations.push({ type: 'native', path: nativeBinPath })
   } catch {
-    // Not found
+    try {
+      const compatibilityNativeBinPath = join(
+        homedir(),
+        '.local',
+        'bin',
+        'claude',
+      )
+      await fs.stat(compatibilityNativeBinPath)
+      installations.push({ type: 'native', path: compatibilityNativeBinPath })
+    } catch {
+      // Not found
+    }
   }
 
   // Also check if config indicates native installation
@@ -435,14 +457,14 @@ async function detectConfigurationIssues(
     if (type === 'npm-local' && config.installMethod !== 'local') {
       warnings.push({
         issue: `Running from local installation but config install method is '${config.installMethod}'`,
-        fix: 'Consider using native installation: gc install',
+        fix: `Consider using native installation: ${getCliCommand()} install`,
       })
     }
 
     if (type === 'native' && config.installMethod !== 'native') {
       warnings.push({
         issue: `Running native installation but config install method is '${config.installMethod}'`,
-        fix: 'Run gc install to update configuration',
+        fix: `Run ${getCliCommand()} install to update configuration`,
       })
     }
   }
@@ -450,32 +472,33 @@ async function detectConfigurationIssues(
   if (type === 'npm-global' && (await localInstallationExists())) {
     warnings.push({
       issue: 'Local installation exists but not being used',
-      fix: 'Consider using native installation: gc install',
+      fix: `Consider using native installation: ${getCliCommand()} install`,
     })
   }
 
-  const existingAlias = await findClaudeAlias()
-  const validAlias = await findValidClaudeAlias()
+  const existingAlias = await findCliAlias()
+  const validAlias = await findValidCliAlias()
+  const cliCommand = getCliCommand()
+  const localCliPath = '~/.claude/local/gc'
 
   // Check if running local installation but it's not in PATH
   if (type === 'npm-local') {
-    // Check if claude is already accessible via PATH
-    const whichResult = await which('claude')
-    const claudeInPath = !!whichResult
+    // Check if the official gc command is already accessible via PATH.
+    const cliInPath = !!(await which(cliCommand))
 
-    // Only show warning if claude is NOT in PATH AND no valid alias exists
-    if (!claudeInPath && !validAlias) {
+    // Only show warning if gc is NOT in PATH AND no valid gc alias exists.
+    if (!cliInPath && !validAlias) {
       if (existingAlias) {
         // Alias exists but points to invalid target
         warnings.push({
           issue: 'Local installation not accessible',
-          fix: `Alias exists but points to invalid target: ${existingAlias}. Update alias: alias claude="~/.claude/local/claude"`,
+          fix: `Alias exists but points to invalid target: ${existingAlias}. Update alias: alias ${cliCommand}="${localCliPath}"`,
         })
       } else {
         // No alias exists and not in PATH
         warnings.push({
           issue: 'Local installation not accessible',
-          fix: 'Create alias: alias claude="~/.claude/local/claude"',
+          fix: `Create alias: alias ${cliCommand}="${localCliPath}"`,
         })
       }
     }

@@ -11,6 +11,7 @@ import { env } from '../utils/env.js';
 import { errorMessage } from '../utils/errors.js';
 import { checkInstall, cleanupNpmInstallations, cleanupShellAliases, installLatest } from '../utils/nativeInstaller/index.js';
 import { getInitialSettings, updateSettingsForSource } from '../utils/settings/settings.js';
+import { getCliCommand, getCliDisplayName } from '../utils/updateSourceConfig.js';
 interface InstallProps {
   onDone: (result: string, options?: {
     display?: CommandResultDisplay;
@@ -40,15 +41,16 @@ type InstallState = {
   warnings?: string[];
 };
 function getInstallationPath(): string {
+  const cliCommand = getCliCommand();
   const isWindows = env.platform === 'win32';
   const homeDir = homedir();
   if (isWindows) {
     // Convert to Windows-style path
-    const windowsPath = join(homeDir, '.local', 'bin', 'claude.exe');
+    const windowsPath = join(homeDir, '.local', 'bin', `${cliCommand}.exe`);
     // Replace forward slashes with backslashes for Windows display
     return windowsPath.replace(/\//g, '\\');
   }
-  return '~/.local/bin/claude';
+  return `~/.local/bin/${cliCommand}`;
 }
 function SetupNotes(t0) {
   const $ = _c(5);
@@ -97,6 +99,7 @@ function Install({
   useEffect(() => {
     async function run() {
       try {
+        const cliDisplayName = getCliDisplayName();
         logForDebugging(`Install: Starting installation process (force=${force}, target=${target})`);
 
         // Install native build first
@@ -113,7 +116,7 @@ function Install({
 
         // Check specifically for lock failure
         if (result.lockFailed) {
-          throw new Error('Could not install - another process is currently installing Claude. Please try again in a moment.');
+          throw new Error(`Could not install - another process is currently installing ${cliDisplayName}. Please try again in a moment.`);
         }
 
         // If we couldn't get the version, there might be an issue
@@ -254,7 +257,7 @@ function Install({
             <Box marginTop={1}>
               <Text dimColor>Next: Run </Text>
               <Text color="claude" bold>
-                claude --help
+                {getCliCommand()} --help
               </Text>
               <Text dimColor> to get started</Text>
             </Box>

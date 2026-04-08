@@ -31,12 +31,6 @@ npm i -g gclm-code
 gc
 ```
 
-兼容入口（保留）：
-
-```bash
-claude
-```
-
 升级 npm 全局安装版：
 
 ```bash
@@ -54,7 +48,7 @@ git clone https://github.com/gclm/gclm-code.git
 cd gclm-code
 bun install
 bun run build
-./dist/gclm
+./dist/gc
 ```
 
 升级仓库本地构建版：
@@ -63,7 +57,7 @@ bun run build
 git pull
 bun install
 bun run build
-./dist/gclm --version
+./dist/gc --version
 ```
 
 ## 快速使用

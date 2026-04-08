@@ -58,7 +58,6 @@ function createMinimalPackageJson(rootPkg, version) {
     description: rootPkg.description,
     type: 'module',
     bin: {
-      gclm: 'cli.js',
       gc: 'cli.js',
       claude: 'cli.js',
     },

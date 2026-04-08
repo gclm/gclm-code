@@ -1,15 +1,20 @@
 /**
  * Utilities for managing shell configuration files (like .bashrc, .zshrc)
- * Used for managing claude aliases and PATH entries
+ * Used for managing installer-created CLI aliases and PATH entries
  */
 
 import { open, readFile, stat } from 'fs/promises'
 import { homedir as osHomedir } from 'os'
 import { join } from 'path'
 import { isFsInaccessible } from './errors.js'
-import { getLocalClaudePath } from './localInstaller.js'
+import {
+  getLocalClaudeCompatibilityPath,
+  getLocalCliPath,
+} from './localInstaller.js'
 
-export const CLAUDE_ALIAS_REGEX = /^\s*alias\s+claude\s*=/
+export const CLI_ALIAS_REGEX = /^\s*alias\s+gc\s*=/
+const INSTALLER_ALIAS_REGEX = /^\s*alias\s+(gc|claude)\s*=/
+const INSTALLER_ALIAS_NAMES = new Set(['gc', 'claude'])
 
 type EnvLike = Record<string, string | undefined>
 
@@ -37,41 +42,50 @@ export function getShellConfigPaths(
 }
 
 /**
- * Filter out installer-created claude aliases from an array of lines
- * Only removes aliases pointing to $HOME/.claude/local/claude
- * Preserves custom user aliases that point to other locations
- * Returns the filtered lines and whether our default installer alias was found
+ * Filter out installer-created aliases from an array of lines.
+ * Only removes aliases pointing to the local installer wrappers so custom
+ * aliases that target other commands or paths are preserved.
  */
-export function filterClaudeAliases(lines: string[]): {
+export function filterInstallerAliases(lines: string[]): {
   filtered: string[]
-  hadAlias: boolean
+  removedAliases: string[]
 } {
-  let hadAlias = false
+  const removedAliases: string[] = []
+  const installerTargets = new Set([
+    getLocalCliPath(),
+    getLocalClaudeCompatibilityPath(),
+  ])
   const filtered = lines.filter(line => {
-    // Check if this is a claude alias
-    if (CLAUDE_ALIAS_REGEX.test(line)) {
-      // Extract the alias target - handle spaces, quotes, and various formats
-      // First try with quotes
-      let match = line.match(/alias\s+claude\s*=\s*["']([^"']+)["']/)
-      if (!match) {
-        // Try without quotes (capturing until end of line or comment)
-        match = line.match(/alias\s+claude\s*=\s*([^#\n]+)/)
-      }
+    const aliasMatch = line.match(/^\s*alias\s+([A-Za-z0-9_-]+)\s*=/)
+    const aliasName = aliasMatch?.[1]
+    if (!aliasName || !INSTALLER_ALIAS_NAMES.has(aliasName)) {
+      return true
+    }
 
-      if (match && match[1]) {
-        const target = match[1].trim()
-        // Only remove if it points to the installer location
-        // The installer always creates aliases with the full expanded path
-        if (target === getLocalClaudePath()) {
-          hadAlias = true
-          return false // Remove this line
-        }
+    if (INSTALLER_ALIAS_REGEX.test(line)) {
+      const target = extractAliasTarget(line, aliasName)
+      if (target && installerTargets.has(target)) {
+        removedAliases.push(aliasName)
+        return false
       }
-      // Keep custom aliases that don't point to the installer location
     }
     return true
   })
-  return { filtered, hadAlias }
+
+  return { filtered, removedAliases: [...new Set(removedAliases)] }
+}
+
+function extractAliasTarget(line: string, aliasName: string): string | null {
+  let match = line.match(
+    new RegExp(`alias\\s+${aliasName}\\s*=\\s*["']([^"']+)["']`),
+  )
+  if (!match) {
+    match = line.match(
+      new RegExp(`alias\\s+${aliasName}\\s*=\\s*([^#\\n]+)`),
+    )
+  }
+
+  return match?.[1]?.trim() ?? null
 }
 
 /**
@@ -107,11 +121,11 @@ export async function writeFileLines(
 }
 
 /**
- * Check if a claude alias exists in any shell config file
+ * Check if a gc alias exists in any shell config file
  * Returns the alias target if found, null otherwise
  * @param options Optional overrides for testing (env, homedir)
  */
-export async function findClaudeAlias(
+export async function findCliAlias(
   options?: ShellConfigOptions,
 ): Promise<string | null> {
   const configs = getShellConfigPaths(options)
@@ -121,11 +135,10 @@ export async function findClaudeAlias(
     if (!lines) continue
 
     for (const line of lines) {
-      if (CLAUDE_ALIAS_REGEX.test(line)) {
-        // Extract the alias target
-        const match = line.match(/alias\s+claude=["']?([^"'\s]+)/)
-        if (match && match[1]) {
-          return match[1]
+      if (CLI_ALIAS_REGEX.test(line)) {
+        const target = extractAliasTarget(line, 'gc')
+        if (target) {
+          return target
         }
       }
     }
@@ -135,14 +148,14 @@ export async function findClaudeAlias(
 }
 
 /**
- * Check if a claude alias exists and points to a valid executable
+ * Check if a gc alias exists and points to a valid executable
  * Returns the alias target if valid, null otherwise
  * @param options Optional overrides for testing (env, homedir)
  */
-export async function findValidClaudeAlias(
+export async function findValidCliAlias(
   options?: ShellConfigOptions,
 ): Promise<string | null> {
-  const aliasTarget = await findClaudeAlias(options)
+  const aliasTarget = await findCliAlias(options)
   if (!aliasTarget) return null
 
   const home = options?.homedir ?? osHomedir()

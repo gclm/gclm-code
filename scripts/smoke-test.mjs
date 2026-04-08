@@ -82,7 +82,7 @@ function expectKnownFailure(label, command, args, acceptedExitCodes, validate, o
 }
 
 function expectCliOk(label, args, validate) {
-  return expectOk(label, './dist/gclm', args, validate, {
+  return expectOk(label, './dist/gc', args, validate, {
     env: CLI_SMOKE_ENV,
   })
 }
@@ -95,7 +95,7 @@ function expectCliKnownFailure(
 ) {
   return expectKnownFailure(
     label,
-    './dist/gclm',
+    './dist/gc',
     args,
     acceptedExitCodes,
     validate,
@@ -165,12 +165,12 @@ if (process.platform === 'darwin') {
   )
 }
 
-expectOk('bin-launcher', 'node', ['bin/gclm.js', '--version'], result =>
+expectOk('bin-launcher', 'node', ['bin/gc.js', '--version'], result =>
   result.stdout.includes('(Gclm Code)'),
 )
 
 expectCliOk('help', ['--help'], result =>
-  result.stdout.includes('Usage: claude'),
+  result.stdout.includes('Usage: gc'),
 )
 
 expectCliKnownFailure(

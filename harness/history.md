@@ -116,3 +116,5 @@
 - 已修正 smoke 脚本：访问 token 现改为读取运行时实际 `state.accessToken`，默认优先使用 `port: 0` 申请随机空闲端口，并回填 `runtime.server.port` 作为实际 base URL。
 - 已修正 `startGclmCodeServer()` 随机端口启动日志：当调用方传入 `port: 0` 时，控制台输出现在会显示真实监听端口，不再误导为 `http://127.0.0.1:0/...`。
 - 最新 `bun ./scripts/smoke-gclm-code-server.mjs` 已在非沙箱宿主终端通过，因此这轮 `gclm-code-server` 新增证据已从 `test` 提升到 `scripted-flow`；沙箱内的 `EADDRINUSE` 仍保留为环境边界说明。
+- 已继续收口命名冻结尾巴：把 `plugin validate` 帮助、branch resume hint、首页 cwd 警告、auth conflict / trust 提示、SSH config 描述、marketplace 恢复指引与 completion 手动补救提示统一改为官方命令 `gc`，并将 `scripts/smoke-npm-package.mjs` 调整为“主验 `gc`、兼容验 `claude`、拒绝 `gclm`”。
+- 已完成定向验证：`bun run build`、`npm run pack:npm`、`./dist/gc --help`、`node dist/npm-package/cli.js --help`、`npm run smoke:npm` 全部通过；其中 `smoke:npm` 已确认 tarball 安装后的官方入口 `gc` 与兼容 alias `claude` 都可正常工作，且 `claude --help` 明确回落显示 `Usage: gc`。

@@ -21,6 +21,12 @@
 
 - 这是一次 release 方向的 `scope-refresh` 收口，不是新的产品规划。
 - 功能侧 `M1-M4` 已完成，当前重点从“发布方案选择”切到“单包主链落地后的放行与维护”。
+- 当前命名与对外入口已冻结为：
+  - 产品名：`Gclm Code`
+  - npm 包名：`gclm-code`
+  - 官方命令：`gc`
+  - `gclm` 已退出用户命令面
+  - `claude` 仅保留为兼容 alias，不再出现在默认文档 / help / 教程指引中
 - 当前默认发布模型已经冻结为：
   - npm 渠道只发布一个 `gclm-code`
   - GitHub Release 继续提供 `darwin-x64` / `darwin-arm64` runtime 资产与 `sha256`
@@ -82,6 +88,9 @@
   - `publish-npm` 已显式依赖 `publish-release-assets`，消除 npm 包先于 GitHub Release runtime 资产发布的窗口期
   - `smoke-single-package-npm-install` 已切到临时 `.npmrc + --userconfig + 显式 env`，隔离宿主用户级 npm 配置
   - `smoke-single-package-npm-registry` 已为 Verdaccio bootstrap 增加独立 upstream registry 配置与更宽松的启动等待窗口
+- 已继续收口命名冻结尾巴：
+  - `plugin validate` 帮助、branch resume hint、首页 cwd 警告、auth conflict / trust 提示、SSH config 描述、marketplace 恢复指引、completion 手动补救提示已统一改为官方命令 `gc`
+  - `scripts/smoke-npm-package.mjs` 已调整为先验证官方入口 `gc`，再验证 `claude` 兼容 alias；`gclm` 继续明确为“不应安装”
 
 ## 进行中
 
@@ -109,7 +118,7 @@
   - workflow 维护已完成：`.github/workflows/ci-verify.yml` 与 `.github/workflows/release-npm.yml` 中的 `actions/checkout`、`actions/setup-node` 已从 `v4` 升级到 `v6`，对齐 GitHub Node 24 action runtime
   - `tests/utils/env.test.ts` 的 Docker 断言前已显式清掉 deployment/CI 环境变量，避免 GitHub Actions 上被 `github-actions` 分支提前命中
   - 根因已确认包括：GitHub Actions `macos-15-intel` runner 上 CLI 冷启动较慢导致集成测试子进程返回 `143`，以及 `Bun.which` 在测试动态改写 `PATH` 时未稳定反映新环境
-  - 新根因已确认：GitHub Actions `CI Verify` run `24026280508` 中原始单测阶段已通过，但 `Run smoke test` 在 `./dist/gclm auth status --text` 的干净 CI 环境里进入阻塞，最终触发 job `15m` 上限取消
+  - 新根因已确认：GitHub Actions `CI Verify` run `24026280508` 中原始单测阶段已通过，但 `Run smoke test` 在 `./dist/gc auth status --text` 的干净 CI 环境里进入阻塞，最终触发 job `15m` 上限取消
   - 最新验证（2026-04-06）：`bun run test` 全绿，`221 pass / 0 fail`；`bun run smoke` 与干净 `HOME + CI=1 + GITHUB_ACTIONS=1` 环境下的 `bun run smoke` 也均通过；GitHub Actions `CI Verify` run `24028484566` 已在 `1m52s` 内全绿
 
 ## 已知未完成项
@@ -172,12 +181,19 @@
   - 已新增文档 `docs/overview/nonessential-traffic-flag.md`，按代码路径盘点 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 当前影响面，明确它仍会影响 auto-update、trusted device enrollment、后台预取、错误上报与部分能力发现，不是“只关 telemetry”的无效开关
 - 最新 auto-mode 验证结果（2026-04-07）：
   - `bun run build`，通过
-  - `./dist/gclm auto-mode defaults`，通过
-  - `./dist/gclm auto-mode config`，通过
-  - `./dist/gclm auto-mode --help`，通过
-  - `./dist/gclm --permission-mode auto --help`，通过
+  - `./dist/gc auto-mode defaults`，通过
+  - `./dist/gc auto-mode config`，通过
+  - `./dist/gc auto-mode --help`，通过
+  - `./dist/gc --permission-mode auto --help`，通过
   - `bun test --preload ./tests/preload.ts tests/utils/autoModePromptAssets.test.ts`，通过
   - 结论：标准外部构建产物已包含 `TRANSCRIPT_CLASSIFIER`，`auto` 模式在默认构建中可见且基础配置导出链路可用
+- 最新命名冻结验证结果（2026-04-08）：
+  - `bun run build`，通过
+  - `npm run pack:npm`，通过
+  - `./dist/gc --help`，通过
+  - `node dist/npm-package/cli.js --help`，通过
+  - `npm run smoke:npm`，通过；已覆盖 tarball 安装后 `gc --version`、`gc --help`、`gc agents`、`gc plugin list`、`gc mcp list`，以及 `claude --version`、`claude --help`、`claude agents`、`claude plugin list`、`claude mcp list`
+  - 结论：当前命名冻结已完成源码、打包产物与安装态兼容烟测收口，`gc` 已成为唯一官方命令入口，`claude` 仅保留为兼容 alias；当前最强新增证据维持 `scripted-flow`
 - 已完成 logo 样式入口排查：`WelcomeV2` 不再维护独立字符画，已改为复用共享 `Clawd`
 - 已完成 Gateway auth/model 流程收口：
   - Gateway 登录配置明确保存到 `~/.claude/settings.json`
@@ -288,4 +304,4 @@
 
 - 2026-04-07: fixed print/debug runtime regressions: query currentModel TDZ, gateway base URL normalization (avoid /v1/v1/messages), and debug log directory bootstrap; added debug + gateway URL regression tests.
 - 2026-04-07: removed gateway startup self-heal for legacy approved keys; keep only explicit /login approval + gateway URL validation, with debug/gateway helper tests green.
-- 2026-04-07: restored `TRANSCRIPT_CLASSIFIER` default build support by adding compatible `yolo-classifier-prompts/*.txt` assets, re-enabling the flag in `defaultFeatures`, confirming standard `dist/gclm` exposes `auto-mode` and `--permission-mode auto`, and adding a focused prompt-asset/build-feature guard test; `POWERSHELL_AUTO_MODE` remains non-default.
+- 2026-04-07: restored `TRANSCRIPT_CLASSIFIER` default build support by adding compatible `yolo-classifier-prompts/*.txt` assets, re-enabling the flag in `defaultFeatures`, confirming standard `dist/gc` exposes `auto-mode` and `--permission-mode auto`, and adding a focused prompt-asset/build-feature guard test; `POWERSHELL_AUTO_MODE` remains non-default.

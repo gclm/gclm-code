@@ -63,6 +63,7 @@ import { settingsChangeDetector } from './utils/settings/changeDetector.js';
 import { skillChangeDetector } from './utils/skills/skillChangeDetector.js';
 import { jsonParse, writeFileSync_DEPRECATED } from './utils/slowOperations.js';
 import { computeInitialTeamContext } from './utils/swarm/reconnection.js';
+import { getCliCommand } from './utils/updateSourceConfig.js';
 import { initializeWarningHandler } from './utils/warningHandler.js';
 import { isWorktreeModeEnabled } from './utils/worktreeModeEnabled.js';
 
@@ -538,7 +539,7 @@ const _pendingConnect: PendingConnect | undefined = feature('DIRECT_CONNECT') ? 
   dangerouslySkipPermissions: false
 } : undefined;
 
-// Set by early argv processing when `claude assistant [sessionId]` is detected
+// Set by early argv processing when `gc assistant [sessionId]` is detected
 type PendingAssistantChat = {
   sessionId?: string;
   discover: boolean;
@@ -548,7 +549,7 @@ const _pendingAssistantChat: PendingAssistantChat | undefined = feature('KAIROS'
   discover: false
 } : undefined;
 
-// `claude ssh <host> [dir]` — parsed from argv early (same pattern as
+// `gc ssh <host> [dir]` — parsed from argv early (same pattern as
 // DIRECT_CONNECT above) so the main command path can pick it up and hand
 // the REPL an SSH-backed session instead of a local one.
 type PendingSSH = {
@@ -663,10 +664,10 @@ export async function main() {
     }
   }
 
-  // `claude assistant [sessionId]` — stash and strip so the main
+  // `gc assistant [sessionId]` — stash and strip so the main
   // command handles it, giving the full interactive TUI. Position-0 only
   // (matching the ssh pattern below) — indexOf would false-positive on
-  // `claude -p "explain assistant"`. Root-flag-before-subcommand
+  // `gc -p "explain assistant"`. Root-flag-before-subcommand
   // (e.g. `--debug assistant`) falls through to the stub, which
   // prints usage.
   if (feature('KAIROS') && _pendingAssistantChat) {
@@ -682,11 +683,11 @@ export async function main() {
         rawArgs.splice(0, 1); // drop 'assistant'
         process.argv = [process.argv[0]!, process.argv[1]!, ...rawArgs];
       }
-      // else: `claude assistant --help` → fall through to stub
+      // else: `gc assistant --help` → fall through to stub
     }
   }
 
-  // `claude ssh <host> [dir]` — strip from argv so the main command handler
+  // `gc ssh <host> [dir]` — strip from argv so the main command handler
   // runs (full interactive TUI), stash the host/dir for the REPL branch at
   // ~line 3720 to pick up. Headless (-p) mode not supported in v1: SSH
   // sessions need the local REPL to drive them (interrupt, permissions).
@@ -695,7 +696,7 @@ export async function main() {
     // SSH-specific flags can appear before the host positional (e.g.
     // `ssh --permission-mode auto host /tmp` — standard POSIX flags-before-
     // positionals). Pull them all out BEFORE checking whether a host was
-    // given, so `claude ssh --permission-mode auto host` and `claude ssh host
+    // given, so `gc ssh --permission-mode auto host` and `gc ssh host
     // --permission-mode auto` are equivalent. The host check below only needs
     // to guard against `-h`/`--help` (which commander should handle).
     if (rawCliArgs[0] === 'ssh') {
@@ -771,7 +772,7 @@ export async function main() {
       // Headless (-p) mode is not supported with SSH in v1 — reject early
       // so the flag doesn't silently cause local execution.
       if (rest.includes('-p') || rest.includes('--print')) {
-        process.stderr.write('Error: headless (-p/--print) mode is not supported with claude ssh\n');
+        process.stderr.write('Error: headless (-p/--print) mode is not supported with gc ssh\n');
         gracefulShutdownSync(1);
         return;
       }
@@ -829,7 +830,7 @@ export async function main() {
     setQuestionPreviewFormat('markdown');
   }
 
-  // Tag sessions created via `claude remote-control` so the backend can identify them
+  // Tag sessions created via `gc remote-control` so the backend can identify them
   if (process.env.CLAUDE_CODE_ENVIRONMENT_KIND === 'bridge') {
     setSessionSource('remote-control');
   }
@@ -887,6 +888,7 @@ async function run(): Promise<CommanderCommand> {
     });
   }
   const program = new CommanderCommand().configureHelp(createSortedHelpConfig()).enablePositionalOptions();
+  const cliCommand = getCliCommand();
   profileCheckpoint('run_commander_initialized');
 
   // Use preAction hook to run initialization only when executing a command,
@@ -907,7 +909,7 @@ async function run(): Promise<CommanderCommand> {
     // terminal shell integration may mirror the process name to the tab.
     // After init() so settings.json env can also gate this (gh-4765).
     if (!isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_TERMINAL_TITLE)) {
-      process.title = 'claude';
+      process.title = cliCommand;
     }
 
     // Attach logging sinks so subcommand handlers can use logEvent/logError.
@@ -952,7 +954,7 @@ async function run(): Promise<CommanderCommand> {
     }
     profileCheckpoint('preAction_after_settings_sync');
   });
-  program.name('claude').description(`Gclm Code - starts an interactive session by default, use -p/--print for non-interactive output`).argument('[prompt]', 'Your prompt', String)
+  program.name(cliCommand).description(`Gclm Code - starts an interactive session by default, use -p/--print for non-interactive output`).argument('[prompt]', 'Your prompt', String)
   // Subcommands inherit helpOption via commander's copyInheritedSettings —
   // setting it once here covers mcp, plugin, auth, and all other subcommands.
   .helpOption('-h, --help', 'Display help for command').option('-d, --debug [filter]', 'Enable debug mode with optional category filtering (e.g., "api,hooks" or "!1p,!file")', (_value: string | true) => {
@@ -1006,7 +1008,7 @@ async function run(): Promise<CommanderCommand> {
     if (prompt === 'code') {
       logEvent('tengu_code_prompt_ignored', {});
       // biome-ignore lint/suspicious/noConsole:: intentional console output
-      console.warn(chalk.yellow('Tip: You can launch Gclm Code with `claude` or `gc`'));
+      console.warn(chalk.yellow(`Tip: Launch Gclm Code with \`${cliCommand}\``));
       prompt = undefined;
     }
 
@@ -2496,7 +2498,7 @@ async function run(): Promise<CommanderCommand> {
 
     // Register PID file for concurrent-session detection (~/.claude/sessions/)
     // and fire multi-clauding telemetry. Lives here (not init.ts) so only the
-    // REPL path registers — not subcommands like `claude doctor`. Chained:
+    // REPL path registers — not subcommands like `gc doctor`. Chained:
     // count must run after register's write completes or it misses our own file.
     void registerSession().then(registered => {
       if (!registered) return;
@@ -3125,7 +3127,7 @@ async function run(): Promise<CommanderCommand> {
         process.exit(1);
       }
     } else if (feature('DIRECT_CONNECT') && _pendingConnect?.url) {
-      // `claude connect <url>` — full interactive TUI connected to a remote server
+      // `gc connect <url>` — full interactive TUI connected to a remote server
       let directConnectConfig;
       try {
         const session = await createDirectConnectSession({
@@ -3162,7 +3164,7 @@ async function run(): Promise<CommanderCommand> {
       }, renderAndRun);
       return;
     } else if (feature('SSH_REMOTE') && _pendingSSH?.host) {
-      // `claude ssh <host> [dir]` — probe remote, deploy binary if needed,
+      // `gc ssh <host> [dir]` — probe remote, deploy binary if needed,
       // spawn ssh with unix-socket -R forward to a local auth proxy, hand
       // the REPL an SSHSession. Tools run remotely, UI renders locally.
       // `--local` skips probe/deploy/ssh and spawns the current binary
@@ -3228,7 +3230,7 @@ async function run(): Promise<CommanderCommand> {
       }, renderAndRun);
       return;
     } else if (feature('KAIROS') && _pendingAssistantChat && (_pendingAssistantChat.sessionId || _pendingAssistantChat.discover)) {
-      // `claude assistant [sessionId]` — REPL as a pure viewer client
+      // `gc assistant [sessionId]` — REPL as a pure viewer client
       // of a remote assistant session. The agentic loop runs remotely; this
       // process streams live events and POSTs messages. History is lazy-
       // loaded by useAssistantHistory on scroll-up (no blocking fetch here).
@@ -3258,7 +3260,7 @@ async function run(): Promise<CommanderCommand> {
           }
           // The daemon needs a few seconds to spin up its worker and
           // establish a bridge session before discovery will find it.
-          return await exitWithMessage(root, `Assistant installed in ${installedDir}. The daemon is starting up — run \`claude assistant\` again in a few seconds to connect.`, {
+          return await exitWithMessage(root, `Assistant installed in ${installedDir}. The daemon is starting up — run \`gc assistant\` again in a few seconds to connect.`, {
             exitCode: 0,
             beforeExit: () => gracefulShutdown(0)
           });
@@ -3860,7 +3862,7 @@ async function run(): Promise<CommanderCommand> {
     return program;
   }
 
-  // claude mcp
+  // gc mcp
 
   const mcp = program.command('mcp').description('Configure and manage MCP servers').configureHelp(createSortedHelpConfig()).enablePositionalOptions();
   mcp.command('serve').description(`Start the Gclm Code MCP server`).option('-d, --debug', 'Enable debug mode', () => true).option('--verbose', 'Override verbose mode setting from config', () => true).action(async ({
@@ -4008,22 +4010,22 @@ async function run(): Promise<CommanderCommand> {
     });
   }
 
-  // `claude ssh <host> [dir]` — registered here only so --help shows it.
+  // `gc ssh <host> [dir]` — registered here only so --help shows it.
   // The actual interactive flow is handled by early argv rewriting in main()
   // (parallels the DIRECT_CONNECT/cc:// pattern above). If commander reaches
   // this action it means the argv rewrite didn't fire (e.g. user ran
-  // `claude ssh` with no host) — just print usage.
+  // `gc ssh` with no host) — just print usage.
   if (feature('SSH_REMOTE')) {
     program.command('ssh <host> [dir]').description('Run Gclm Code on a remote host over SSH. Deploys the binary and ' + 'tunnels API auth back through your local machine — no remote setup needed.').option('--permission-mode <mode>', 'Permission mode for the remote session').option('--dangerously-skip-permissions', 'Skip all permission prompts on the remote (dangerous)').option('--local', 'e2e test mode — spawn the child CLI locally (skip ssh/deploy). ' + 'Exercises the auth proxy and unix-socket plumbing without a remote host.').action(async () => {
       // Argv rewriting in main() should have consumed `ssh <host>` before
       // commander runs. Reaching here means host was missing or the
       // rewrite predicate didn't match.
-      process.stderr.write('Usage: gc ssh <user@host | ssh-config-alias> [dir]\n\n' + "Runs Gclm Code on a remote Linux host. You don't need to install\n" + 'anything on the remote or run `gc auth login` there — the binary is\n' + 'deployed over SSH and API auth tunnels back through your local machine.\n');
+      process.stderr.write(`Usage: ${cliCommand} ssh <user@host | ssh-config-alias> [dir]\n\n` + "Runs Gclm Code on a remote Linux host. You don't need to install\n" + `anything on the remote or run \`${cliCommand} auth login\` there — the binary is\n` + 'deployed over SSH and API auth tunnels back through your local machine.\n');
       process.exit(1);
     });
   }
 
-  // claude connect — subcommand only handles -p (headless) mode.
+  // gc connect — subcommand only handles -p (headless) mode.
   // Interactive mode (without -p) is handled by early argv rewriting in main()
   // which redirects to the main command with full TUI support.
   if (feature('DIRECT_CONNECT')) {
@@ -4308,7 +4310,7 @@ async function run(): Promise<CommanderCommand> {
       // before commander runs. Reaching here means a root flag came first
       // (e.g. `--debug assistant`) and the position-0 predicate
       // didn't match. Print usage like the ssh stub does.
-      process.stderr.write('Usage: gc assistant [sessionId]\n\n' + 'Attach the REPL as a viewer client to a running bridge session.\n' + 'Omit sessionId to discover and pick from available sessions.\n');
+      process.stderr.write(`Usage: ${cliCommand} assistant [sessionId]\n\n` + 'Attach the REPL as a viewer client to a running bridge session.\n' + 'Omit sessionId to discover and pick from available sessions.\n');
       process.exit(1);
     });
   }
@@ -4324,7 +4326,7 @@ async function run(): Promise<CommanderCommand> {
     await doctorHandler(root);
   });
 
-  // claude update
+  // gc update
   //
   // For SemVer-compliant versioning with build metadata (X.X.X+SHA):
   // - We perform exact string comparison (including SHA) to detect any change
@@ -4350,7 +4352,7 @@ async function run(): Promise<CommanderCommand> {
   // claude rollback (ant-only)
   // Rolls back to previous releases
   if ("external" === 'ant') {
-    program.command('rollback [target]').description('[ANT-ONLY] Roll back to a previous release\n\nExamples:\n  claude rollback                                    Go 1 version back from current\n  claude rollback 3                                  Go 3 versions back from current\n  claude rollback 2.0.73-dev.20251217.t190658        Roll back to a specific version').option('-l, --list', 'List recent published versions with ages').option('--dry-run', 'Show what would be installed without installing').option('--safe', 'Roll back to the server-pinned safe version (set by oncall during incidents)').action(async (target?: string, options?: {
+    program.command('rollback [target]').description(`[ANT-ONLY] Roll back to a previous release\n\nExamples:\n  ${cliCommand} rollback                                    Go 1 version back from current\n  ${cliCommand} rollback 3                                  Go 3 versions back from current\n  ${cliCommand} rollback 2.0.73-dev.20251217.t190658        Roll back to a specific version`).option('-l, --list', 'List recent published versions with ages').option('--dry-run', 'Show what would be installed without installing').option('--safe', 'Roll back to the server-pinned safe version (set by oncall during incidents)').action(async (target?: string, options?: {
       list?: boolean;
       dryRun?: boolean;
       safe?: boolean;
@@ -4398,10 +4400,10 @@ async function run(): Promise<CommanderCommand> {
     // claude export
     program.command('export').description('[ANT-ONLY] Export a conversation to a text file.').usage('<source> <outputFile>').argument('<source>', 'Session ID, log index (0, 1, 2...), or path to a .json/.jsonl log file').argument('<outputFile>', 'Output file path for the exported text').addHelpText('after', `
 Examples:
-  $ claude export 0 conversation.txt                Export conversation at log index 0
-  $ claude export <uuid> conversation.txt           Export conversation by session ID
-  $ claude export input.json output.txt             Render JSON log file to text
-  $ claude export <uuid>.jsonl output.txt           Render JSONL session file to text`).action(async (source: string, outputFile: string) => {
+  $ ${cliCommand} export 0 conversation.txt                Export conversation at log index 0
+  $ ${cliCommand} export <uuid> conversation.txt           Export conversation by session ID
+  $ ${cliCommand} export input.json output.txt             Render JSON log file to text
+  $ ${cliCommand} export <uuid>.jsonl output.txt           Render JSONL session file to text`).action(async (source: string, outputFile: string) => {
       const {
         exportHandler
       } = await import('./cli/handlers/ant.js');

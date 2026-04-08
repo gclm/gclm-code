@@ -89,24 +89,37 @@ try {
 
   const gcBin = join(tempDir, 'node_modules', '.bin', 'gc')
   const claudeBin = join(tempDir, 'node_modules', '.bin', 'claude')
+  const gclmBin = join(tempDir, 'node_modules', '.bin', 'gclm')
+
+  assert(!existsSync(gclmBin), 'gclm bin should not be installed')
 
   expectOk('gc --version', gcBin, ['--version'], result =>
     result.stdout.includes('(Gclm Code)'),
   )
 
-  expectOk('claude --version', claudeBin, ['--version'], result =>
+  expectOk('gc --help', gcBin, ['--help'], result =>
+    result.stdout.includes('Usage: gc'),
+  )
+
+  expectOk('gc agents', gcBin, ['agents'], () => true)
+
+  expectOk('gc plugin list', gcBin, ['plugin', 'list'], () => true)
+
+  expectOk('gc mcp list', gcBin, ['mcp', 'list'], () => true)
+
+  expectOk('claude --version (compat)', claudeBin, ['--version'], result =>
     result.stdout.includes('(Gclm Code)'),
   )
 
-  expectOk('claude agents', claudeBin, ['agents'], () => true)
+  expectOk('claude agents (compat)', claudeBin, ['agents'], () => true)
 
-  expectOk('claude --help', claudeBin, ['--help'], result =>
-    result.stdout.includes('Usage: claude'),
+  expectOk('claude --help (compat)', claudeBin, ['--help'], result =>
+    result.stdout.includes('Usage: gc'),
   )
 
-  expectOk('claude plugin list', claudeBin, ['plugin', 'list'], () => true)
+  expectOk('claude plugin list (compat)', claudeBin, ['plugin', 'list'], () => true)
 
-  expectOk('claude mcp list', claudeBin, ['mcp', 'list'], () => true)
+  expectOk('claude mcp list (compat)', claudeBin, ['mcp', 'list'], () => true)
 
   process.stdout.write('\nAll npm package smoke tests passed.\n')
 } finally {

@@ -15,13 +15,13 @@
 ## 构建变体（Build Variants）
 
 - `bun run build`
-  构建常规外部二进制到 `./dist/gclm`。
+  构建常规外部二进制到 `./dist/gc`。
 - `bun run compile`
-  构建常规外部二进制到 `./gclm`。
+  构建常规外部二进制到 `./gc`。
 - `bun run build:dev`
-  构建 `./dist/gclm-dev`（开发版本号 + 实验 GrowthBook key）。
+  构建 `./dist/gc-dev`（开发版本号 + 实验 GrowthBook key）。
 - `bun run build:dev:full`
-  构建 `./dist/gclm-dev`，启用当前“可工作的实验功能集合”（不含 `CHICAGO_MCP`，该项虽可编译但当前外部运行时会触发缺失包）。
+  构建 `./dist/gc-dev`，启用当前“可工作的实验功能集合”（不含 `CHICAGO_MCP`，该项虽可编译但当前外部运行时会触发缺失包）。
 
 ## 默认构建开关
 

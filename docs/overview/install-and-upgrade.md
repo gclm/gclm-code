@@ -38,12 +38,6 @@ hash -r
 gc --version
 ```
 
-兼容入口也会一并可用：
-
-```bash
-claude --version
-```
-
 说明：
 
 - 当前 npm 发布主链为 `single-package + vendor runtime`
@@ -57,7 +51,7 @@ claude --version
 
 - 你需要修改源码或跟踪仓库最新提交
 - 你希望验证未发布改动
-- 你当前主要通过仓库内的 `./dist/gclm` 运行
+- 你当前主要通过仓库内的 `./dist/gc` 运行
 
 首次拉取并构建：
 
@@ -66,7 +60,7 @@ git clone https://github.com/gclm/gclm-code.git
 cd gclm-code
 bun install
 bun run build
-./dist/gclm
+./dist/gc
 ```
 
 升级仓库本地构建版：
@@ -75,7 +69,7 @@ bun run build
 git pull
 bun install
 bun run build
-./dist/gclm --version
+./dist/gc --version
 ```
 
 如果你本地有未提交改动，升级前建议先查看工作树状态：
@@ -88,7 +82,7 @@ git status --short
 
 - 仓库本地构建版不会自动跟随 npm 发布升级
 - 它的升级方式本质上是“拉最新代码 + 重新安装依赖 + 重新构建”
-- 如果你运行的是 `./dist/gclm`，那么全局执行 `npm i -g gclm-code@latest` 不会替你更新仓库里的构建产物
+- 如果你运行的是 `./dist/gc`，那么全局执行 `npm i -g gclm-code@latest` 不会替你更新仓库里的构建产物
 
 ## 3. 如何判断自己是哪一种
 
@@ -103,7 +97,7 @@ gc
 如果你平时这样使用：
 
 ```bash
-./dist/gclm
+./dist/gc
 ```
 
 或者在仓库目录里执行 `bun run build` 后再运行产物，一般就是仓库本地构建版。

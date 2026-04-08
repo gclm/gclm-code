@@ -1515,7 +1515,9 @@ const READONLY_COMMAND_REGEXES = new Set([
   // Also allow optional 2>&1 stderr redirection at the end
   /^echo(?:\s+(?:'[^']*'|"[^"$<>\n\r]*"|[^|;&`$(){}><#\\!"'\s]+))*(?:\s+2>&1)?\s*$/,
 
-  // Claude CLI help
+  // CLI help
+  /^gc -h$/,
+  /^gc --help$/,
   /^claude -h$/,
   /^claude --help$/,
 

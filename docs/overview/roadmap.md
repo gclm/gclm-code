@@ -17,7 +17,7 @@ bun run release:npm
 # 等价于: bun run build && bun run pack:npm && bun run smoke:npm
 ```
 
-产出：`dist/npm-tarballs/gclm-code-<version>.tgz`（4 文件：cli.js + bin/claude.js + package.json + README.md）
+产出：`dist/npm-tarballs/gclm-code-<version>.tgz`（打包主入口为 `cli.js`，并携带 `package.json`、`README.md` 与 `vendor/` 运行时资产）
 
 ## 当前推荐动作
 

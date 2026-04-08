@@ -12,6 +12,9 @@ import { getFsImplementation } from './fsOperations.js'
 import { logError } from './log.js'
 import { jsonStringify } from './slowOperations.js'
 
+const PRIMARY_LOCAL_BINARY_NAME = 'gc'
+const COMPATIBILITY_LOCAL_BINARY_NAME = 'claude'
+
 // Lazy getters: getClaudeConfigHomeDir() is memoized and reads process.env.
 // Evaluating at module scope would capture the value before entrypoints like
 // hfi.tsx get a chance to set CLAUDE_CONFIG_DIR in main(), and would also
@@ -19,8 +22,14 @@ import { jsonStringify } from './slowOperations.js'
 function getLocalInstallDir(): string {
   return join(getClaudeConfigHomeDir(), 'local')
 }
+export function getLocalCliPath(): string {
+  return join(getLocalInstallDir(), PRIMARY_LOCAL_BINARY_NAME)
+}
+export function getLocalClaudeCompatibilityPath(): string {
+  return join(getLocalInstallDir(), COMPATIBILITY_LOCAL_BINARY_NAME)
+}
 export function getLocalClaudePath(): string {
-  return join(getLocalInstallDir(), 'claude')
+  return getLocalClaudeCompatibilityPath()
 }
 
 /**
@@ -64,22 +73,27 @@ export async function ensureLocalPackageEnvironment(): Promise<boolean> {
     await writeIfMissing(
       join(localInstallDir, 'package.json'),
       jsonStringify(
-        { name: 'claude-local', version: '0.0.1', private: true },
+        { name: 'gclm-code-local', version: '0.0.1', private: true },
         null,
         2,
       ),
     )
 
-    // Create the wrapper script if it doesn't exist
-    const wrapperPath = join(localInstallDir, 'claude')
-    const created = await writeIfMissing(
-      wrapperPath,
-      `#!/bin/sh\nexec "${localInstallDir}/node_modules/.bin/claude" "$@"`,
-      0o755,
-    )
-    if (created) {
-      // Mode in writeFile is masked by umask; chmod to ensure executable bit.
-      await chmod(wrapperPath, 0o755)
+    // Create the wrapper scripts if they don't exist.
+    for (const binaryName of [
+      PRIMARY_LOCAL_BINARY_NAME,
+      COMPATIBILITY_LOCAL_BINARY_NAME,
+    ]) {
+      const wrapperPath = join(localInstallDir, binaryName)
+      const created = await writeIfMissing(
+        wrapperPath,
+        `#!/bin/sh\nexec "${localInstallDir}/node_modules/.bin/${binaryName}" "$@"`,
+        0o755,
+      )
+      if (created) {
+        // Mode in writeFile is masked by umask; chmod to ensure executable bit.
+        await chmod(wrapperPath, 0o755)
+      }
     }
 
     return true
@@ -118,7 +132,7 @@ export async function installOrUpdateClaudePackage(
 
     if (result.code !== 0) {
       const error = new Error(
-        `Failed to install Claude CLI package: ${result.stderr}`,
+        `Failed to install Gclm Code package: ${result.stderr}`,
       )
       logError(error)
       return result.code === 190 ? 'in_progress' : 'install_failed'
@@ -142,12 +156,19 @@ export async function installOrUpdateClaudePackage(
  * Pure existence probe — callers use this to choose update path / UI hints.
  */
 export async function localInstallationExists(): Promise<boolean> {
-  try {
-    await access(join(getLocalInstallDir(), 'node_modules', '.bin', 'claude'))
-    return true
-  } catch {
-    return false
+  for (const binaryName of [
+    PRIMARY_LOCAL_BINARY_NAME,
+    COMPATIBILITY_LOCAL_BINARY_NAME,
+  ]) {
+    try {
+      await access(join(getLocalInstallDir(), 'node_modules', '.bin', binaryName))
+      return true
+    } catch {
+      // Continue checking compatibility entrypoints.
+    }
   }
+
+  return false
 }
 
 /**

@@ -20,7 +20,7 @@ import { logError } from './log.js'
 import { gte, lt } from './semver.js'
 import { getInitialSettings } from './settings/settings.js'
 import {
-  filterClaudeAliases,
+  filterInstallerAliases,
   getShellConfigPaths,
   readFileLines,
   writeFileLines,
@@ -532,7 +532,7 @@ To fix this issue:
     )
     if (installResult.code !== 0) {
       const error = new AutoUpdaterError(
-        `Failed to install new version of claude: ${installResult.stdout} ${installResult.stderr}`,
+        `Failed to install new version of Gclm Code: ${installResult.stdout} ${installResult.stderr}`,
       )
       logError(error)
       return 'install_failed'
@@ -552,8 +552,8 @@ To fix this issue:
 }
 
 /**
- * Remove claude aliases from shell configuration files
- * This helps clean up old installation methods when switching to native or npm global
+ * Remove installer-managed aliases from shell configuration files.
+ * This helps clean up old installation methods when switching to native or npm global.
  */
 async function removeClaudeAliasesFromShellConfigs(): Promise<void> {
   const configMap = getShellConfigPaths()
@@ -564,11 +564,13 @@ async function removeClaudeAliasesFromShellConfigs(): Promise<void> {
       const lines = await readFileLines(configFile)
       if (!lines) continue
 
-      const { filtered, hadAlias } = filterClaudeAliases(lines)
+      const { filtered, removedAliases } = filterInstallerAliases(lines)
 
-      if (hadAlias) {
+      if (removedAliases.length > 0) {
         await writeFileLines(configFile, filtered)
-        logForDebugging(`Removed claude alias from ${configFile}`)
+        logForDebugging(
+          `Removed installer alias(es) ${removedAliases.join(', ')} from ${configFile}`,
+        )
       }
     } catch (error) {
       // Don't fail the whole operation if one file can't be processed

@@ -4,9 +4,8 @@
   "description": "Gclm Code - an AI-powered CLI coding assistant that understands your codebase, edits files, runs terminal commands, and handles entire workflows for you.",
   "type": "module",
   "bin": {
-    "gclm": "bin/gclm.js",
-    "gc": "bin/gclm.js",
-    "claude": "bin/gclm.js"
+    "gc": "bin/gc.js",
+    "claude": "bin/gc.js"
   },
   "homepage": "https://github.com/gclm/gclm-code",
   "bugs": {
@@ -26,6 +25,7 @@
     "compile": "bun scripts/build.mjs --compile",
     "dev": "bun --preload ./scripts/dev-preload.mjs ./src/entrypoints/cli.tsx",
     "dev:gclm-code-server": "node ./scripts/dev-gclm-code-server.mjs",
+    "smoke:gclm-code-server": "bun ./scripts/smoke-gclm-code-server.mjs",
     "smoke:feishu-openapi": "node ./scripts/smoke-feishu-openapi.mjs",
     "smoke:feishu-long-connection": "node ./scripts/smoke-feishu-long-connection.mjs",
     "dev:watch": "bun scripts/dev.mjs --watch-only",
