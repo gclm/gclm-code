@@ -5,8 +5,8 @@
 
 本仓库当前共引用 88 个 `feature('FLAG')` 编译期开关。按当前外部构建参数逐个校验后结果如下：
 
-- 54 个开关可正常打包
-- 34 个开关仍无法打包
+- 55 个开关可正常打包
+- 33 个开关仍无法打包
 
 说明：
 - “可打包”不等于“运行时一定可用”。
@@ -15,13 +15,13 @@
 ## 构建变体（Build Variants）
 
 - `bun run build`
-  构建常规外部二进制到 `./gc`。
+  构建常规外部二进制到 `./dist/gclm`。
 - `bun run compile`
-  构建常规外部二进制到 `./dist/gc`。
+  构建常规外部二进制到 `./gclm`。
 - `bun run build:dev`
-  构建 `./gc-dev`（开发版本号 + 实验 GrowthBook key）。
+  构建 `./dist/gclm-dev`（开发版本号 + 实验 GrowthBook key）。
 - `bun run build:dev:full`
-  构建 `./gc-dev`，启用当前“可工作的实验功能集合”（不含 `CHICAGO_MCP`，该项虽可编译但当前外部运行时会触发缺失包）。
+  构建 `./dist/gclm-dev`，启用当前“可工作的实验功能集合”（不含 `CHICAGO_MCP`，该项虽可编译但当前外部运行时会触发缺失包）。
 
 ## 默认构建开关
 
@@ -29,6 +29,10 @@
   已纳入默认构建流程（不再仅限 dev）。
   提供 `/voice`、按键说话、语音提示和听写能力。
   运行时仍依赖 `claude.ai` OAuth 以及本地录音后端（原生模块或 SoX 回退路径）。
+- `TRANSCRIPT_CLASSIFIER`
+  已纳入默认构建流程，因此标准构建会直接暴露 `--permission-mode auto`
+  与 `auto-mode` 检查命令。外部构建使用仓库内补齐的
+  `yolo-classifier-prompts/*.txt` 资产。
 
 ## 可工作的实验功能（中文分组）
 
@@ -115,4 +119,3 @@
 
 - 对外发布与验收建议继续以 `bun run verify`（即 `bun run build`）为唯一门槛。
 - 新增或恢复实验开关时，应先验证“是否可编译 + 是否可运行”，避免只通过编译就进入默认构建。
-

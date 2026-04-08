@@ -32,11 +32,22 @@
   - `vendor/modules/` 收敛 workspace 运行时产物
   - `vendor/runtime/` 收敛平台 runtime 与 sidecar
   - 安装期通过 `postinstall` + GitHub Release 资产完成当前平台 runtime 落盘
+- 已补权限与并发行为排查结论：
+  - AI 自动判断是否需要授权的主开关是 `permission mode = auto`，持久化配置入口是 `permissions.defaultMode = "auto"`；`skipAutoPermissionPrompt` 只记录用户是否接受过 opt-in 弹窗，`autoMode.allow/soft_deny/environment` 只定制 classifier 规则文本
+  - `classifierPermissionsEnabled` 仅作用于 `Bash(prompt:...)` 规则，不是全局授权总开关
+  - 当前实现并非简单“不支持多窗口/多进程”；仓库内已有 `concurrentSessions` 与多处 cross-process lock 处理，但部分鉴权链路仍存在跨进程竞争窗口（例如 MCP/XAA refresh 仍留有 `cross-process lockfile` TODO），双窗口异常更像共享状态竞争而非单实例限制
 
 ## 已完成
 
 - Logo V2 默认欢迎文案已从 `How are you` 调整为 `Are You Ok?`
 - `scripts/build.ts` 已优化为统一产物命名：默认输出 `gc`、dev 输出 `gc-dev`，并联动更新 smoke / install / release 引用
+- 已修复 `scripts/build.mjs` feature 注入不一致：
+  - 新增 `defaultFeatures` 作为默认 feature 单一来源，当前默认包含 `VOICE_MODE` 与 `TRANSCRIPT_CLASSIFIER`
+  - `Bun.build()` 与 `--compile` 路径现统一消费 `options.features`
+  - 已补齐 `src/utils/permissions/yolo-classifier-prompts/*.txt` 兼容资产：`auto_mode_system_prompt.txt`、`permissions_external.txt`、`permissions_anthropic.txt`
+  - 已确认 `TRANSCRIPT_CLASSIFIER` 现可重新放入标准默认 feature：`bun run build` 已通过，标准构建产物已暴露 `auto-mode` 与 `--permission-mode auto`
+  - 已确认 `POWERSHELL_AUTO_MODE` 当前也不适合放入默认 feature：external build 下它会放开 PowerShell 进入 auto classifier，但不会注入 PowerShell 专属 deny guidance
+  - 后续若要新增默认 feature，只需调整 `defaultFeatures` 数组；若要扩充 `dev-full`，只需调整 `experimentalFeatures` 数组
 - 发布 runtime 资产结构已调整为 `bin/gc` + `bin/claude -> gc` 软链，并通过 tar 包对外分发
 - 已完成 `R1 - 单包发布骨架与 vendor manifest`：
   - 新增 `scripts/prepare-single-package-npm.mjs`
@@ -159,6 +170,14 @@
   - `bun run smoke:single-package -- --with-registry`，通过
   - `node ./scripts/smoke-single-package-npm-registry.mjs`，通过
   - 已新增文档 `docs/overview/nonessential-traffic-flag.md`，按代码路径盘点 `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` 当前影响面，明确它仍会影响 auto-update、trusted device enrollment、后台预取、错误上报与部分能力发现，不是“只关 telemetry”的无效开关
+- 最新 auto-mode 验证结果（2026-04-07）：
+  - `bun run build`，通过
+  - `./dist/gclm auto-mode defaults`，通过
+  - `./dist/gclm auto-mode config`，通过
+  - `./dist/gclm auto-mode --help`，通过
+  - `./dist/gclm --permission-mode auto --help`，通过
+  - `bun test --preload ./tests/preload.ts tests/utils/autoModePromptAssets.test.ts`，通过
+  - 结论：标准外部构建产物已包含 `TRANSCRIPT_CLASSIFIER`，`auto` 模式在默认构建中可见且基础配置导出链路可用
 - 已完成 logo 样式入口排查：`WelcomeV2` 不再维护独立字符画，已改为复用共享 `Clawd`
 - 已完成 Gateway auth/model 流程收口：
   - Gateway 登录配置明确保存到 `~/.claude/settings.json`
@@ -244,3 +263,4 @@
 
 - 2026-04-07: fixed print/debug runtime regressions: query currentModel TDZ, gateway base URL normalization (avoid /v1/v1/messages), and debug log directory bootstrap; added debug + gateway URL regression tests.
 - 2026-04-07: removed gateway startup self-heal for legacy approved keys; keep only explicit /login approval + gateway URL validation, with debug/gateway helper tests green.
+- 2026-04-07: restored `TRANSCRIPT_CLASSIFIER` default build support by adding compatible `yolo-classifier-prompts/*.txt` assets, re-enabling the flag in `defaultFeatures`, confirming standard `dist/gclm` exposes `auto-mode` and `--permission-mode auto`, and adding a focused prompt-asset/build-feature guard test; `POWERSHELL_AUTO_MODE` remains non-default.

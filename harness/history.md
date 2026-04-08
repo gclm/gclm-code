@@ -88,3 +88,11 @@
 - 已复现新的 smoke 卡点：在干净 `HOME + CI=1 + GITHUB_ACTIONS=1` 环境中，`./dist/gclm auth status --text` 会进入阻塞；而在注入 `CLAUDE_CODE_SIMPLE=1` 后可立即返回 `Not logged in`。
 - 已补强 `scripts/smoke-test.mjs`：为 CLI smoke 命令统一注入 `CLAUDE_CODE_SIMPLE=1`、关闭 background/auto-memory/nonessential traffic/auto-updater，并为所有 smoke 子进程增加 `20s` 硬超时，避免单个命令挂死整条 CI。
 - 已完成 smoke 级验证：常规 `bun run smoke` 与干净 `HOME + CI=1 + GITHUB_ACTIONS=1` 环境下的 `bun run smoke` 均通过，说明新的 CI 阻塞点已被本地关闭。
+
+## 2026-04-07
+
+- 已补齐 `src/utils/permissions/yolo-classifier-prompts/` 兼容资产：新增 `auto_mode_system_prompt.txt`、`permissions_external.txt`、`permissions_anthropic.txt`，恢复 `TRANSCRIPT_CLASSIFIER` 在外部构建中的 prompt 依赖。
+- 已将 `scripts/build.mjs` 的 `defaultFeatures` 更新为同时包含 `VOICE_MODE` 与 `TRANSCRIPT_CLASSIFIER`，继续保留“后续只改数组即可生效”的单一配置入口。
+- 已确认 `POWERSHELL_AUTO_MODE` 仍不进入默认 feature：external build 下它会放开 PowerShell 进入 auto classifier，但不会注入 PowerShell 专属 deny guidance。
+- 已补 focused guard test：新增 `tests/utils/autoModePromptAssets.test.ts`，固定 `yolo-classifier-prompts/*.txt` 的占位符契约，以及 `defaultFeatures` / `experimentalFeatures` 中 `TRANSCRIPT_CLASSIFIER` 与 `POWERSHELL_AUTO_MODE` 的分层决策。
+- 已完成定向验证：`bun run build`、`./dist/gclm auto-mode defaults`、`./dist/gclm auto-mode config`、`./dist/gclm auto-mode --help`、`./dist/gclm --permission-mode auto --help`、`bun test --preload ./tests/preload.ts tests/utils/autoModePromptAssets.test.ts` 全部通过，说明标准构建产物已包含可见的 `auto` 模式入口与默认规则导出能力。

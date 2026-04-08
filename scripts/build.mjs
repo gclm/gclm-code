@@ -22,6 +22,8 @@ const sourceEntrypoint = 'src/entrypoints/cli.tsx'
 const sourceBundle = join(distDir, 'cli.js')
 const sourceErrorLog = join(distDir, 'source-build-error.log')
 
+const defaultFeatures = ['VOICE_MODE', 'TRANSCRIPT_CLASSIFIER']
+
 const experimentalFeatures = [
   'AGENT_MEMORY_SNAPSHOT',
   'AGENT_TRIGGERS',
@@ -58,7 +60,6 @@ const experimentalFeatures = [
   'ULTRATHINK',
   'UNATTENDED_RETRY',
   'VERIFICATION_AGENT',
-  'VOICE_MODE',
 ]
 
 // ── Helpers ────────────────────────────────────────────────────────────
@@ -127,13 +128,19 @@ function getVersionChangelog() {
   )
 }
 
+function appendFeatures(target, features) {
+  for (const feature of features) {
+    target.push(feature)
+  }
+}
+
 // ── Argument Parsing ───────────────────────────────────────────────────
 
 function parseArgs(argv) {
   const options = {
     dev: false,
     compile: false,
-    features: ['VOICE_MODE'],
+    features: [...defaultFeatures],
   }
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -148,13 +155,13 @@ function parseArgs(argv) {
     }
     if (arg === '--feature-set' && argv[i + 1]) {
       if (argv[i + 1] === 'dev-full') {
-        for (const f of experimentalFeatures) options.features.push(f)
+        appendFeatures(options.features, experimentalFeatures)
       }
       i += 1
       continue
     }
     if (arg === '--feature-set=dev-full') {
-      for (const f of experimentalFeatures) options.features.push(f)
+      appendFeatures(options.features, experimentalFeatures)
       continue
     }
     if (arg === '--feature' && argv[i + 1]) {
@@ -239,6 +246,7 @@ async function buildFromSource(pkg, version, options) {
     format: 'esm',
     banner: getMacroBanner(macroValues),
     define: getDefines(options),
+    features: options.features,
   })
 
   if (!sourceBuild.success) {

@@ -6,8 +6,8 @@ This repository currently references 88 `feature('FLAG')` compile-time flags.
 I re-checked them by bundling the CLI once per flag on top of the current
 external-build defines and externals. Result:
 
-- 54 flags bundle cleanly in this snapshot
-- 34 flags still fail to bundle
+- 55 flags bundle cleanly in this snapshot
+- 33 flags still fail to bundle
 
 Important: "bundle cleanly" does not always mean "runtime-safe". Some flags
 still depend on optional native modules, claude.ai OAuth, GrowthBook gates, or
@@ -16,13 +16,13 @@ externalized `@ant/*` packages.
 ## Build Variants
 
 - `bun run build`
-  Builds the regular external binary at `./cli`.
+  Builds the regular external binary at `./dist/gclm`.
 - `bun run compile`
-  Builds the regular external binary at `./dist/cli`.
+  Builds the regular external binary at `./gclm`.
 - `bun run build:dev`
-  Builds `./cli-dev` with a dev-stamped version and experimental GrowthBook key.
+  Builds `./dist/gclm-dev` with a dev-stamped version and experimental GrowthBook key.
 - `bun run build:dev:full`
-  Builds `./cli-dev` with the entire current "Working Experimental Features"
+  Builds `./dist/gclm-dev` with the entire current "Working Experimental Features"
   bundle from this document, minus `CHICAGO_MCP`. That flag still compiles,
   but the external binary does not boot cleanly with it because startup
   reaches the missing `@ant/computer-use-mcp` runtime package.
@@ -34,6 +34,10 @@ externalized `@ant/*` packages.
   It enables `/voice`, push-to-talk UI, voice notices, and dictation plumbing.
   Runtime still depends on claude.ai OAuth plus either the native audio module
   or a fallback recorder such as SoX.
+- `TRANSCRIPT_CLASSIFIER`
+  This is now included in the default build pipeline so standard builds expose
+  `--permission-mode auto` and `auto-mode` inspection commands. The external
+  build uses the reconstructed `yolo-classifier-prompts/*.txt` assets.
 
 ## Working Experimental Features
 
@@ -244,12 +248,6 @@ entire subsystem.
 - `TORCH`
   Fails on missing `src/commands/torch.js`. This looks like a single command
   entry gap.
-- `TRANSCRIPT_CLASSIFIER`
-  The first hard failure is missing
-  `src/utils/permissions/yolo-classifier-prompts/auto_mode_system_prompt.txt`.
-  The classifier engine, parser, and settings plumbing already exist, so the
-  missing prompt/assets are likely the first reconstruction target.
-
 ## Broken Flags With Partial Wiring But Medium-Sized Gaps
 
 These do have meaningful surrounding code, but the missing piece is larger
