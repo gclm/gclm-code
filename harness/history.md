@@ -118,3 +118,16 @@
 - 最新 `bun ./scripts/smoke-gclm-code-server.mjs` 已在非沙箱宿主终端通过，因此这轮 `gclm-code-server` 新增证据已从 `test` 提升到 `scripted-flow`；沙箱内的 `EADDRINUSE` 仍保留为环境边界说明。
 - 已继续收口命名冻结尾巴：把 `plugin validate` 帮助、branch resume hint、首页 cwd 警告、auth conflict / trust 提示、SSH config 描述、marketplace 恢复指引与 completion 手动补救提示统一改为官方命令 `gc`，并将 `scripts/smoke-npm-package.mjs` 调整为“主验 `gc`、兼容验 `claude`、拒绝 `gclm`”。
 - 已完成定向验证：`bun run build`、`npm run pack:npm`、`./dist/gc --help`、`node dist/npm-package/cli.js --help`、`npm run smoke:npm` 全部通过；其中 `smoke:npm` 已确认 tarball 安装后的官方入口 `gc` 与兼容 alias `claude` 都可正常工作，且 `claude --help` 明确回落显示 `Usage: gc`。
+
+## 2026-04-08 (v1.0.4)
+
+- 已完成 v1.0.4 发布准备：
+  - `bun run build` 通过
+  - `bun run verify` 通过
+  - `package.json` 版本号已更新为 `1.0.4`
+- 本轮变更范围（v1.0.3..v1.0.4，30 commits）：
+  - gclm-code-server 收口：删除飞书 HTTP webhook、收口 ID 规范为 `prefix_<uuidv7hex>`、补齐会话级鉴权、修正 terminal.html 鉴权链路
+  - 命名收口：统一 `gc` 命令入口，`claude` 仅保留兼容 alias
+  - auto-mode：恢复 transcript classifier defaults
+  - CI 稳定性：修复测试路径抖动、补网关登录审批回归测试
+  - docs：重构 API 设计 v4 与数据库 schema v2、统一 gc 命令入口命名
