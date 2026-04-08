@@ -35,7 +35,6 @@ gc
 
 ```bash
 npm i -g gclm-code@latest
-hash -r
 gc --version
 ```
 
