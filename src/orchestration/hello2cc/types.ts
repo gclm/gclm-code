@@ -112,6 +112,7 @@ export type Hello2ccSessionState = {
   capabilities: CapabilitySnapshot
   lastIntent?: Hello2ccIntentProfile
   lastRouteGuidance?: string
+  lastRouteGuidanceSignature?: string
   activeTeamName?: string
   activeWorktreePath?: string
   toolFailureCounts: Record<string, number>

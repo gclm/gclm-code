@@ -1,6 +1,28 @@
 import type { Hello2ccIntentProfile, Hello2ccSessionState } from './types.js'
 import { buildUniversalGuidance, formatGuidanceForSystemContext, formatGuidanceAsJsonSnapshot } from './universalStrategy.js'
 
+export function computeRouteGuidanceSignature(
+  state: Hello2ccSessionState,
+  intent: Hello2ccIntentProfile,
+): string {
+  const s = intent.signals
+  const parts = [
+    `intent=${intent.primaryIntent}`,
+    `team=${state.activeTeamName ?? '-'}`,
+    `worktree=${state.activeWorktreePath ?? '-'}`,
+    `failures=${state.recentFailures.length}`,
+    `s:needTeam=${+s.needTeam}`,
+    `s:needWorktree=${+s.needWorktree}`,
+    `s:continuation=${+s.continuation}`,
+    `s:bounded=${+s.boundedImplementation}`,
+    `s:workflowContinuation=${+s.workflowContinuation}`,
+    `s:decisionHeavy=${+s.decisionHeavy}`,
+    `profile=${state.capabilities.profile}`,
+    `provider=${state.capabilities.provider ?? '-'}`,
+  ]
+  return parts.join('|')
+}
+
 export function buildSessionStartContext(state: Hello2ccSessionState): string {
   const caps = state.capabilities
   const lines = [

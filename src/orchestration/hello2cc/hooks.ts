@@ -13,6 +13,7 @@ import { analyzeIntentProfile } from './intentProfile.js'
 import {
   buildRouteGuidance,
   buildSessionStartContext,
+  computeRouteGuidanceSignature,
 } from './routeGuidance.js'
 import {
   ensureHello2ccSessionState,
@@ -119,8 +120,15 @@ const userPromptSubmitHook: HookCallback = {
     })
     const intentProfile = analyzeIntentProfile(hookInput.prompt)
     const nextState = rememberIntentProfile(hookInput.session_id, intentProfile)
-    const guidance = buildRouteGuidance(nextState ?? sessionState, intentProfile)
-    rememberRouteGuidance(hookInput.session_id, guidance)
+    const currentState = nextState ?? sessionState
+    const signature = computeRouteGuidanceSignature(currentState, intentProfile)
+
+    if (currentState.lastRouteGuidanceSignature === signature) {
+      return { continue: true }
+    }
+
+    const guidance = buildRouteGuidance(currentState, intentProfile)
+    rememberRouteGuidance(hookInput.session_id, guidance, signature)
 
     return {
       continue: true,

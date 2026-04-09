@@ -12,6 +12,7 @@ import { checkToolPreconditions } from '../../src/orchestration/hello2cc/precond
 import {
   buildRouteGuidance,
   buildSessionStartContext,
+  computeRouteGuidanceSignature,
 } from '../../src/orchestration/hello2cc/routeGuidance.ts'
 import {
   getGatewayOrchestrationState,
@@ -24,10 +25,12 @@ import {
 import {
   clearHello2ccSessionState,
   getHello2ccSessionState,
+  rememberToolSuccess,
   restoreHello2ccSessionState,
   snapshotHello2ccSessionState,
 } from '../../src/orchestration/hello2cc/sessionState.ts'
 import { normalizeToolInput } from '../../src/orchestration/hello2cc/toolNormalization.ts'
+import { suggestSubagentType } from '../../src/orchestration/hello2cc/subagentGuidance.ts'
 import type { Hello2ccSessionState } from '../../src/orchestration/hello2cc/types.ts'
 import {
   buildRecommendedHello2ccProjectSettings,
@@ -455,5 +458,306 @@ describe('hello2cc orchestration', () => {
     expect(guidance).toContain('Execution Playbook')
     expect(guidance).toContain('Recovery')
     expect(guidance).toContain('Write')
+  })
+
+  test('route guidance signature deduplicates identical prompts', () => {
+    const state = makeSessionState()
+    const intent1 = analyzeIntentProfile('请继续实现 Gateway 编排增强')
+    const sig1 = computeRouteGuidanceSignature(state, intent1)
+    const intent2 = analyzeIntentProfile('请继续实现 Gateway 编排增强')
+    const sig2 = computeRouteGuidanceSignature(state, intent2)
+
+    expect(sig1).toBe(sig2)
+  })
+
+  test('route guidance signature changes when intent or state differs', () => {
+    const state = makeSessionState()
+    const intent1 = analyzeIntentProfile('请继续实现 Gateway 编排增强')
+    const sig1 = computeRouteGuidanceSignature(state, intent1)
+
+    state.activeTeamName = 'gateway-workers'
+    const intent2 = analyzeIntentProfile('请继续实现 Gateway 编排增强')
+    const sig2 = computeRouteGuidanceSignature(state, intent2)
+
+    expect(sig1).not.toBe(sig2)
+  })
+
+  test('route guidance signature changes when intent kind differs', () => {
+    const state = makeSessionState()
+    const implIntent = analyzeIntentProfile('请实现这个功能')
+    const reviewIntent = analyzeIntentProfile('请 review 一下这个实现')
+
+    const sig1 = computeRouteGuidanceSignature(state, implIntent)
+    const sig2 = computeRouteGuidanceSignature(state, reviewIntent)
+
+    expect(sig1).not.toBe(sig2)
+  })
+
+  test('blocks duplicate TeamCreate with the same active team name', () => {
+    const state = makeSessionState()
+    state.activeTeamName = 'gateway-workers'
+
+    const result = checkToolPreconditions(
+      'TeamCreate',
+      { team_name: 'gateway-workers' },
+      state,
+    )
+
+    expect(result.blocked).toBe(true)
+    expect(result.reason).toContain('gateway-workers')
+    expect(result.reason).toContain('already the active team')
+  })
+
+  test('allows TeamCreate with a different name', () => {
+    const state = makeSessionState()
+    state.activeTeamName = 'gateway-workers'
+
+    const result = checkToolPreconditions(
+      'TeamCreate',
+      { name: 'new-team' },
+      state,
+    )
+
+    expect(result.blocked).toBe(false)
+  })
+
+  test('blocks file edit after 3 general failures', () => {
+    const state = makeSessionState()
+    state.fileEditFailures = [
+      { filePath: 'src/query.ts', errorType: 'edit_invalid', count: 3, lastError: 'old_string not found', updatedAt: '2026-04-09T10:00:00.000Z' },
+    ]
+
+    const result = checkToolPreconditions(
+      'Edit',
+      { file_path: 'src/query.ts', old_string: 'old code', new_string: 'new code' },
+      state,
+    )
+
+    expect(result.blocked).toBe(true)
+    expect(result.reason).toContain('src/query.ts')
+    expect(result.reason).toContain('3 times')
+  })
+
+  test('blocks file edit after 2 permission failures', () => {
+    const state = makeSessionState()
+    state.fileEditFailures = [
+      { filePath: 'etc/hosts', errorType: 'permission', count: 2, lastError: 'EACCES', updatedAt: '2026-04-09T10:00:00.000Z' },
+    ]
+
+    const result = checkToolPreconditions(
+      'Write',
+      { file_path: 'etc/hosts', content: 'test' },
+      state,
+    )
+
+    expect(result.blocked).toBe(true)
+    expect(result.reason).toContain('permission')
+  })
+
+  test('does not block file edit for a different file', () => {
+    const state = makeSessionState()
+    state.fileEditFailures = [
+      { filePath: 'src/query.ts', errorType: 'edit_invalid', count: 3, lastError: 'old_string not found', updatedAt: '2026-04-09T10:00:00.000Z' },
+    ]
+
+    const result = checkToolPreconditions(
+      'Edit',
+      { file_path: 'src/other.ts', old_string: 'old', new_string: 'new' },
+      state,
+    )
+
+    expect(result.blocked).toBe(false)
+  })
+
+  test('remembers tool success and resets failure count', () => {
+    const state = makeSessionState()
+    state.sessionId = 'test-session'
+    state.toolFailureCounts.Agent = 3
+
+    restoreHello2ccSessionState(snapshotHello2ccSessionState(state))
+
+    rememberToolSuccess('test-session', 'Agent', { description: 'test' }, 'completed')
+
+    const restored = getHello2ccSessionState('test-session')
+    expect(restored?.toolFailureCounts.Agent).toBe(0)
+
+    clearHello2ccSessionState('test-session')
+  })
+
+  test('route guidance deduplication: identical signature produces identical guidance text', () => {
+    const state = makeSessionState()
+    const intent1 = analyzeIntentProfile('请继续实现 Gateway 编排增强')
+    const guidance1 = buildRouteGuidance(state, intent1)
+    const sig1 = computeRouteGuidanceSignature(state, intent1)
+
+    // Same prompt, same state → same signature → same guidance
+    const intent2 = analyzeIntentProfile('请继续实现 Gateway 编排增强')
+    const sig2 = computeRouteGuidanceSignature(state, intent2)
+    const guidance2 = buildRouteGuidance(state, intent2)
+
+    expect(sig1).toBe(sig2)
+    expect(guidance1).toBe(guidance2)
+  })
+
+  test('resume with empty state does not crash', () => {
+    const restored = restoreHello2ccSessionState(undefined)
+    expect(restored).toBeUndefined()
+  })
+
+  test('resume with partial state (no intent, no guidance) restores without errors', () => {
+    const state = makeSessionState()
+    delete state.lastIntent
+    delete state.lastRouteGuidance
+    state.sessionId = 'partial-session'
+
+    restoreHello2ccSessionState(snapshotHello2ccSessionState(state))
+    const restored = getHello2ccSessionState('partial-session')
+
+    expect(restored?.sessionId).toBe('partial-session')
+    expect(restored?.lastIntent).toBeUndefined()
+    expect(restored?.lastRouteGuidance).toBeUndefined()
+
+    clearHello2ccSessionState('partial-session')
+  })
+
+  test('resume with state missing recentSuccesses/recentFailures arrays restores safely', () => {
+    const partialState = {
+      sessionId: 'corrupt-session',
+      capabilities: {
+        cwd: '/repo',
+        toolNames: ['Agent', 'SendMessage'],
+        supportsAgent: true,
+        supportsTeam: false,
+        supportsMessaging: true,
+        supportsWorktree: false,
+        availableSubagentTypes: ['Plan'],
+        mcpConnectedCount: 0,
+        mcpPendingCount: 0,
+        mcpNeedsAuthCount: 0,
+        mcpFailedCount: 0,
+        toolSearchOptimistic: false,
+        webSearchAvailable: false,
+        webSearchRequests: 0,
+        profile: 'balanced' as const,
+      },
+      toolFailureCounts: {},
+    } as any
+
+    restoreHello2ccSessionState(partialState)
+    const restored = getHello2ccSessionState('corrupt-session')
+
+    expect(restored?.sessionId).toBe('corrupt-session')
+    expect(restored?.recentSuccesses).toEqual([])
+    expect(restored?.recentFailures).toEqual([])
+    expect(restored?.fileEditFailures).toEqual([])
+
+    clearHello2ccSessionState('corrupt-session')
+  })
+
+  test('file edit block includes recovery advice for edit_invalid', () => {
+    const state = makeSessionState()
+    state.fileEditFailures = [
+      { filePath: 'src/query.ts', errorType: 'edit_invalid', count: 3, lastError: 'old_string not found', updatedAt: '2026-04-09T10:00:00.000Z' },
+    ]
+
+    const result = checkToolPreconditions(
+      'Edit',
+      { file_path: 'src/query.ts', old_string: 'old code', new_string: 'new code' },
+      state,
+    )
+
+    expect(result.blocked).toBe(true)
+    expect(result.notes.join(' ')).toContain('read the file first')
+  })
+
+  test('file edit block includes recovery advice for permission errors', () => {
+    const state = makeSessionState()
+    state.fileEditFailures = [
+      { filePath: '/etc/hosts', errorType: 'permission', count: 2, lastError: 'EACCES', updatedAt: '2026-04-09T10:00:00.000Z' },
+    ]
+
+    const result = checkToolPreconditions(
+      'Write',
+      { file_path: '/etc/hosts', content: 'test' },
+      state,
+    )
+
+    expect(result.blocked).toBe(true)
+    expect(result.notes.join(' ')).toContain('ls -la')
+  })
+
+  test('subagent guidance routes planning intent to Plan subagent', () => {
+    const state = makeSessionState()
+    state.lastIntent = analyzeIntentProfile('请先规划这个 Gateway 变更')
+
+    const result = suggestSubagentType('Agent', { description: 'plan it' }, state)
+
+    expect(result.subagentType).toBe('Plan')
+    expect(result.note).toContain('planning')
+  })
+
+  test('subagent guidance returns Explore for review intent', () => {
+    const state = makeSessionState()
+    state.lastIntent = analyzeIntentProfile('请 review 一下这个实现')
+
+    const result = suggestSubagentType('Agent', { description: 'review it' }, state)
+
+    expect(result.subagentType).toBe('Explore')
+    expect(result.note).toContain('Review')
+  })
+
+  test('subagent guidance returns empty when Explore is unavailable for research', () => {
+    const state = makeSessionState()
+    state.capabilities.availableSubagentTypes = ['Plan', 'GeneralPurpose']
+    state.lastIntent = analyzeIntentProfile('请先研究一下这个方案的可行性')
+
+    const result = suggestSubagentType('Agent', { description: 'research' }, state)
+
+    expect(result.subagentType).toBeUndefined()
+    expect(result.shapingNotes.join(' ')).toContain('read-only')
+  })
+
+  test('subagent guidance returns empty when no intent is set', () => {
+    const state = makeSessionState()
+
+    const result = suggestSubagentType('Agent', { description: 'do something' }, state)
+
+    expect(result.subagentType).toBeUndefined()
+    expect(result.shapingNotes).toHaveLength(0)
+  })
+
+  test('subagent guidance skips for non-Agent tools', () => {
+    const state = makeSessionState()
+    state.lastIntent = analyzeIntentProfile('请先规划一下')
+
+    const result = suggestSubagentType('SendMessage', { to: 'worker-1', message: 'hi' }, state)
+
+    expect(result.subagentType).toBeUndefined()
+    expect(result.shapingNotes).toHaveLength(0)
+  })
+
+  test('SendMessage to named recipient without active team is not blocked', () => {
+    const state = makeSessionState()
+
+    const result = checkToolPreconditions(
+      'SendMessage',
+      { to: 'worker-1', message: 'please report' },
+      state,
+    )
+
+    expect(result.blocked).toBe(false)
+  })
+
+  test('SendMessage broadcast with active team is not blocked', () => {
+    const state = makeSessionState()
+    state.activeTeamName = 'gateway-workers'
+
+    const result = checkToolPreconditions(
+      'SendMessage',
+      { to: '*', message: 'please report' },
+      state,
+    )
+
+    expect(result.blocked).toBe(false)
   })
 })

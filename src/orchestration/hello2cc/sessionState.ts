@@ -188,10 +188,11 @@ export function rememberIntentProfile(
 export function rememberRouteGuidance(
   sessionId: string,
   routeGuidance: string,
+  signature?: string,
 ): Hello2ccSessionState | undefined {
   const current = sessionStateStore.get(sessionId)
   if (!current) return undefined
-  const next = { ...current, lastRouteGuidance: routeGuidance }
+  const next = { ...current, lastRouteGuidance: routeGuidance, lastRouteGuidanceSignature: signature }
   sessionStateStore.set(sessionId, next)
   return next
 }
@@ -283,9 +284,9 @@ export function snapshotHello2ccSessionState(
     ...state,
     capabilities: { ...state.capabilities, toolNames: [...state.capabilities.toolNames] },
     toolFailureCounts: { ...state.toolFailureCounts },
-    recentSuccesses: state.recentSuccesses.map(r => ({ ...r })),
-    recentFailures: state.recentFailures.map(r => ({ ...r })),
-    fileEditFailures: state.fileEditFailures.map(f => ({ ...f })),
+    recentSuccesses: (state.recentSuccesses ?? []).map(r => ({ ...r })),
+    recentFailures: (state.recentFailures ?? []).map(r => ({ ...r })),
+    fileEditFailures: (state.fileEditFailures ?? []).map(f => ({ ...f })),
   }
 }
 
