@@ -24,6 +24,13 @@ import {
 } from './sessionState.js'
 import { normalizeToolInput } from './toolNormalization.js'
 import { checkToolPreconditions } from './preconditions.js'
+import {
+  incrementRouteGuidance,
+  incrementNormalization,
+  incrementMemoryHit,
+  incrementPreconditionBlock,
+  incrementDedupSkip,
+} from './metrics.js'
 
 const NORMALIZED_TOOL_MATCHER = [
   AGENT_TOOL_NAME,
@@ -124,11 +131,13 @@ const userPromptSubmitHook: HookCallback = {
     const signature = computeRouteGuidanceSignature(currentState, intentProfile)
 
     if (currentState.lastRouteGuidanceSignature === signature) {
+      incrementDedupSkip(hookInput.session_id)
       return { continue: true }
     }
 
     const guidance = buildRouteGuidance(currentState, intentProfile)
     rememberRouteGuidance(hookInput.session_id, guidance, signature)
+    incrementRouteGuidance(hookInput.session_id)
 
     return {
       continue: true,
@@ -155,6 +164,9 @@ const preToolUseHook: HookCallback = {
       hookInput.tool_input as Record<string, unknown>,
       sessionState,
     )
+    if (normalization.updatedInput || normalization.notes.length > 0) {
+      incrementNormalization(hookInput.session_id)
+    }
 
     if (!normalization.updatedInput && normalization.notes.length === 0) {
       const precondition = checkToolPreconditions(
@@ -166,6 +178,9 @@ const preToolUseHook: HookCallback = {
         return { continue: true }
       }
 
+      if (precondition.blocked) {
+        incrementPreconditionBlock(hookInput.session_id)
+      }
       return {
         continue: !precondition.blocked,
         stopReason: precondition.reason,
@@ -213,6 +228,7 @@ const postToolUseHook: HookCallback = {
       hookInput.tool_input as Record<string, unknown>,
       summarizeToolResponse(hookInput.tool_response),
     )
+    incrementMemoryHit(hookInput.session_id)
     return { continue: true }
   },
 }

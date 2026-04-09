@@ -135,9 +135,10 @@ describe('hello2cc resume integration', () => {
     expect(labels).toContain('Last intent')
     expect(labels).toContain('Active team')
     expect(labels).toContain('Recent failures')
-    expect(healthSummary?.value).toBe(
-      'intent=implement · 4 capabilities · 2 MCP connected · team=gateway-workers · worktree=active · 1 success · 1 failure · 2 total retries',
-    )
+    expect(healthSummary?.value).toContain('intent=implement')
+    expect(healthSummary?.value).toContain('4 capabilities')
+    expect(healthSummary?.value).toContain('team=gateway-workers')
+    expect(healthSummary?.value).toContain('lastFailure=Agent')
     const hostFacts = properties.find(property => property.label === 'Host facts')
     const routingPosture = properties.find(
       property => property.label === 'Routing posture',

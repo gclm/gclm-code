@@ -5,6 +5,14 @@ function pluralize(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`
 }
 
+function formatRelativeTimestamp(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  if (diffMs < 60_000) return 'just now'
+  if (diffMs < 3_600_000) return `${Math.floor(diffMs / 60_000)}m ago`
+  if (diffMs < 86_400_000) return `${Math.floor(diffMs / 3_600_000)}h ago`
+  return `${Math.floor(diffMs / 86_400_000)}d ago`
+}
+
 export function buildHello2ccHealthSummary(
   state: PersistedHello2ccSessionState | undefined,
 ): string | undefined {
@@ -49,6 +57,16 @@ export function buildHello2ccHealthSummary(
     parts.push(`${failureTotal} total retries`)
   }
 
+  if (state.recentFailures.length > 0) {
+    const lastFailure = state.recentFailures[0]
+    parts.push(`lastFailure=${lastFailure.toolName}(${formatRelativeTimestamp(lastFailure.updatedAt)})`)
+  }
+
+  if (state.lastRouteGuidance) {
+    const guidancePreview = state.lastRouteGuidance.slice(0, 60).replace(/\n/g, ' ')
+    parts.push(`guidance="${guidancePreview}${state.lastRouteGuidance.length > 60 ? '...' : ''}"`)
+  }
+
   return parts.join(' · ')
 }
 
@@ -87,6 +105,13 @@ export function buildHello2ccResumeSummary(
 
   if (state.recentFailures.length > 0) {
     details.push(pluralize(state.recentFailures.length, 'failure'))
+    const lastFailure = state.recentFailures[0]
+    details.push(`lastFailure=${lastFailure.toolName}(${formatRelativeTimestamp(lastFailure.updatedAt)})`)
+  }
+
+  if (state.lastRouteGuidance) {
+    const guidancePreview = state.lastRouteGuidance.slice(0, 60).replace(/\n/g, ' ')
+    details.push(`guidance="${guidancePreview}${state.lastRouteGuidance.length > 60 ? '...' : ''}"`)
   }
 
   const capabilityCount = state.capabilities.toolNames.length

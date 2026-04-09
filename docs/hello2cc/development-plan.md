@@ -78,8 +78,8 @@ UserPrompt → IntentProfile(4层/25+signals) → UniversalGuidance
 
 **目标：让 hello2cc 的行为可观测、可排查**
 
-4. [ ] `/status` 和 `/resume` 摘要增强（P1-1）
-5. [ ] 独立可观测指标（P1-2）
+4. [x] `/status` 和 `/resume` 摘要增强（P1-1）— 增加 `lastFailure` 时间戳 + `guidance` 预览
+5. [x] 独立可观测指标（P1-2）— `metrics.ts` 跟踪 guidance/dedup/normalization/memoryHits/blocks
 
 ### 第三批：选择性增强（按需）
 

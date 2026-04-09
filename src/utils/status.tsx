@@ -17,6 +17,7 @@ import { getMTLSConfig } from './mtls.js';
 import { checkInstall } from './nativeInstaller/index.js';
 import { getGatewayOrchestrationState } from '../orchestration/hello2cc/index.js';
 import { buildHello2ccDebugDump, formatHello2ccHostFacts, formatHello2ccRoutingPosture } from '../orchestration/hello2cc/observability.js';
+import { getHello2ccMetrics } from '../orchestration/hello2cc/metrics.js';
 import { buildHello2ccHealthSummary } from '../orchestration/hello2cc/summary.js';
 import { getProxyUrl } from './proxy.js';
 import { SandboxManager } from './sandbox/sandbox-adapter.js';
@@ -189,6 +190,19 @@ export function buildHello2ccProperties(): Property[] {
     properties.push({
       label: 'Failure counts',
       value: nonZeroFailures
+    });
+  }
+  const metrics = getHello2ccMetrics(state.sessionId);
+  if (metrics.routeGuidanceCount > 0 || metrics.dedupSkipCount > 0 || metrics.normalizationCount > 0 || metrics.memoryHitCount > 0) {
+    properties.push({
+      label: 'Pipeline metrics',
+      value: [
+        `guidance=${metrics.routeGuidanceCount}`,
+        `dedupSkip=${metrics.dedupSkipCount}`,
+        `normalization=${metrics.normalizationCount}`,
+        `memoryHits=${metrics.memoryHitCount}`,
+        `preconditionBlocks=${metrics.preconditionBlockCount}`,
+      ]
     });
   }
   return properties;

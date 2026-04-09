@@ -23,6 +23,15 @@ import {
   buildHello2ccResumeSummary,
 } from '../../src/orchestration/hello2cc/summary.ts'
 import {
+  clearAllHello2ccMetrics,
+  getHello2ccMetrics,
+  incrementRouteGuidance,
+  incrementNormalization,
+  incrementMemoryHit,
+  incrementPreconditionBlock,
+  incrementDedupSkip,
+} from '../../src/orchestration/hello2cc/metrics.ts'
+import {
   clearHello2ccSessionState,
   getHello2ccSessionState,
   rememberToolSuccess,
@@ -378,6 +387,7 @@ describe('hello2cc orchestration', () => {
     state.lastIntent = analyzeIntentProfile('请继续 Gateway 编排增强实现')
     state.activeTeamName = 'gateway-workers'
     state.activeWorktreePath = '/tmp/gateway-workers'
+    state.lastRouteGuidance = 'Role: direct_executor\nSpecialization: implement'
     state.toolFailureCounts.Agent = 2
     state.recentSuccesses.push({
       toolName: 'TeamCreate',
@@ -394,15 +404,34 @@ describe('hello2cc orchestration', () => {
       updatedAt: '2026-04-06T10:05:00.000Z',
     })
 
-    expect(buildHello2ccHealthSummary(state)).toBe(
-      'intent=implement · 4 capabilities · 2 MCP connected · team=gateway-workers · worktree=active · 1 success · 1 failure · 2 total retries',
-    )
-    expect(buildHello2ccResumeSummary(state)).toBe(
-      'Restored hello2cc orchestration memory: team=gateway-workers · worktree=/tmp/gateway-workers · intent=implement · 1 success · 1 failure · 4 capabilities',
-    )
-    expect(buildHello2ccResumeSummary(state, 'compact')).toBe(
-      'Restored hello2cc orchestration memory: intent=implement · 4 capabilities · 2 MCP connected · team=gateway-workers · worktree=active · 1 success · 1 failure · 2 total retries',
-    )
+    const healthSummary = buildHello2ccHealthSummary(state)!
+    expect(healthSummary).toContain('intent=implement')
+    expect(healthSummary).toContain('4 capabilities')
+    expect(healthSummary).toContain('2 MCP connected')
+    expect(healthSummary).toContain('team=gateway-workers')
+    expect(healthSummary).toContain('worktree=active')
+    expect(healthSummary).toContain('1 success')
+    expect(healthSummary).toContain('1 failure')
+    expect(healthSummary).toContain('2 total retries')
+    expect(healthSummary).toContain('lastFailure=Agent')
+
+    const resumeSummary = buildHello2ccResumeSummary(state)!
+    expect(resumeSummary).toContain('team=gateway-workers')
+    expect(resumeSummary).toContain('worktree=/tmp/gateway-workers')
+    expect(resumeSummary).toContain('intent=implement')
+    expect(resumeSummary).toContain('1 success')
+    expect(resumeSummary).toContain('1 failure')
+    expect(resumeSummary).toContain('lastFailure=Agent')
+    expect(resumeSummary).toContain('guidance=')
+    expect(resumeSummary).toContain('4 capabilities')
+
+    const compactSummary = buildHello2ccResumeSummary(state, 'compact')!
+    expect(compactSummary).toContain('intent=implement')
+    expect(compactSummary).toContain('4 capabilities')
+    expect(compactSummary).toContain('2 MCP connected')
+    expect(compactSummary).toContain('team=gateway-workers')
+    expect(compactSummary).toContain('worktree=active')
+    expect(compactSummary).toContain('lastFailure=Agent')
   })
 
   test('escalates route guidance when retry pressure is high', () => {
@@ -759,5 +788,83 @@ describe('hello2cc orchestration', () => {
     )
 
     expect(result.blocked).toBe(false)
+  })
+
+  test('metrics track route guidance, normalization, and memory hits', () => {
+    const sessionId = 'metrics-test-session'
+
+    incrementRouteGuidance(sessionId)
+    incrementRouteGuidance(sessionId)
+    incrementNormalization(sessionId)
+    incrementMemoryHit(sessionId)
+    incrementMemoryHit(sessionId)
+    incrementMemoryHit(sessionId)
+
+    const metrics = getHello2ccMetrics(sessionId)
+    expect(metrics.routeGuidanceCount).toBe(2)
+    expect(metrics.normalizationCount).toBe(1)
+    expect(metrics.memoryHitCount).toBe(3)
+    expect(metrics.preconditionBlockCount).toBe(0)
+    expect(metrics.dedupSkipCount).toBe(0)
+  })
+
+  test('metrics track dedup skips and precondition blocks', () => {
+    const sessionId = 'metrics-dedup-session'
+
+    incrementDedupSkip(sessionId)
+    incrementDedupSkip(sessionId)
+    incrementDedupSkip(sessionId)
+    incrementPreconditionBlock(sessionId)
+
+    const metrics = getHello2ccMetrics(sessionId)
+    expect(metrics.dedupSkipCount).toBe(3)
+    expect(metrics.preconditionBlockCount).toBe(1)
+    expect(metrics.routeGuidanceCount).toBe(0)
+  })
+
+  test('health summary includes failure timestamp', () => {
+    const state = makeSessionState()
+    state.lastIntent = analyzeIntentProfile('请继续实现')
+    state.recentFailures.push({
+      toolName: 'Agent',
+      signature: 'Agent:{"description":"test"}',
+      summary: 'test failure',
+      count: 2,
+      updatedAt: new Date().toISOString(),
+    })
+
+    const summary = buildHello2ccHealthSummary(state)!
+    expect(summary).toContain('lastFailure=Agent')
+    expect(summary).toContain('just now')
+  })
+
+  test('resume summary includes route guidance preview', () => {
+    const state = makeSessionState()
+    state.lastIntent = analyzeIntentProfile('请继续实现')
+    state.lastRouteGuidance = 'Role: direct_executor\nSpecialization: implement\nDecision Backbone: 3 rules'
+
+    const summary = buildHello2ccResumeSummary(state)!
+    expect(summary).toContain('guidance="Role: direct_executor')
+    expect(summary).toContain('...')
+  })
+
+  test('resume summary includes failure timestamp', () => {
+    const state = makeSessionState()
+    state.lastIntent = analyzeIntentProfile('请继续实现')
+    state.recentFailures.push({
+      toolName: 'Write',
+      signature: 'Write:{"file_path":"src/x.ts"}',
+      summary: 'permission denied',
+      count: 2,
+      updatedAt: '2026-04-09T10:00:00.000Z',
+    })
+
+    const summary = buildHello2ccResumeSummary(state)!
+    expect(summary).toContain('lastFailure=Write')
+  })
+
+  test('summary handles empty state gracefully', () => {
+    expect(buildHello2ccHealthSummary(undefined)).toBeUndefined()
+    expect(buildHello2ccResumeSummary(undefined)).toBeUndefined()
   })
 })
