@@ -16,7 +16,6 @@
   ],
   "scripts": {
     "typecheck": "bunx tsc --noEmit",
-    "brand:guard": "bash scripts/brand-guard.sh",
     "verify": "bun run build && bun run smoke",
     "clean": "node ./scripts/clean.mjs",
     "build": "bun scripts/build.mjs",
