@@ -1,6 +1,6 @@
 # hello2cc Gateway Status And Resume
 
-更新时间：2026-04-06
+更新时间：2026-04-09
 
 ## 目的
 
@@ -14,10 +14,6 @@
 
 1. hello2cc 现在到底记住了什么
 2. `/resume` 之后这些记忆有没有真的恢复回来
-
-如果你要继续排查“为什么恢复了但行为还是不对”或“模型为什么像没感知到能力”，请继续看：
-
-- [docs/hello2cc/gateway-diagnostics.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-diagnostics.md)
 
 ## 三者关系总览
 
@@ -39,7 +35,7 @@
 
 ## `hello2cc-state` 是什么
 
-当前 hello2cc 不只是“进程内记忆”。
+当前 hello2cc 不只是"进程内记忆"。
 
 它会把编排增强层使用到的关键 session state 作为 transcript metadata entry 写入日志，entry 类型是：
 
@@ -50,13 +46,11 @@ type: "hello2cc-state"
 这份 state 目前主要包含：
 
 - capability snapshot
-- last intent
-- last route guidance
-- active team
-- active worktree
-- recent successes
-- recent failures
+- last intent + route guidance
+- active team / worktree
+- recent successes / failures
 - tool failure counts
+- file edit failures (v2 新增)
 
 相关实现位置：
 
@@ -76,7 +70,7 @@ type: "hello2cc-state"
 `/status` 会先显示：
 
 ```text
-Orchestration health: intent=implement · 4 capabilities · team=gateway-workers · worktree=active · 1 success · 1 failure · 2 total retries
+Orchestration health: intent=implement · 4 capabilities · 2 MCP connected · team=gateway-workers · worktree=active · 1 success · 1 failure · 2 total retries
 ```
 
 这条摘要的价值是让你在不翻 debug log 的情况下，先快速判断：
@@ -92,23 +86,33 @@ Orchestration health: intent=implement · 4 capabilities · team=gateway-workers
 
 - `Gateway orchestration`
 - `Surfaced capabilities`
+- `Host facts`
+- `Routing posture`
 - `Last intent`
 - `Active team`
-- `Active worktree`
-- `Recent successes`
-- `Recent failures`
-- `Failure counts`
+- `Debug snapshot`
 
-相关实现位置：
+### 3. `/hello2cc` 统一诊断
 
-- [src/utils/status.tsx](/Users/gclm/workspace/lab/ai/gclm-code/src/utils/status.tsx)
-- [src/orchestration/hello2cc/summary.ts](/Users/gclm/workspace/lab/ai/gclm-code/src/orchestration/hello2cc/summary.ts)
+`/hello2cc` 提供更细的诊断视图：
+
+```
+/hello2cc        # 人类可读摘要（默认）
+/hello2cc json   # AI 消费用的 JSON snapshot
+/hello2cc both   # 两个都展示
+```
+
+重点看三块：
+
+- `Severity`：low / medium / high
+- `Detected anomalies`：自动检测到的异常（retry pressure、MCP 失败、tool search 置信度低等）
+- `Suggested actions`：基于当前状态的建议
 
 ## `/resume` 后会发生什么
 
 当前 `/resume` 成功加载 transcript 后，会走一条通用恢复链路，把 `hello2cc-state` 回填到内存态。
 
-恢复完成后，系统会追加一条 info message，告诉你“刚刚恢复了哪些 hello2cc 记忆”。
+恢复完成后，系统会追加一条 info message，告诉你"刚刚恢复了哪些 hello2cc 记忆"。
 
 默认示例：
 
@@ -122,6 +126,7 @@ Restored hello2cc orchestration memory: team=gateway-workers · worktree=/tmp/ga
 - worktree 有没有恢复
 - 上一轮 intent 还在不在
 - recent success / failure 有没有延续
+- file edit failures 有没有延续（v2 新增）
 
 相关实现位置：
 
@@ -156,7 +161,7 @@ Restored hello2cc orchestration memory: team=gateway-workers · worktree=/tmp/ga
 `compact` 示例：
 
 ```text
-Restored hello2cc orchestration memory: intent=implement · 4 capabilities · team=gateway-workers · worktree=active · 1 success · 1 failure · 2 total retries
+Restored hello2cc orchestration memory: intent=implement · 4 capabilities · 2 MCP connected · team=gateway-workers · worktree=active · 1 success · 1 failure · 2 total retries
 ```
 
 配置 schema 与读取位置：
@@ -170,13 +175,14 @@ Restored hello2cc orchestration memory: intent=implement · 4 capabilities · te
 
 1. 平时先看 `/resume` 后的恢复提示，确认关键记忆已经回来了
 2. 如果要进一步核对细节，再看 `/status`
-3. 如果 `/resume` 提示看起来不对，再去看 transcript 与 debug log
+3. 如果需要更细的诊断，运行 `/hello2cc`
+4. 如果 `/resume` 提示看起来不对，再去看 transcript 与 debug log
 
 这套顺序的好处是：
 
-- 第一眼先确认“恢复是否发生”
-- 第二眼确认“恢复内容是否完整”
-- 第三眼才进入开发者排查路径
+- 第一眼先确认"恢复是否发生"
+- 第二眼确认"恢复内容是否完整"
+- 第三眼进入详细诊断路径
 
 ## 当前项目长任务续跑演练
 
@@ -184,7 +190,6 @@ Restored hello2cc orchestration memory: intent=implement · 4 capabilities · te
 
 - `resumeSummaryStyle = "compact"`
 - `strategyProfile = "balanced"`
-- `qualityGateMode = "advisory"`
 
 适用场景：
 
@@ -207,6 +212,7 @@ Restored hello2cc orchestration memory: intent=implement · 4 capabilities · te
 - active team
 - active worktree
 - recent successes / failures
+- file edit failures（v2 新增）
 
 如果你在这个阶段已经创建过 `gateway-workers`，或者已经进入过某个 worktree，后面这些信息就会成为续跑依据。
 
@@ -224,7 +230,7 @@ Restored hello2cc orchestration memory: intent=implement · 4 capabilities · te
 Orchestration health: intent=implement · 4 capabilities · team=gateway-workers · worktree=active · 1 success · 1 failure · 2 total retries
 ```
 
-这表示 hello2cc 已经不只是“知道你在做实现任务”，还记住了：
+这表示 hello2cc 已经不只是"知道你在做实现任务"，还记住了：
 
 - 已存在的 team
 - 已存在的 worktree
@@ -237,13 +243,7 @@ Orchestration health: intent=implement · 4 capabilities · team=gateway-workers
 /hello2cc
 ```
 
-此时建议重点看三块：
-
-- `Severity`
-- `Detected anomalies`
-- `Suggested actions`
-
-在当前项目的长任务里，如果已经有 active team / worktree，通常会看到“优先复用已有执行面”的建议，而不是鼓励再新开一层并行。
+在当前项目的长任务里，如果已经有 active team / worktree，通常会看到"优先复用已有执行面"的建议，而不是鼓励再新开一层并行。
 
 ### 3. 中断任务后恢复
 
@@ -283,15 +283,16 @@ Restored hello2cc orchestration memory: intent=implement · 4 capabilities · 2 
 - 已有 active team，优先复用 `gateway-workers`
 - 已有 active worktree，优先复用当前 worktree
 - 如果前面某条路径刚失败过，要显式提醒避免重复同一路径
+- 如果之前某个文件编辑反复失败，guidance 中会直接告诉模型"上次在 xxx 失败，建议 zzz"
 
-换句话说，恢复后的目标不是“重新开始一轮”，而是“沿着旧的执行面继续推进”。
+换句话说，恢复后的目标不是"重新开始一轮"，而是"沿着旧的执行面继续推进"。
 
 ### 5. 如何判断这次续跑是成功的
 
 最实用的判断标准有三条：
 
 1. `/resume` 恢复提示里还能看到 team / worktree / success / failure / retries
-2. `/status` 里的 `Orchestration health` 没有退回到像“全新 session”那样的空状态
+2. `/status` 里的 `Orchestration health` 没有退回到像"全新 session"那样的空状态
 3. 继续提问后，route guidance 仍然体现：
    - active team already present
    - recent failures to avoid repeating
@@ -306,13 +307,25 @@ Restored hello2cc orchestration memory: intent=implement · 4 capabilities · 2 
 - `/status` 里看不到预期的 active team / active worktree
 - 之前已有 success/failure memory，但恢复后全部归零
 - 下一轮 route guidance 不再体现既有 team/worktree 或 recent failure
+- 文件编辑失败保护没有延续
 
-遇到这些情况，建议回到诊断文档继续排查：
+遇到这些情况，建议：
 
-- [docs/hello2cc/gateway-diagnostics.md](/Users/gclm/workspace/lab/ai/gclm-code/docs/hello2cc/gateway-diagnostics.md)
+1. 先检查 transcript 里是否有 `hello2cc-state` metadata entry
+2. 运行 `/hello2cc json` 看完整 state
+3. 确认 file edit failures 是否正常恢复
+
+## v2 文件编辑失败保护（新增）
+
+v2 新增了文件编辑失败追踪：
+
+- 记录 Edit/Write 失败，按 `文件路径 + 错误类型` 去重
+- 通用失败 ≥ 3 次或权限失败 ≥ 2 次 → 自动拦截
+- guidance 中注入历史失败信息："上次在 xxx 文件失败，原因是 yyy，建议 zzz"
+- 这些信息也会持久化到 `hello2cc-state` 并在 `/resume` 时恢复
 
 ## 一句话理解
 
 可以把三者关系记成一句话：
 
-`hello2cc-state` 负责“记住”，`/resume` 负责“恢复并提示”，`/status` 负责“随时查看当前记住了什么”。
+`hello2cc-state` 负责"记住"，`/resume` 负责"恢复并提示"，`/status` 负责"随时查看当前记住了什么"。
