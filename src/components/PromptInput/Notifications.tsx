@@ -31,6 +31,7 @@ import { IdeStatusIndicator } from '../IdeStatusIndicator.js';
 import { MemoryUsageIndicator } from '../MemoryUsageIndicator.js';
 import { SentryErrorBoundary } from '../SentryErrorBoundary.js';
 import { TokenWarning } from '../TokenWarning.js';
+import { shouldShowVerboseTokenUsage } from './notificationUtils.js';
 import { SandboxPromptFooterHint } from './SandboxPromptFooterHint.js';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -51,6 +52,7 @@ type Props = {
   mcpClients?: MCPServerConnection[];
   isInputWrapped?: boolean;
   isNarrow?: boolean;
+  isLoading?: boolean;
 };
 export function Notifications(t0) {
   const $ = _c(34);
@@ -65,11 +67,15 @@ export function Notifications(t0) {
     onChangeIsUpdating,
     ideSelection,
     mcpClients,
-    isInputWrapped: t1,
-    isNarrow: t2
+    isInputWrapped = false,
+    isNarrow = false,
+    isLoading = false
   } = t0;
-  const isInputWrapped = t1 === undefined ? false : t1;
-  const isNarrow = t2 === undefined ? false : t2;
+  const showVerboseTokenUsage = shouldShowVerboseTokenUsage({
+    apiKeyStatus,
+    verbose,
+    isLoading
+  });
   let t3;
   if ($[0] !== messages) {
     const messagesForTokenCount = getMessagesAfterCompactBoundary(messages);
@@ -174,28 +180,7 @@ export function Notifications(t0) {
   useEffect(t9, t10);
   const t11 = isNarrow ? "flex-start" : "flex-end";
   const t12 = isInOverageMode ?? false;
-  let t13;
-  if ($[15] !== apiKeyStatus || $[16] !== autoUpdaterResult || $[17] !== debug || $[18] !== ideSelection || $[19] !== isAutoUpdating || $[20] !== isShowingCompactMessage || $[21] !== mainLoopModel || $[22] !== mcpClients || $[23] !== notifications || $[24] !== onAutoUpdaterResult || $[25] !== onChangeIsUpdating || $[26] !== shouldShowAutoUpdater || $[27] !== t12 || $[28] !== tokenUsage || $[29] !== verbose) {
-    t13 = <NotificationContent ideSelection={ideSelection} mcpClients={mcpClients} notifications={notifications} isInOverageMode={t12} isTeamOrEnterprise={isTeamOrEnterprise} apiKeyStatus={apiKeyStatus} debug={debug} verbose={verbose} tokenUsage={tokenUsage} mainLoopModel={mainLoopModel} shouldShowAutoUpdater={shouldShowAutoUpdater} autoUpdaterResult={autoUpdaterResult} isAutoUpdating={isAutoUpdating} isShowingCompactMessage={isShowingCompactMessage} onAutoUpdaterResult={onAutoUpdaterResult} onChangeIsUpdating={onChangeIsUpdating} />;
-    $[15] = apiKeyStatus;
-    $[16] = autoUpdaterResult;
-    $[17] = debug;
-    $[18] = ideSelection;
-    $[19] = isAutoUpdating;
-    $[20] = isShowingCompactMessage;
-    $[21] = mainLoopModel;
-    $[22] = mcpClients;
-    $[23] = notifications;
-    $[24] = onAutoUpdaterResult;
-    $[25] = onChangeIsUpdating;
-    $[26] = shouldShowAutoUpdater;
-    $[27] = t12;
-    $[28] = tokenUsage;
-    $[29] = verbose;
-    $[30] = t13;
-  } else {
-    t13 = $[30];
-  }
+  const t13 = <NotificationContent ideSelection={ideSelection} mcpClients={mcpClients} notifications={notifications} isInOverageMode={t12} isTeamOrEnterprise={isTeamOrEnterprise} apiKeyStatus={apiKeyStatus} debug={debug} verbose={verbose} showVerboseTokenUsage={showVerboseTokenUsage} tokenUsage={tokenUsage} mainLoopModel={mainLoopModel} shouldShowAutoUpdater={shouldShowAutoUpdater} autoUpdaterResult={autoUpdaterResult} isAutoUpdating={isAutoUpdating} isShowingCompactMessage={isShowingCompactMessage} onAutoUpdaterResult={onAutoUpdaterResult} onChangeIsUpdating={onChangeIsUpdating} />;
   let t14;
   if ($[31] !== t11 || $[32] !== t13) {
     t14 = <SentryErrorBoundary><Box flexDirection="column" alignItems={t11} flexShrink={0} overflowX="hidden">{t13}</Box></SentryErrorBoundary>;
@@ -222,6 +207,7 @@ function NotificationContent({
   apiKeyStatus,
   debug,
   verbose,
+  showVerboseTokenUsage,
   tokenUsage,
   mainLoopModel,
   shouldShowAutoUpdater,
@@ -242,6 +228,7 @@ function NotificationContent({
   apiKeyStatus: VerificationStatus;
   debug: boolean;
   verbose: boolean;
+  showVerboseTokenUsage: boolean;
   tokenUsage: number;
   mainLoopModel: string;
   shouldShowAutoUpdater: boolean;
@@ -313,7 +300,7 @@ function NotificationContent({
             Debug mode
           </Text>
         </Box>}
-      {apiKeyStatus !== 'invalid' && apiKeyStatus !== 'missing' && verbose && <Box>
+      {showVerboseTokenUsage && <Box>
           <Text dimColor wrap="truncate">
             {tokenUsage} tokens
           </Text>

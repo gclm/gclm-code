@@ -37,7 +37,7 @@ export function SpinnerGlyph(t0) {
     const isDim = Math.floor(time / (REDUCED_MOTION_CYCLE_MS / 2)) % 2 === 1;
     let t4;
     if ($[0] !== isDim || $[1] !== messageColor) {
-      t4 = <Box flexWrap="wrap" height={1} width={2}><Text color={messageColor} dimColor={isDim}>{REDUCED_MOTION_DOT}</Text></Box>;
+      t4 = <Box flexWrap="wrap" height={1} width={1}><Text color={messageColor} dimColor={isDim}>{REDUCED_MOTION_DOT} </Text></Box>;
       $[0] = isDim;
       $[1] = messageColor;
       $[2] = t4;
@@ -52,12 +52,12 @@ export function SpinnerGlyph(t0) {
     const baseRGB = baseColorStr ? parseRGB(baseColorStr) : null;
     if (baseRGB) {
       const interpolated = interpolateColor(baseRGB, ERROR_RED, stalledIntensity);
-      return <Box flexWrap="wrap" height={1} width={2}><Text color={toRGBColor(interpolated)}>{spinnerChar}</Text></Box>;
+      return <Box flexWrap="wrap" height={1} width={1}><Text color={toRGBColor(interpolated)}>{spinnerChar} </Text></Box>;
     }
     const color = stalledIntensity > 0.5 ? "error" : messageColor;
     let t4;
     if ($[3] !== color || $[4] !== spinnerChar) {
-      t4 = <Box flexWrap="wrap" height={1} width={2}><Text color={color}>{spinnerChar}</Text></Box>;
+      t4 = <Box flexWrap="wrap" height={1} width={1}><Text color={color}>{spinnerChar} </Text></Box>;
       $[3] = color;
       $[4] = spinnerChar;
       $[5] = t4;
@@ -68,7 +68,7 @@ export function SpinnerGlyph(t0) {
   }
   let t4;
   if ($[6] !== messageColor || $[7] !== spinnerChar) {
-    t4 = <Box flexWrap="wrap" height={1} width={2}><Text color={messageColor}>{spinnerChar}</Text></Box>;
+    t4 = <Box flexWrap="wrap" height={1} width={1}><Text color={messageColor}>{spinnerChar} </Text></Box>;
     $[6] = messageColor;
     $[7] = spinnerChar;
     $[8] = t4;
