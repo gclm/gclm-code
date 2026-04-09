@@ -362,89 +362,158 @@ describe('env', () => {
     ).toBe('ssh-session')
   })
 
-  test('detects additional terminal fallbacks and non-interactive shells', async () => {
+  test('detects antigravity terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({
         VSCODE_GIT_ASKPASS_MAIN: '/applications/antigravity.app/bin',
       }).terminal,
     ).toBe('antigravity')
+  })
+
+  test('detects codium terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({
         __CFBundleIdentifier: 'com.vscodium.VSCodium',
       }).terminal,
     ).toBe('codium')
+  })
+
+  test('detects windsurf terminal via CFBundleIdentifier', async () => {
     expect(
       evaluateEnvModuleInSubprocess({
         __CFBundleIdentifier: 'com.windsurf.desktop',
       }).terminal,
     ).toBe('windsurf')
+  })
+
+  test('detects visualstudio terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ VisualStudioVersion: '17.0' }).terminal,
     ).toBe('visualstudio')
+  })
+
+  test('detects kitty terminal via TERM', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ TERM: 'xterm-kitty' }).terminal,
     ).toBe('kitty')
+  })
+
+  test('detects WezTerm terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ TERM_PROGRAM: 'WezTerm' }).terminal,
     ).toBe('WezTerm')
+  })
+
+  test('detects screen terminal', async () => {
     expect(evaluateEnvModuleInSubprocess({ STY: '123' }).terminal).toBe('screen')
+  })
+
+  test('detects konsole terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ KONSOLE_VERSION: '230000' }).terminal,
     ).toBe('konsole')
+  })
+
+  test('detects gnome-terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({
         GNOME_TERMINAL_SERVICE: '/org/gnome/Terminal/screen',
       }).terminal,
     ).toBe('gnome-terminal')
+  })
+
+  test('detects xterm terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ XTERM_VERSION: 'XTerm(390)' }).terminal,
     ).toBe('xterm')
+  })
+
+  test('detects vte-based terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ VTE_VERSION: '7003' }).terminal,
     ).toBe('vte-based')
+  })
+
+  test('detects terminator terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({
         TERMINATOR_UUID: 'urn:uuid:test',
       }).terminal,
     ).toBe('terminator')
+  })
+
+  test('detects kitty terminal via KITTY_WINDOW_ID', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ KITTY_WINDOW_ID: '7' }).terminal,
     ).toBe('kitty')
+  })
+
+  test('detects alacritty terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ ALACRITTY_LOG: '/tmp/alacritty.log' })
         .terminal,
     ).toBe('alacritty')
+  })
+
+  test('detects tilix terminal', async () => {
     expect(evaluateEnvModuleInSubprocess({ TILIX_ID: '42' }).terminal).toBe(
       'tilix',
     )
+  })
+
+  test('detects windows terminal', async () => {
     expect(evaluateEnvModuleInSubprocess({ WT_SESSION: '1' }).terminal).toBe(
       'windows-terminal',
     )
+  })
+
+  test('detects cygwin terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({
         SESSIONNAME: 'Console',
         TERM: 'cygwin',
       }).terminal,
     ).toBe('cygwin')
+  })
+
+  test('detects mingw64 terminal', async () => {
     expect(evaluateEnvModuleInSubprocess({ MSYSTEM: 'MINGW64' }).terminal).toBe(
       'mingw64',
     )
+  })
+
+  test('detects conemu terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ ConEmuANSI: 'ON' }).terminal,
     ).toBe('conemu')
+  })
+
+  test('detects wsl terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ WSL_DISTRO_NAME: 'Ubuntu-24.04' })
         .terminal,
     ).toBe('wsl-Ubuntu-24.04')
+  })
+
+  test('detects rxvt terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ TERM: 'rxvt-unicode-256color' }).terminal,
     ).toBe('rxvt')
+  })
+
+  test('detects termite terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ TERM: 'termite-direct' }).terminal,
     ).toBe('termite')
+  })
+
+  test('detects xterm-256color terminal', async () => {
     expect(
       evaluateEnvModuleInSubprocess({ TERM: 'xterm-256color' }).terminal,
     ).toBe('xterm-256color')
+  })
+
+  test('reports non-interactive when no terminal env vars are set', async () => {
     expect(evaluateEnvModuleInSubprocess({}).terminal).toBe('non-interactive')
   })
 
