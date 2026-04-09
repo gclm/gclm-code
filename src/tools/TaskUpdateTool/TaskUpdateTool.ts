@@ -1,4 +1,5 @@
 import { feature } from 'bun:bundle'
+import isEqual from 'lodash-es/isEqual.js'
 import { z } from 'zod/v4'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import { buildTool, type ToolDef } from '../../Tool.js'
@@ -78,12 +79,26 @@ const outputSchema = lazySchema(() =>
         to: z.string(),
       })
       .optional(),
+    noOp: z.boolean().optional(),
+    noOpReason: z.string().optional(),
     verificationNudgeNeeded: z.boolean().optional(),
   }),
 )
 type OutputSchema = ReturnType<typeof outputSchema>
 
 export type Output = z.infer<OutputSchema>
+
+function buildNoOpReason(
+  taskId: string,
+  existingStatus: TaskStatus,
+  requestedStatus?: TaskStatus,
+): string {
+  if (requestedStatus && requestedStatus === existingStatus) {
+    return `Task #${taskId} is already ${existingStatus}. No fields or dependencies changed, so do not repeat the same TaskUpdate unless something actually changed.`
+  }
+
+  return `Task #${taskId} is unchanged. No fields or dependencies changed, so do not repeat the same TaskUpdate unless something actually changed.`
+}
 
 export const TaskUpdateTool = buildTool({
   name: TASK_UPDATE_TOOL_NAME,
@@ -206,8 +221,10 @@ export const TaskUpdateTool = buildTool({
           merged[key] = value
         }
       }
-      updates.metadata = merged
-      updatedFields.push('metadata')
+      if (!isEqual(merged, existingTask.metadata ?? {})) {
+        updates.metadata = merged
+        updatedFields.push('metadata')
+      }
     }
     if (status !== undefined) {
       // Handle deletion - delete the task file and return early
@@ -269,6 +286,30 @@ export const TaskUpdateTool = buildTool({
       }
     }
 
+    const newBlocks = addBlocks?.filter(id => !existingTask.blocks.includes(id)) ?? []
+    const newBlockedBy =
+      addBlockedBy?.filter(id => !existingTask.blockedBy.includes(id)) ?? []
+
+    if (
+      Object.keys(updates).length === 0 &&
+      newBlocks.length === 0 &&
+      newBlockedBy.length === 0
+    ) {
+      return {
+        data: {
+          success: true,
+          taskId,
+          updatedFields: [],
+          noOp: true,
+          noOpReason: buildNoOpReason(
+            taskId,
+            existingTask.status,
+            status === 'deleted' ? undefined : status,
+          ),
+        },
+      }
+    }
+
     if (Object.keys(updates).length > 0) {
       await updateTask(taskListId, taskId, updates)
     }
@@ -298,29 +339,19 @@ export const TaskUpdateTool = buildTool({
     }
 
     // Add blocks if provided and not already present
-    if (addBlocks && addBlocks.length > 0) {
-      const newBlocks = addBlocks.filter(
-        id => !existingTask.blocks.includes(id),
-      )
+    if (newBlocks.length > 0) {
       for (const blockId of newBlocks) {
         await blockTask(taskListId, taskId, blockId)
       }
-      if (newBlocks.length > 0) {
-        updatedFields.push('blocks')
-      }
+      updatedFields.push('blocks')
     }
 
     // Add blockedBy if provided and not already present (reverse: the blocker blocks this task)
-    if (addBlockedBy && addBlockedBy.length > 0) {
-      const newBlockedBy = addBlockedBy.filter(
-        id => !existingTask.blockedBy.includes(id),
-      )
+    if (newBlockedBy.length > 0) {
       for (const blockerId of newBlockedBy) {
         await blockTask(taskListId, blockerId, taskId)
       }
-      if (newBlockedBy.length > 0) {
-        updatedFields.push('blockedBy')
-      }
+      updatedFields.push('blockedBy')
     }
 
     // Structural verification nudge: if the main-thread agent just closed
@@ -368,6 +399,8 @@ export const TaskUpdateTool = buildTool({
       updatedFields,
       error,
       statusChange,
+      noOp,
+      noOpReason,
       verificationNudgeNeeded,
     } = content as Output
     if (!success) {
@@ -378,6 +411,14 @@ export const TaskUpdateTool = buildTool({
         tool_use_id: toolUseID,
         type: 'tool_result',
         content: error || `Task #${taskId} not found`,
+      }
+    }
+
+    if (noOp) {
+      return {
+        tool_use_id: toolUseID,
+        type: 'tool_result',
+        content: noOpReason ?? `Task #${taskId} is unchanged.`,
       }
     }
 
