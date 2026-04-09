@@ -11,6 +11,7 @@ import type {
   Hello2ccSessionState,
   ToolMemoryRecord,
 } from './types.js'
+import { recordFileEditFailure } from './fileEditProtection.js'
 
 const MAX_MEMORY_RECORDS = 5
 const sessionStateStore = new Map<string, Hello2ccSessionState>()
@@ -40,8 +41,6 @@ export function buildCapabilitySnapshot({
   webSearchRequests,
   provider,
   strategyProfile,
-  qualityGateMode,
-  providerPoliciesEnabled,
 }: {
   cwd: string
   agentType?: string
@@ -56,8 +55,6 @@ export function buildCapabilitySnapshot({
   webSearchRequests?: number
   provider?: string
   strategyProfile?: 'balanced' | 'strict'
-  qualityGateMode?: 'off' | 'advisory' | 'strict'
-  providerPoliciesEnabled?: boolean
 }): CapabilitySnapshot {
   const toolNames = buildToolNames()
   return {
@@ -76,9 +73,7 @@ export function buildCapabilitySnapshot({
     webSearchAvailable: webSearchAvailable ?? false,
     webSearchRequests: webSearchRequests ?? 0,
     provider,
-    strategyProfile: strategyProfile ?? 'balanced',
-    qualityGateMode: qualityGateMode ?? 'advisory',
-    providerPoliciesEnabled: providerPoliciesEnabled ?? true,
+    profile: strategyProfile ?? 'balanced',
     agentType,
     model,
   }
@@ -110,8 +105,6 @@ export function ensureHello2ccSessionState({
   webSearchRequests,
   provider,
   strategyProfile,
-  qualityGateMode,
-  providerPoliciesEnabled,
 }: {
   sessionId: string
   cwd: string
@@ -127,8 +120,6 @@ export function ensureHello2ccSessionState({
   webSearchRequests?: number
   provider?: string
   strategyProfile?: 'balanced' | 'strict'
-  qualityGateMode?: 'off' | 'advisory' | 'strict'
-  providerPoliciesEnabled?: boolean
 }): Hello2ccSessionState {
   const existing = sessionStateStore.get(sessionId)
   const capabilities = mergeCapabilities(
@@ -147,22 +138,18 @@ export function ensureHello2ccSessionState({
       webSearchRequests,
       provider,
       strategyProfile,
-      qualityGateMode,
-      providerPoliciesEnabled,
     }),
   )
 
   const nextState: Hello2ccSessionState = existing
-    ? {
-        ...existing,
-        capabilities,
-      }
+    ? { ...existing, capabilities }
     : {
         sessionId,
         capabilities,
         toolFailureCounts: {},
         recentSuccesses: [],
         recentFailures: [],
+        fileEditFailures: [],
       }
 
   sessionStateStore.set(sessionId, nextState)
@@ -181,10 +168,7 @@ export function updateHello2ccSessionState(
 ): Hello2ccSessionState {
   const current =
     sessionStateStore.get(sessionId) ??
-    ensureHello2ccSessionState({
-      sessionId,
-      cwd: process.cwd(),
-    })
+    ensureHello2ccSessionState({ sessionId, cwd: process.cwd() })
   const next = updater(current)
   sessionStateStore.set(sessionId, next)
   return next
@@ -196,10 +180,7 @@ export function rememberIntentProfile(
 ): Hello2ccSessionState | undefined {
   const current = sessionStateStore.get(sessionId)
   if (!current) return undefined
-  const next = {
-    ...current,
-    lastIntent: intentProfile,
-  }
+  const next = { ...current, lastIntent: intentProfile }
   sessionStateStore.set(sessionId, next)
   return next
 }
@@ -210,10 +191,7 @@ export function rememberRouteGuidance(
 ): Hello2ccSessionState | undefined {
   const current = sessionStateStore.get(sessionId)
   if (!current) return undefined
-  const next = {
-    ...current,
-    lastRouteGuidance: routeGuidance,
-  }
+  const next = { ...current, lastRouteGuidance: routeGuidance }
   sessionStateStore.set(sessionId, next)
   return next
 }
@@ -237,29 +215,17 @@ function upsertMemoryRecord(
   const updatedAt = new Date().toISOString()
 
   if (existing) {
-    const merged = records.map(record =>
-      record.signature === signature
-        ? {
-            ...record,
-            summary,
-            updatedAt,
-            count: record.count + 1,
-          }
-        : record,
-    )
-    return merged.sort((left, right) =>
-      right.updatedAt.localeCompare(left.updatedAt),
-    )
+    return records
+      .map(record =>
+        record.signature === signature
+          ? { ...record, summary, updatedAt, count: record.count + 1 }
+          : record,
+      )
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   }
 
   return [
-    {
-      toolName,
-      signature,
-      summary,
-      count: 1,
-      updatedAt,
-    },
+    { toolName, signature, summary, count: 1, updatedAt },
     ...records,
   ].slice(0, MAX_MEMORY_RECORDS)
 }
@@ -274,16 +240,8 @@ export function rememberToolSuccess(
   if (!current) return undefined
   const next = {
     ...current,
-    toolFailureCounts: {
-      ...current.toolFailureCounts,
-      [toolName]: 0,
-    },
-    recentSuccesses: upsertMemoryRecord(
-      current.recentSuccesses,
-      toolName,
-      detail,
-      summary,
-    ),
+    toolFailureCounts: { ...current.toolFailureCounts, [toolName]: 0 },
+    recentSuccesses: upsertMemoryRecord(current.recentSuccesses, toolName, detail, summary),
   }
   sessionStateStore.set(sessionId, next)
   return next
@@ -297,21 +255,21 @@ export function rememberToolFailure(
 ): Hello2ccSessionState | undefined {
   const current = sessionStateStore.get(sessionId)
   if (!current) return undefined
-  const next = {
-    ...current,
+
+  // Track file edit failures
+  const nextState = recordFileEditFailure(current, toolName, detail, summary)
+  const stateToUpdate = nextState ?? current
+
+  const updated = {
+    ...stateToUpdate,
     toolFailureCounts: {
-      ...current.toolFailureCounts,
-      [toolName]: (current.toolFailureCounts[toolName] ?? 0) + 1,
+      ...stateToUpdate.toolFailureCounts,
+      [toolName]: (stateToUpdate.toolFailureCounts[toolName] ?? 0) + 1,
     },
-    recentFailures: upsertMemoryRecord(
-      current.recentFailures,
-      toolName,
-      detail,
-      summary,
-    ),
+    recentFailures: upsertMemoryRecord(stateToUpdate.recentFailures, toolName, detail, summary),
   }
-  sessionStateStore.set(sessionId, next)
-  return next
+  sessionStateStore.set(sessionId, updated)
+  return updated
 }
 
 export function clearHello2ccSessionState(sessionId: string): void {
@@ -323,22 +281,18 @@ export function snapshotHello2ccSessionState(
 ): PersistedHello2ccSessionState {
   return {
     ...state,
-    capabilities: {
-      ...state.capabilities,
-      toolNames: [...state.capabilities.toolNames],
-    },
+    capabilities: { ...state.capabilities, toolNames: [...state.capabilities.toolNames] },
     toolFailureCounts: { ...state.toolFailureCounts },
-    recentSuccesses: state.recentSuccesses.map(record => ({ ...record })),
-    recentFailures: state.recentFailures.map(record => ({ ...record })),
+    recentSuccesses: state.recentSuccesses.map(r => ({ ...r })),
+    recentFailures: state.recentFailures.map(r => ({ ...r })),
+    fileEditFailures: state.fileEditFailures.map(f => ({ ...f })),
   }
 }
 
 export function restoreHello2ccSessionState(
   state: PersistedHello2ccSessionState | undefined,
 ): Hello2ccSessionState | undefined {
-  if (!state) {
-    return undefined
-  }
+  if (!state) return undefined
   const restored = snapshotHello2ccSessionState(state)
   sessionStateStore.set(restored.sessionId, restored)
   return restored

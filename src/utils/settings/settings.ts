@@ -341,46 +341,6 @@ export function buildRecommendedHello2ccProjectSettings(
     hello2cc: {
       resumeSummaryStyle: 'compact',
       strategyProfile: 'balanced',
-      qualityGateMode: 'advisory',
-      enableProviderPolicies: true,
-      extraStrategies: [
-        {
-          id: 'gclm-code-default-long-task',
-          priority: 90,
-          scope: {
-            cwdPrefixes: [resolve(cwd)],
-            strategyProfiles: ['balanced', 'strict'],
-            qualityGateModes: ['advisory', 'strict'],
-          },
-          activation: {
-            intents: ['implement', 'verify', 'plan'],
-            minRetryPressure: 2,
-          },
-          sessionStartLines: [
-            '- project default: keep Gateway long tasks phase-oriented, resume-friendly, and biased toward execution-surface reuse.',
-          ],
-          routeRecommendations: [
-            'Prefer SendMessage or reuse of the active team/worktree before creating another parallel branch.',
-            'If retries are accumulating, switch to diagnosis or verification before another implementation hop.',
-          ],
-          subagentGuidance: {
-            toolNames: ['Agent'],
-            shapingNotes: [
-              'For this repository, long-running Agent tasks should stay phase-scoped and always report touched files plus validation evidence.',
-            ],
-          },
-          preconditions: [
-            {
-              toolNames: ['SendMessage'],
-              requireActiveTeam: true,
-              block: false,
-              notes: [
-                'Project default: an active team already exists, so prefer reusing it rather than spinning up another parallel group.',
-              ],
-            },
-          ],
-        },
-      ],
     },
   }
 }
@@ -1152,61 +1112,6 @@ export function getHello2ccResumeSummaryStyle(): 'detailed' | 'compact' {
 
 export function getHello2ccStrategyProfile(): 'balanced' | 'strict' {
   return getInitialSettings().hello2cc?.strategyProfile ?? 'balanced'
-}
-
-export function getHello2ccQualityGateMode():
-  | 'off'
-  | 'advisory'
-  | 'strict' {
-  return getInitialSettings().hello2cc?.qualityGateMode ?? 'advisory'
-}
-
-export function isHello2ccProviderPoliciesEnabled(): boolean {
-  return getInitialSettings().hello2cc?.enableProviderPolicies ?? true
-}
-
-export function getHello2ccExtraStrategies():
-  | Array<{
-      id: string
-      enabled?: boolean
-      priority?: number
-      activation?: {
-        intents?: Array<
-          'implement' | 'review' | 'verify' | 'plan' | 'explore' | 'other'
-        >
-        minRetryPressure?: number
-        requireActiveTeam?: boolean
-        requireActiveWorktree?: boolean
-      }
-      sessionStartLines?: string[]
-      routeRecommendations?: string[]
-      subagentGuidance?: {
-        toolNames?: string[]
-        subagentType?: 'Explore' | 'Plan'
-        note?: string
-        shapingNotes?: string[]
-      }
-      preconditions?: Array<{
-        toolNames?: string[]
-        minRetryPressure?: number
-        repeatedFailureCountAtLeast?: number
-        requireActiveTeam?: boolean
-        requireActiveWorktree?: boolean
-        block?: boolean
-        reason?: string
-        notes?: string[]
-      }>
-      scope?: {
-        sessionIds?: string[]
-        cwdPrefixes?: string[]
-        providers?: string[]
-        modelPatterns?: string[]
-        strategyProfiles?: Array<'balanced' | 'strict'>
-        qualityGateModes?: Array<'off' | 'advisory' | 'strict'>
-      }
-    }>
-  | undefined {
-  return getInitialSettings().hello2cc?.extraStrategies
 }
 
 export function rawSettingsContainsKey(key: string): boolean {

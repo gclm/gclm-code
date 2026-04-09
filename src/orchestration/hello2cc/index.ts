@@ -3,7 +3,6 @@ import { saveHello2ccState } from '../../utils/sessionStorage.js'
 import { getCwd } from '../../utils/cwd.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { extractTextContent } from '../../utils/messages.js'
-import { getHello2ccExtraStrategies } from '../../utils/settings/settings.js'
 import { analyzeIntentProfile } from './intentProfile.js'
 import {
   buildRouteGuidance,
@@ -21,40 +20,11 @@ import {
   snapshotHello2ccSessionState,
   updateHello2ccSessionState,
 } from './sessionState.js'
-import {
-  createHello2ccStrategyFromConfig,
-  registerHello2ccStrategy,
-  unregisterHello2ccStrategy,
-} from './strategy.js'
 import { normalizeToolInput } from './toolNormalization.js'
 import { checkToolPreconditions } from './preconditions.js'
 
 export { registerHello2ccHooks } from './hooks.js'
 export { restoreHello2ccSessionState } from './sessionState.js'
-export { registerHello2ccStrategy } from './strategy.js'
-
-let syncedConfiguredStrategyIds = new Set<string>()
-
-function syncConfiguredHello2ccStrategies(): void {
-  const configuredStrategies = getHello2ccExtraStrategies() ?? []
-  const nextConfiguredStrategyIds = new Set<string>()
-
-  for (const strategy of configuredStrategies) {
-    if (strategy.enabled === false) {
-      continue
-    }
-    nextConfiguredStrategyIds.add(strategy.id)
-    registerHello2ccStrategy(createHello2ccStrategyFromConfig(strategy))
-  }
-
-  for (const strategyId of syncedConfiguredStrategyIds) {
-    if (!nextConfiguredStrategyIds.has(strategyId)) {
-      unregisterHello2ccStrategy(strategyId)
-    }
-  }
-
-  syncedConfiguredStrategyIds = nextConfiguredStrategyIds
-}
 
 function summarizeToolPayload(payload: unknown): string {
   if (typeof payload === 'string') {
@@ -115,13 +85,10 @@ export function buildGatewayOrchestrationContext(params: {
   webSearchRequests?: number
   provider?: string
   strategyProfile?: 'balanced' | 'strict'
-  qualityGateMode?: 'off' | 'advisory' | 'strict'
-  providerPoliciesEnabled?: boolean
 }): {
   userContext: Record<string, string>
   systemContext: Record<string, string>
 } {
-  syncConfiguredHello2ccStrategies()
   const sessionId = getSessionId()
   const sessionState = ensureHello2ccSessionState({
     sessionId,
@@ -137,8 +104,6 @@ export function buildGatewayOrchestrationContext(params: {
     webSearchRequests: params.webSearchRequests,
     provider: params.provider,
     strategyProfile: params.strategyProfile,
-    qualityGateMode: params.qualityGateMode,
-    providerPoliciesEnabled: params.providerPoliciesEnabled,
   })
   const latestPrompt = getLatestPromptText(params.messages)
   if (!latestPrompt) {
@@ -164,8 +129,6 @@ export function buildGatewayOrchestrationContext(params: {
       webSearchRequests: snapshot.hostFacts.webSearchRequests,
       provider: snapshot.hostFacts.provider,
       strategyProfile: snapshot.hostFacts.strategyProfile,
-      qualityGateMode: snapshot.hostFacts.qualityGateMode,
-      activeStrategies: snapshot.strategySurface.activeStrategyIds,
       activeTeamName: snapshot.sessionAnchors.activeTeamName,
       recentSuccessCount: snapshot.memoryPressure.recentSuccessCount,
       recentFailureCount: snapshot.memoryPressure.recentFailureCount,
@@ -189,7 +152,6 @@ export function normalizeGatewayToolInput(params: {
   toolName: string
   input: Record<string, unknown>
 }): Record<string, unknown> {
-  syncConfiguredHello2ccStrategies()
   const sessionState = ensureHello2ccSessionState({
     sessionId: getSessionId(),
     cwd: getCwd(),
@@ -214,7 +176,6 @@ export function checkGatewayToolPreconditions(params: {
   blocked: boolean
   reason?: string
 } {
-  syncConfiguredHello2ccStrategies()
   const sessionState = ensureHello2ccSessionState({
     sessionId: getSessionId(),
     cwd: getCwd(),
@@ -240,7 +201,6 @@ export function rememberGatewayToolSuccess(params: {
   input: Record<string, unknown>
   output: unknown
 }): void {
-  syncConfiguredHello2ccStrategies()
   const sessionId = getSessionId()
   const nextState = rememberToolSuccess(
     sessionId,
@@ -287,7 +247,6 @@ export function rememberGatewayToolFailure(params: {
   input: Record<string, unknown>
   error: string
 }): void {
-  syncConfiguredHello2ccStrategies()
   const nextState = rememberToolFailure(
     getSessionId(),
     params.toolName,
@@ -305,6 +264,5 @@ export function rememberGatewayToolFailure(params: {
 }
 
 export function getGatewayOrchestrationState() {
-  syncConfiguredHello2ccStrategies()
   return getHello2ccSessionState(getSessionId())
 }

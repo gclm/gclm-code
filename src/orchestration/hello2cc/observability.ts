@@ -1,5 +1,4 @@
 import type { Hello2ccSessionState } from './types.js'
-import { getApplicableHello2ccStrategies } from './strategy.js'
 
 type Hello2ccObservabilitySnapshot = {
   hostFacts: {
@@ -15,30 +14,25 @@ type Hello2ccObservabilitySnapshot = {
     webSearchAvailable: boolean
     webSearchRequests: number
     provider?: string
-    strategyProfile?: 'balanced' | 'strict'
-    qualityGateMode?: 'off' | 'advisory' | 'strict'
-    providerPoliciesEnabled?: boolean
+    strategyProfile: 'balanced' | 'strict'
   }
   sessionAnchors: {
     intent?: string
     activeTeamName?: string
     activeWorktreePath?: string
   }
-  strategySurface: {
-    activeStrategyIds: string[]
-  }
   memoryPressure: {
     recentSuccessCount: number
     recentFailureCount: number
     totalRetries: number
     topFailureTool?: string
+    fileEditFailures: number
   }
 }
 
 export function buildHello2ccObservabilitySnapshot(
   state: Hello2ccSessionState,
 ): Hello2ccObservabilitySnapshot {
-  const { strategies } = getApplicableHello2ccStrategies(state)
   const totalRetries = Object.values(state.toolFailureCounts).reduce(
     (sum, count) => sum + count,
     0,
@@ -61,23 +55,19 @@ export function buildHello2ccObservabilitySnapshot(
       webSearchAvailable: state.capabilities.webSearchAvailable,
       webSearchRequests: state.capabilities.webSearchRequests,
       provider: state.capabilities.provider,
-      strategyProfile: state.capabilities.strategyProfile,
-      qualityGateMode: state.capabilities.qualityGateMode,
-      providerPoliciesEnabled: state.capabilities.providerPoliciesEnabled,
+      strategyProfile: state.capabilities.profile,
     },
     sessionAnchors: {
       intent: state.lastIntent?.primaryIntent,
       activeTeamName: state.activeTeamName,
       activeWorktreePath: state.activeWorktreePath,
     },
-    strategySurface: {
-      activeStrategyIds: strategies.map(strategy => strategy.id),
-    },
     memoryPressure: {
       recentSuccessCount: state.recentSuccesses.length,
       recentFailureCount: state.recentFailures.length,
       totalRetries,
       topFailureTool: topFailureEntry?.[0],
+      fileEditFailures: state.fileEditFailures.length,
     },
   }
 }
@@ -91,7 +81,7 @@ export function formatHello2ccHostFacts(
     `MCP connected=${hostFacts.mcp.connected}, auth=${hostFacts.mcp.needsAuth}, pending=${hostFacts.mcp.pending}, failed=${hostFacts.mcp.failed}`,
     `tool search optimistic=${hostFacts.toolSearchOptimistic ? 'yes' : 'no'}`,
     `web search available=${hostFacts.webSearchAvailable ? 'yes' : 'no'}, requests=${hostFacts.webSearchRequests}`,
-    `provider=${hostFacts.provider ?? 'unknown'}, strategy=${hostFacts.strategyProfile ?? 'balanced'}, qualityGate=${hostFacts.qualityGateMode ?? 'advisory'}`,
+    `provider=${hostFacts.provider ?? 'unknown'}, strategy=${hostFacts.strategyProfile}`,
   ]
 
   if (hostFacts.availableSubagentTypes.length > 0) {
@@ -122,10 +112,8 @@ export function formatHello2ccRoutingPosture(
     posture.push(`topFailureTool=${snapshot.memoryPressure.topFailureTool}`)
   }
 
-  if (snapshot.strategySurface.activeStrategyIds.length > 0) {
-    posture.push(
-      `strategies=${snapshot.strategySurface.activeStrategyIds.join(',')}`,
-    )
+  if (snapshot.memoryPressure.fileEditFailures > 0) {
+    posture.push(`fileEditFailures=${snapshot.memoryPressure.fileEditFailures}`)
   }
 
   return posture
@@ -141,7 +129,6 @@ export function buildHello2ccDebugDump(
       sessionId: state.sessionId,
       hostFacts: snapshot.hostFacts,
       sessionAnchors: snapshot.sessionAnchors,
-      strategySurface: snapshot.strategySurface,
       memoryPressure: snapshot.memoryPressure,
       recentSuccesses: state.recentSuccesses.slice(0, 5).map(record => ({
         toolName: record.toolName,
@@ -154,6 +141,11 @@ export function buildHello2ccDebugDump(
         count: record.count,
       })),
       toolFailureCounts: state.toolFailureCounts,
+      fileEditFailures: state.fileEditFailures.slice(0, 5).map(f => ({
+        filePath: f.filePath,
+        errorType: f.errorType,
+        count: f.count,
+      })),
     },
     null,
     2,
@@ -182,7 +174,8 @@ function getHello2ccDiagnosticSeverity(
 
   if (
     snapshot.hostFacts.mcp.needsAuth > 0 ||
-    snapshot.memoryPressure.recentFailureCount > 0
+    snapshot.memoryPressure.recentFailureCount > 0 ||
+    snapshot.memoryPressure.fileEditFailures > 0
   ) {
     return 'medium'
   }
@@ -229,6 +222,12 @@ function buildHello2ccDetectedAnomalies(
     anomalies.push('tool search confidence is low, so routing may need more explicit tool names')
   }
 
+  if (snapshot.memoryPressure.fileEditFailures > 0) {
+    anomalies.push(
+      `${snapshot.memoryPressure.fileEditFailures} file edit failure signature(s) tracked`,
+    )
+  }
+
   return anomalies
 }
 
@@ -270,10 +269,6 @@ function buildHello2ccSuggestedActions(
       'keep tool routing explicit by naming the target tool and the expected output shape in the prompt',
     )
   }
-
-  actions.push(
-    'use `/hello2cc both` when you want the human summary plus the raw JSON snapshot for AI-assisted diagnosis',
-  )
 
   return actions
 }

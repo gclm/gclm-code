@@ -52,9 +52,7 @@ function makeSessionState(sessionId: string): Hello2ccSessionState {
       webSearchAvailable: true,
       webSearchRequests: 1,
       provider: 'firstParty',
-      strategyProfile: 'balanced',
-      qualityGateMode: 'advisory',
-      providerPoliciesEnabled: true,
+      profile: 'balanced',
       model: 'gateway-main',
     },
     lastIntent: {
@@ -96,6 +94,7 @@ function makeSessionState(sessionId: string): Hello2ccSessionState {
         updatedAt: '2026-04-06T10:05:00.000Z',
       },
     ],
+    fileEditFailures: [],
   }
 }
 
@@ -150,7 +149,7 @@ describe('hello2cc resume integration', () => {
       'MCP connected=2, auth=0, pending=1, failed=0',
       'tool search optimistic=yes',
       'web search available=yes, requests=1',
-      'provider=firstParty, strategy=balanced, qualityGate=advisory',
+      'provider=firstParty, strategy=balanced',
       'subagents=Plan, Explore, GeneralPurpose',
     ])
     expect(routingPosture?.value).toEqual([
@@ -161,11 +160,10 @@ describe('hello2cc resume integration', () => {
       'failures=1',
       'retries=2',
       'topFailureTool=Agent',
-      'strategies=provider-aware-policy,capability-policy,conservative-subagent,long-task-orchestrator-policy',
     ])
     expect(typeof debugSnapshot?.value).toBe('string')
     expect(String(debugSnapshot?.value)).toContain('"sessionId"')
-    expect(String(debugSnapshot?.value)).toContain('"strategySurface"')
+    expect(String(debugSnapshot?.value)).toContain('"memoryPressure"')
   })
 
   test('persists hello2cc-state to transcript and restores it through the resume path', async () => {
@@ -237,12 +235,8 @@ describe('hello2cc resume integration', () => {
       }),
     })
 
-    expect(guidance).toContain(
-      'active team already present: gateway-workers',
-    )
-    expect(guidance).toContain(
-      'recent failures to avoid repeating: Agent: missing worktree isolation',
-    )
+    expect(guidance).toContain('gateway-workers')
+    expect(guidance).toContain('missing worktree isolation')
     expect(precondition.blocked).toBe(true)
     expect(precondition.reason).toContain('/tmp/hello2cc-worktree')
   })

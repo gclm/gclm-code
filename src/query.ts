@@ -115,9 +115,7 @@ import { count } from './utils/array.js'
 import { isToolSearchEnabledOptimistic } from './utils/toolSearch.js'
 import { getAPIProvider } from './utils/model/providers.js'
 import {
-  getHello2ccQualityGateMode,
   getHello2ccStrategyProfile,
-  isHello2ccProviderPoliciesEnabled,
 } from './utils/settings/settings.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -497,8 +495,6 @@ async function* queryLoop(
       webSearchRequests: getTotalWebSearchRequests(),
       provider: getAPIProvider(),
       strategyProfile: getHello2ccStrategyProfile(),
-      qualityGateMode: getHello2ccQualityGateMode(),
-      providerPoliciesEnabled: isHello2ccProviderPoliciesEnabled(),
     })
 
     const fullSystemPrompt = asSystemPrompt(

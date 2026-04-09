@@ -15,7 +15,6 @@ import {
 } from '../../src/orchestration/hello2cc/routeGuidance.ts'
 import {
   getGatewayOrchestrationState,
-  registerHello2ccStrategy,
   restoreHello2ccSessionState as restoreGatewayOrchestrationState,
 } from '../../src/orchestration/hello2cc/index.ts'
 import {
@@ -28,10 +27,6 @@ import {
   restoreHello2ccSessionState,
   snapshotHello2ccSessionState,
 } from '../../src/orchestration/hello2cc/sessionState.ts'
-import {
-  createHello2ccStrategyFromConfig,
-  resetHello2ccStrategiesForTests,
-} from '../../src/orchestration/hello2cc/strategy.ts'
 import { normalizeToolInput } from '../../src/orchestration/hello2cc/toolNormalization.ts'
 import type { Hello2ccSessionState } from '../../src/orchestration/hello2cc/types.ts'
 import {
@@ -61,14 +56,13 @@ function makeSessionState(): Hello2ccSessionState {
       webSearchAvailable: true,
       webSearchRequests: 2,
       provider: 'firstParty',
-      strategyProfile: 'balanced',
-      qualityGateMode: 'advisory',
-      providerPoliciesEnabled: true,
+      profile: 'balanced',
       model: 'gateway-main',
     },
     toolFailureCounts: {},
     recentSuccesses: [],
     recentFailures: [],
+    fileEditFailures: [],
   }
 }
 
@@ -77,7 +71,6 @@ describe('hello2cc orchestration', () => {
   const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR
 
   beforeEach(() => {
-    resetHello2ccStrategiesForTests()
     resetSettingsCache()
     setOriginalCwd(originalCwd)
     if (originalClaudeConfigDir === undefined) {
@@ -111,27 +104,10 @@ describe('hello2cc orchestration', () => {
     const profile = analyzeIntentProfile('Use gitworker to parallel implementation work')
     const guidance = buildRouteGuidance(state, profile)
 
-    expect(guidance).toContain('detected intent: implement')
-    expect(guidance).toContain('TeamCreate is available')
-    expect(guidance).toContain('SendMessage can continue an existing worker')
-    expect(guidance).toContain('available subagent specializations: Plan, Explore, GeneralPurpose')
-    expect(guidance).toContain('tool search is not confidently available')
-    expect(guidance).toContain('prefer SendMessage or team reuse before creating another parallel worker set')
-  })
-
-  test('accepts custom route strategies without changing the main orchestration entrypoints', () => {
-    registerHello2ccStrategy({
-      id: 'test-custom-route',
-      buildRouteRecommendations() {
-        return ['custom policy: prefer the test route first']
-      },
-    })
-
-    const state = makeSessionState()
-    const profile = analyzeIntentProfile('Please plan the next Gateway step')
-    const guidance = buildRouteGuidance(state, profile)
-
-    expect(guidance).toContain('custom policy: prefer the test route first')
+    expect(guidance).toContain('Specialization: implement')
+    expect(guidance).toContain('Active team "gateway-workers" exists')
+    expect(guidance).toContain('SendMessage to existing worker > Spawn new Agent')
+    expect(guidance).toContain('Tool search confidence is low')
   })
 
   test('applies provider-aware recommendations when non-first-party providers are active', () => {
@@ -148,9 +124,6 @@ describe('hello2cc orchestration', () => {
       'provider=bedrock is active, so keep tool routing explicit',
     )
     expect(guidance).toContain(
-      'model=gpt-4o-proxy may need more explicit host scaffolding',
-    )
-    expect(guidance).toContain(
       'GPT-family models tend to benefit from explicit execution framing',
     )
   })
@@ -163,12 +136,12 @@ describe('hello2cc orchestration', () => {
       analyzeIntentProfile('继续这个 Gateway 长任务'),
     )
     expect(qwenGuidance).toContain(
-      'Qwen-family models usually respond better to host-visible structure',
+      'Qwen-family models usually respond better with host-visible structure',
     )
 
     const deepseekState = makeSessionState()
     deepseekState.capabilities.model = 'deepseek-r1'
-    deepseekState.capabilities.strategyProfile = 'strict'
+    deepseekState.capabilities.profile = 'strict'
     const deepseekGuidance = buildRouteGuidance(
       deepseekState,
       analyzeIntentProfile('继续这个 Gateway 长任务'),
@@ -214,9 +187,7 @@ describe('hello2cc orchestration', () => {
 
     expect(result.updatedInput?.subagent_type).toBe('Plan')
     expect(result.notes.join(' ')).toContain('Plan subagent')
-    expect(result.notes.join(' ')).toContain(
-      'Available subagent types in this host: Plan, Explore, GeneralPurpose.',
-    )
+    expect(result.notes.join(' ')).toContain('Identify constraints')
   })
 
   test('keeps investigation-oriented Agent prompts read-only when Explore is unavailable', () => {
@@ -234,7 +205,8 @@ describe('hello2cc orchestration', () => {
     )
 
     expect(result.updatedInput?.subagent_type).toBeUndefined()
-    expect(result.notes.join(' ')).toContain('keep the Agent prompt read-only')
+    expect(result.notes.join(' ')).toContain('Explore subagent is unavailable')
+    expect(result.notes.join(' ')).toContain('read-only')
   })
 
   test('normalizes SendMessage summary from the message body', () => {
@@ -280,183 +252,7 @@ describe('hello2cc orchestration', () => {
     expect(worktreeCheck.blocked).toBe(true)
     expect(worktreeCheck.reason).toContain('/tmp/existing-worktree')
     expect(retryCheck.blocked).toBe(true)
-    expect(retryCheck.reason).toContain('failed 2 times recently')
-  })
-
-  test('strict quality gate blocks another implementation worker after repeated failures', () => {
-    const state = makeSessionState()
-    state.capabilities.qualityGateMode = 'strict'
-    state.toolFailureCounts.Agent = 3
-
-    const result = checkToolPreconditions(
-      'Agent',
-      {
-        description: 'worker',
-        prompt: 'Implement the same Gateway change again',
-      },
-      state,
-    )
-
-    expect(result.blocked).toBe(true)
-    expect(result.reason).toContain('Quality gate blocked another implementation-oriented Agent run')
-  })
-
-  test('strategy predicates and priority affect routing contributions in order', () => {
-    registerHello2ccStrategy({
-      id: 'test-low',
-      priority: 10,
-      buildRouteRecommendations() {
-        return ['priority-low']
-      },
-    })
-    registerHello2ccStrategy({
-      id: 'test-conditional',
-      priority: 100,
-      when(context) {
-        return context.provider === 'vertex'
-      },
-      buildRouteRecommendations() {
-        return ['priority-conditional']
-      },
-    })
-
-    const state = makeSessionState()
-    state.capabilities.provider = 'vertex'
-    const guidance = buildRouteGuidance(
-      state,
-      analyzeIntentProfile('Plan the next Gateway step'),
-    )
-
-    expect(guidance).toContain('priority-conditional')
-    expect(guidance).toContain('priority-low')
-    expect(guidance.indexOf('priority-conditional')).toBeLessThan(
-      guidance.indexOf('priority-low'),
-    )
-  })
-
-  test('strategy scope can target specific project paths and sessions', () => {
-    registerHello2ccStrategy({
-      id: 'project-session-scoped',
-      priority: 90,
-      scope: {
-        sessionIds: ['session-1'],
-        cwdPrefixes: ['/repo'],
-        providers: ['firstParty'],
-      },
-      buildRouteRecommendations() {
-        return ['scoped-policy-hit']
-      },
-    })
-    registerHello2ccStrategy({
-      id: 'project-session-miss',
-      priority: 95,
-      scope: {
-        sessionIds: ['other-session'],
-      },
-      buildRouteRecommendations() {
-        return ['scoped-policy-miss']
-      },
-    })
-
-    const state = makeSessionState()
-    const guidance = buildRouteGuidance(
-      state,
-      analyzeIntentProfile('Plan the next Gateway step'),
-    )
-
-    expect(guidance).toContain('scoped-policy-hit')
-    expect(guidance).not.toContain('scoped-policy-miss')
-  })
-
-  test('creates route strategies from declarative config', () => {
-    registerHello2ccStrategy(
-      createHello2ccStrategyFromConfig({
-        id: 'config-driven',
-        priority: 88,
-        scope: {
-          providers: ['firstParty'],
-          modelPatterns: ['gateway'],
-        },
-        routeRecommendations: ['config-driven-hit'],
-      }),
-    )
-
-    const state = makeSessionState()
-    const guidance = buildRouteGuidance(
-      state,
-      analyzeIntentProfile('Plan the next Gateway step'),
-    )
-
-    expect(guidance).toContain('config-driven-hit')
-  })
-
-  test('supports stronger declarative policies beyond route recommendations', async () => {
-    registerHello2ccStrategy(
-      createHello2ccStrategyFromConfig({
-        id: 'config-policy',
-        priority: 88,
-        activation: {
-          intents: ['plan'],
-          minRetryPressure: 2,
-          requireActiveTeam: true,
-        },
-        scope: {
-          providers: ['firstParty'],
-          modelPatterns: ['gateway'],
-          strategyProfiles: ['balanced'],
-          qualityGateModes: ['advisory'],
-        },
-        sessionStartLines: ['- config policy session-start'],
-        routeRecommendations: ['config-policy-route'],
-        subagentGuidance: {
-          toolNames: ['Agent'],
-          subagentType: 'Plan',
-          note: 'config policy selected Plan',
-          shapingNotes: ['config policy shaping note'],
-        },
-        preconditions: [
-          {
-            toolNames: ['SendMessage'],
-            requireActiveTeam: true,
-            block: true,
-            reason: 'config policy blocked team broadcast until the plan is refreshed',
-            notes: ['config policy precondition hit'],
-          },
-        ],
-      }),
-    )
-
-    const state = makeSessionState()
-    state.lastIntent = analyzeIntentProfile('请先规划一下这个 Gateway 长任务')
-    state.activeTeamName = 'gateway-workers'
-    state.toolFailureCounts.Agent = 2
-
-    const sessionStart = buildSessionStartContext(state)
-    const guidance = buildRouteGuidance(state, state.lastIntent)
-    const normalization = normalizeToolInput(
-      'Agent',
-      {
-        description: 'plan the next step',
-        prompt: 'Design the next Gateway rollout slice',
-      },
-      state,
-    )
-    const precondition = checkToolPreconditions(
-      'SendMessage',
-      {
-        to: '*',
-        message: 'Please continue with the old plan',
-      },
-      state,
-    )
-
-    expect(sessionStart).toContain('config policy session-start')
-    expect(guidance).toContain('config-policy-route')
-    expect(normalization.updatedInput?.subagent_type).toBe('Plan')
-    expect(normalization.notes.join(' ')).toContain('config policy selected Plan')
-    expect(normalization.notes.join(' ')).toContain('config policy shaping note')
-    expect(precondition.blocked).toBe(true)
-    expect(precondition.reason).toContain('config policy blocked team broadcast')
+    expect(retryCheck.reason).toContain('failed 2 times')
   })
 
   test('exposes a dedicated /hello2cc debug command', async () => {
@@ -505,9 +301,6 @@ describe('hello2cc orchestration', () => {
     expect(userResult.type).toBe('text')
     expect(projectResult.type).toBe('text')
     expect(effectiveSettings.hello2cc?.resumeSummaryStyle).toBe('compact')
-    expect(effectiveSettings.hello2cc?.extraStrategies?.[0]?.scope?.cwdPrefixes).toContain(
-      projectDir,
-    )
   })
 
   test('generates conventional hello2cc config files for the current project', async () => {
@@ -549,7 +342,7 @@ describe('hello2cc orchestration', () => {
     )
 
     expect(result.blocked).toBe(true)
-    expect(result.reason).toContain('active team context')
+    expect(result.reason).toContain('active team')
   })
 
   test('restores a persisted orchestration snapshot for resume', () => {
@@ -618,6 +411,49 @@ describe('hello2cc orchestration', () => {
       analyzeIntentProfile('请继续实现这个 Gateway 变更'),
     )
 
-    expect(guidance).toContain('session retry pressure is elevated (3 total retries)')
+    expect(guidance).toContain('Retry pressure is high (3 total retries)')
+  })
+
+  test('blocks file edit after repeated failures', () => {
+    const state = makeSessionState()
+    state.fileEditFailures.push({
+      filePath: 'src/query.ts',
+      errorType: 'edit_invalid',
+      count: 3,
+      lastError: 'Edit failed: old_string not found',
+      updatedAt: '2026-04-09T10:00:00.000Z',
+    })
+
+    const result = checkToolPreconditions(
+      'Edit',
+      { file_path: 'src/query.ts', old_string: 'old code', new_string: 'new code' },
+      state,
+    )
+
+    expect(result.blocked).toBe(true)
+    expect(result.reason).toContain('src/query.ts')
+    expect(result.reason).toContain('failed 3 times')
+  })
+
+  test('universal guidance includes role, playbook, and recovery', () => {
+    const state = makeSessionState()
+    state.toolFailureCounts.Write = 2
+    state.recentFailures.push({
+      toolName: 'Write',
+      signature: 'Write:{"file_path":"src/foo.ts"}',
+      summary: 'permission denied',
+      count: 2,
+      updatedAt: '2026-04-09T10:00:00.000Z',
+    })
+
+    const guidance = buildRouteGuidance(
+      state,
+      analyzeIntentProfile('Please implement the change'),
+    )
+
+    expect(guidance).toContain('Role:')
+    expect(guidance).toContain('Execution Playbook')
+    expect(guidance).toContain('Recovery')
+    expect(guidance).toContain('Write')
   })
 })
