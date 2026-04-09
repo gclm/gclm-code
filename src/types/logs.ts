@@ -5,6 +5,7 @@ import type { ContentReplacementRecord } from 'src/utils/toolResultStorage.js'
 import type { AgentId } from './ids.js'
 import type { Message } from './message.js'
 import type { QueueOperationMessage } from './messageQueueTypes.js'
+import type { MemorySnapshot } from '../utils/memoryObserver.js'
 
 export type SerializedMessage = Message & {
   cwd: string
@@ -193,6 +194,16 @@ export type Hello2ccStateEntry = {
   state: PersistedHello2ccSessionState
 }
 
+/**
+ * Lightweight memory snapshot persisted to the transcript for post-crash
+ * analysis. Written once per query turn when CLAUDE_CODE_PROFILE_MEMORY=1.
+ */
+export type MemoryStateEntry = {
+  type: 'memory-state'
+  sessionId: UUID
+  snapshot: MemorySnapshot
+}
+
 export type FileHistorySnapshotMessage = {
   type: 'file-history-snapshot'
   messageId: UUID
@@ -322,6 +333,7 @@ export type Entry =
   | WorktreeStateEntry
   | ContentReplacementEntry
   | Hello2ccStateEntry
+  | MemoryStateEntry
   | ContextCollapseCommitEntry
   | ContextCollapseSnapshotEntry
 

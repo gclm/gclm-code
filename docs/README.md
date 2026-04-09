@@ -35,6 +35,10 @@
   - 自建 Web 控制台方案、`references/tlive` Web 的复用边界，以及 `gclm-code-server` 统一中台建议
 - `docs/overview/roadmap.md`
   - 当前阶段状态与后续动作
+- `docs/overview/profile-env-vars.md`
+  - `CLAUDE_CODE_PROFILE_*` 环境变量说明：内存观测、启动分析、Query 管道性能
+- `docs/overview/octopus-gc-oom-investigation.md`
+  - Octopus 场景下 `gc` OOM 排查记录
 
 ## 3. hello2cc（能力集成与使用）
 

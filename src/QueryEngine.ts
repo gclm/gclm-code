@@ -106,6 +106,37 @@ import {
   isResultSuccessful,
   normalizeMessage,
 } from './utils/queryHelpers.js'
+import {
+  captureMemorySnapshot,
+  estimateBytes,
+  getOrCreateSessionTracker,
+} from './utils/memoryObserver.js'
+import { saveMemoryState } from './utils/sessionStorage.js'
+
+/**
+ * Scan the current message array to compute memory-relevant statistics.
+ * Only counts user messages (where toolUseResult lives) and estimates
+ * the serialized size of those objects.
+ */
+function gatherMessageMemoryStats(messages: Message[]): {
+  messageCount: number
+  toolUseResultCount: number
+  toolUseResultBytesEst: number
+} {
+  let toolUseResultCount = 0
+  let toolUseResultBytesEst = 0
+  for (const msg of messages) {
+    if (msg.type === 'user' && msg.toolUseResult !== undefined) {
+      toolUseResultCount++
+      toolUseResultBytesEst += estimateBytes(msg.toolUseResult)
+    }
+  }
+  return {
+    messageCount: messages.length,
+    toolUseResultCount,
+    toolUseResultBytesEst,
+  }
+}
 
 // Dead code elimination: conditional import for coordinator mode
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -196,6 +227,7 @@ export class QueryEngine {
   // many turns in SDK mode.
   private discoveredSkillNames = new Set<string>()
   private loadedNestedMemoryPaths = new Set<string>()
+  private _compactBoundaryCount = 0
 
   constructor(config: QueryEngineConfig) {
     this.config = config
@@ -239,6 +271,18 @@ export class QueryEngine {
     setCwd(cwd)
     const persistSession = !isSessionPersistenceDisabled()
     const startTime = Date.now()
+
+    // Memory observation at query start (baseline)
+    if (isEnvTruthy(process.env.CLAUDE_CODE_PROFILE_MEMORY)) {
+      const stats = gatherMessageMemoryStats(messages)
+      const snapshot = captureMemorySnapshot({
+        ...stats,
+        compactBoundaryCount: this._compactBoundaryCount,
+        label: 'query-start',
+      })
+      const tracker = getOrCreateSessionTracker()
+      tracker.record(snapshot)
+    }
 
     // Wrap canUseTool to track permission denials
     const wrappedCanUseTool: CanUseToolFn = async (
@@ -932,6 +976,19 @@ export class QueryEngine {
               messages.splice(0, localBoundaryIdx)
             }
 
+            // Memory observation after compaction (verify GC effect)
+            if (isEnvTruthy(process.env.CLAUDE_CODE_PROFILE_MEMORY)) {
+              this._compactBoundaryCount++
+              const stats = gatherMessageMemoryStats(messages)
+              const snapshot = captureMemorySnapshot({
+                ...stats,
+                compactBoundaryCount: this._compactBoundaryCount,
+                label: 'post-compact',
+              })
+              const tracker = getOrCreateSessionTracker()
+              tracker.record(snapshot)
+            }
+
             yield {
               type: 'system',
               subtype: 'compact_boundary' as const,
@@ -1130,6 +1187,20 @@ export class QueryEngine {
         textResult = lastContent.text
       }
       isApiError = Boolean(result.isApiErrorMessage)
+    }
+
+    // Memory observation at query end (cost of a full turn)
+    if (isEnvTruthy(process.env.CLAUDE_CODE_PROFILE_MEMORY)) {
+      const stats = gatherMessageMemoryStats(messages)
+      const snapshot = captureMemorySnapshot({
+        ...stats,
+        compactBoundaryCount: this._compactBoundaryCount,
+        label: 'query-end',
+      })
+      const tracker = getOrCreateSessionTracker()
+      tracker.record(snapshot)
+      tracker.checkAndWarn()
+      saveMemoryState(snapshot)
     }
 
     yield {

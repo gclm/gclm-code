@@ -50,6 +50,7 @@ import {
   type FileHistorySnapshotMessage,
   type Hello2ccStateEntry,
   type LogOption,
+  type MemoryStateEntry,
   type PersistedWorktreeSession,
   type SerializedMessage,
   sortLogs,
@@ -2951,6 +2952,21 @@ export function saveHello2ccState(
     state,
     sessionId: state.sessionId as UUID,
   } satisfies Hello2ccStateEntry)
+}
+
+/**
+ * Append a memory state snapshot to the session transcript.
+ * Used for post-crash memory trend reconstruction.
+ */
+export function saveMemoryState(snapshot: MemoryStateEntry['snapshot']): void {
+  const project = getProject()
+  if (!project.sessionFile) return
+
+  appendEntryToFile(project.sessionFile, {
+    type: 'memory-state',
+    snapshot,
+    sessionId: getSessionId(),
+  })
 }
 
 /**

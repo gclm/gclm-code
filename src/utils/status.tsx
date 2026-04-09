@@ -203,6 +203,64 @@ export async function buildMemoryDiagnostics(): Promise<Diagnostic[]> {
   });
   return diagnostics;
 }
+
+function formatMb(bytes: number): string {
+  return (bytes / (1024 * 1024)).toFixed(0);
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${formatMb(bytes)} MB`;
+}
+
+/**
+ * Session memory observation properties for the /status pane.
+ * Returns empty array when no memory tracker has been initialized
+ * (i.e. CLAUDE_CODE_PROFILE_MEMORY is not set).
+ */
+export function buildMemoryStateProperties(): Property[] {
+  // Lazy import to avoid pulling memoryObserver into builds that don't use it
+  const { getOrCreateSessionTracker } = require('./memoryObserver.js');
+  const tracker = getOrCreateSessionTracker();
+  const summary = tracker.getSummary();
+  if (!summary.current) return [];
+
+  const properties: Property[] = [];
+  properties.push({
+    label: 'Session memory',
+    value: `heapUsed: ${formatMb(summary.current.heapUsed)} MB | RSS: ${formatMb(summary.current.rss)} MB`,
+  });
+  properties.push({
+    label: 'Messages',
+    value: `${formatNumber(summary.current.messageCount)} messages | ${formatNumber(summary.current.toolUseResultCount)} toolUseResults (${formatBytes(summary.current.toolUseResultBytesEst)})`,
+  });
+  properties.push({
+    label: 'Compactions',
+    value: String(summary.current.compactBoundaryCount),
+  });
+  if (summary.trend && summary.trend.rateMbPerHour !== 0) {
+    const sign = summary.trend.rateMbPerHour > 0 ? '+' : '';
+    const warn = summary.trend.rateMbPerHour > 100 ? ' \u26a0' : '';
+    properties.push({
+      label: 'Memory trend (1h)',
+      value: `${sign}${summary.trend.rateMbPerHour.toFixed(1)} MB/hr${warn}`,
+    });
+  }
+  if (summary.peak && summary.peak !== summary.current) {
+    properties.push({
+      label: 'Peak heap',
+      value: `${formatMb(summary.peak.heapUsed)} MB (${summary.peak.label})`,
+    });
+  }
+  if (summary.snapshotCount > 0) {
+    properties.push({
+      label: 'Snapshots',
+      value: `${formatNumber(summary.snapshotCount)} recorded`,
+    });
+  }
+  return properties;
+}
 export function buildSettingSourcesProperties(): Property[] {
   const enabledSources = getEnabledSettingSources();
 

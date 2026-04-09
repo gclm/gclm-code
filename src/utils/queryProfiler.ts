@@ -29,6 +29,7 @@
 
 import { logForDebugging } from './debug.js'
 import { isEnvTruthy } from './envUtils.js'
+import { formatFileSize } from './format.js'
 import { formatMs, formatTimelineLine, getPerformance } from './profilerBase.js'
 
 // Module-level state - initialized once when the module loads
@@ -205,6 +206,13 @@ function getQueryProfileReport(): string {
   // Add phase summary
   lines.push(getPhaseSummary(marks, baselineTime))
 
+  // Append session memory summary if a tracker exists
+  const memorySummary = getSessionMemorySummary()
+  if (memorySummary) {
+    lines.push('')
+    lines.push(memorySummary)
+  }
+
   lines.push('='.repeat(80))
 
   return lines.join('\n')
@@ -290,6 +298,38 @@ function getPhaseSummary(
   }
 
   return lines.join('\n')
+}
+
+/**
+ * Build a one-line memory summary for the query profile report.
+ * Returns null if no session tracker has been initialized.
+ */
+function getSessionMemorySummary(): string | null {
+  try {
+    const { getOrCreateSessionTracker } = require('./memoryObserver.js')
+    const tracker = getOrCreateSessionTracker()
+    const summary = tracker.getSummary()
+    if (!summary.current) return null
+
+    const baseline =
+      summary.trend ? summary.trend.startHeapUsed : summary.current.heapUsed
+    const delta = summary.current.heapUsed - baseline
+
+    let line = `Memory: heapUsed=${formatFileSize(summary.current.heapUsed)}`
+    if (summary.trend) {
+      const sign = summary.trend.rateMbPerHour >= 0 ? '+' : ''
+      line += ` (${sign}${summary.trend.rateMbPerHour.toFixed(1)} MB/hr)`
+    }
+    if (delta > 0) {
+      line += ` (+${formatFileSize(delta)} from start)`
+    }
+    line += ` | RSS=${formatFileSize(summary.current.rss)}`
+    line += ` | messages=${summary.current.messageCount}`
+    line += ` | toolUseResults=${summary.current.toolUseResultCount} (${formatFileSize(summary.current.toolUseResultBytesEst)})`
+    return line
+  } catch {
+    return null
+  }
 }
 
 /**
