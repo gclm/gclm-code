@@ -14,10 +14,12 @@ UserPrompt → IntentProfile(4层/25+signals) → UniversalGuidance
            → PostToolUse/Failure(记忆) → 恢复建议
 ```
 
-- 13 个源文件，TypeScript 内嵌到 gclm-code 主链
+- 14 个源文件（含新增 metrics.ts），TypeScript 内嵌到 gclm-code 主链
 - 5 个 Hook：SessionStart / UserPromptSubmit / PreToolUse / PostToolUse / PostToolUseFailure
-- 2 个测试文件，20 个用例
+- 2 个测试文件，49 个用例
 - transcript 持久化 + resume 恢复链路完整
+- P0（路由去重 + 测试）和 P1（可观测指标 + 摘要增强）已完成
+- 已发布 v1.0.5
 
 ### 已知待办（来自 harness/state.md）
 
