@@ -208,6 +208,7 @@ function getMacroValues(pkg, version) {
       process.env.CLAUDE_CODE_NATIVE_PACKAGE_URL || packageUrl,
     VERSION_CHANGELOG:
       process.env.CLAUDE_CODE_VERSION_CHANGELOG || '',
+    FEATURES: '',
   }
 }
 
@@ -238,6 +239,8 @@ async function buildFromSource(pkg, version, options) {
   if (options.dev && !macroValues.VERSION_CHANGELOG) {
     macroValues.VERSION_CHANGELOG = getVersionChangelog()
   }
+  // Inject enabled feature flags so they're visible at runtime via --info
+  macroValues.FEATURES = options.features.join(', ')
 
   const sourceBuild = await Bun.build({
     entrypoints: [sourceEntrypoint],

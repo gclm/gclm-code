@@ -51,6 +51,19 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Fast-path for --info: show build metadata including enabled feature flags
+  if (args.length === 1 && args[0] === '--info') {
+    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    console.log(`${MACRO.VERSION} (Gclm Code)`);
+    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    console.log(`Build: ${MACRO.BUILD_TIME}`);
+    if (MACRO.FEATURES) {
+      // biome-ignore lint/suspicious/noConsole:: intentional console output
+      console.log(`Features: ${MACRO.FEATURES}`);
+    }
+    return;
+  }
+
   // For all other paths, load the startup profiler
   const {
     profileCheckpoint
