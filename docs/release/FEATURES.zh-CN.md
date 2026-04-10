@@ -35,8 +35,10 @@
 | `AWAY_SUMMARY` | 离开键盘后的摘要行为 | 实验性 | REPL UI | 用户暂离后生成对话摘要 |
 | `HISTORY_PICKER` | 交互式历史选择器 | 实验性 | REPL UI | 可通过选择器浏览和恢复历史会话 |
 | `HOOK_PROMPTS` | 在 hook 流程中传递 prompt 文本 | 实验性 | Hook 系统 | hook 脚本可获取请求原文 |
+| `KAIROS` | 完整 assistant 多代理协作栈 | 实验性 | Agent / REPL | 启用 assistant 模式，支持多代理协作、会话发现和团队代理调度 |
 | `KAIROS_BRIEF` | 精简 transcript 布局 + BriefTool | 实验性 | REPL UI / 工具 | 仅展示简报级别的能力，非完整 assistant 栈 |
 | `KAIROS_CHANNELS` | 频道通知与回调链路 | 实验性 | API / REPL | 启用 MCP/channel 消息的频道通知 |
+| `KAIROS_DREAM` | Dream 长期任务行为 | 实验性 | Agent / 任务 | 启用 dream 模式，支持长期异步任务的后台执行 |
 | `LODESTONE` | 深链/协议注册相关流程 | 实验性 | CLI 入口 / 设置 | 支持 deep link 协议注册与相关设置 |
 | `MESSAGE_ACTIONS` | 消息操作入口 | 实验性 | REPL UI / 快捷键 | 消息上出现操作按钮（如复制/重试等） |
 | `NEW_INIT` | 新版 `/init` 路径 | 实验性 | 命令系统 | 启用较新的项目初始化决策路径 |
@@ -137,8 +139,6 @@
 | `UDS_INBOX` | UDS 消息 | `src/utils/udsMessaging.js` |
 | `WEB_BROWSER_TOOL` | Web 浏览器工具 | `src/tools/WebBrowserTool/WebBrowserTool.js` |
 | `WORKFLOW_SCRIPTS` | 工作流脚本 | `src/commands/workflows/index.js` |
-| `KAIROS` | 完整 assistant 栈 | `src/assistant/index.js` + 大部分 assistant 栈 |
-| `KAIROS_DREAM` | Dream 任务行为 | `src/dream.js` |
 | `PROACTIVE` | 主动任务/工具栈 | `src/proactive/index.js` |
 
 ## 运行时前提（重点提示）
@@ -151,6 +151,7 @@
 | `NATIVE_CLIPBOARD_IMAGE` | 安装 `image-processor-napi` 时效果最佳 |
 | `BRIDGE_MODE` / `CCR_AUTO_CONNECT` / `CCR_MIRROR` / `CCR_REMOTE_SETUP` | 受 OAuth 与 GrowthBook entitlement 约束 |
 | `KAIROS_BRIEF` / `KAIROS_CHANNELS` | 仅恢复到保留下来的简版能力，不是完整旧栈 |
+| `KAIROS` / `KAIROS_DREAM` | 已完整恢复，无需额外运行时前提 |
 | `CHICAGO_MCP` | 当前外部运行态仍会触发 `@ant/computer-use-*` 缺包 |
 | `TEAMMEM` | 需环境中真实启用 team memory 才有实际效果 |
 
