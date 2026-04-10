@@ -274,7 +274,7 @@ export class QueryEngine {
 
     // Memory observation at query start (baseline)
     if (isEnvTruthy(process.env.CLAUDE_CODE_PROFILE_MEMORY)) {
-      const stats = gatherMessageMemoryStats(messages)
+      const stats = gatherMessageMemoryStats(this.mutableMessages)
       const snapshot = captureMemorySnapshot({
         ...stats,
         compactBoundaryCount: this._compactBoundaryCount,

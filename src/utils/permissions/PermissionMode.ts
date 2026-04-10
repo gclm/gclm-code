@@ -139,3 +139,41 @@ export function permissionModeSymbol(mode: PermissionMode): string {
 export function getModeColor(mode: PermissionMode): ModeColorKey {
   return getModeConfig(mode).color
 }
+
+// ============================================================================
+// Phase 2: Mode registry registration
+// ============================================================================
+
+// Lazy import to avoid circular dependency at module load time
+let _registryRegistered = false
+function ensureModeRegistryRegistered(): void {
+  if (_registryRegistered) return
+  _registryRegistered = true
+
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { registerMode } = require('./evaluator/modeRegistry.js') as typeof import('./evaluator/modeRegistry.js')
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { dontAskResultTransformer } = require('./evaluator/dontAskEvaluator.js') as typeof import('./evaluator/dontAskEvaluator.js')
+
+  // All modes: no post-core evaluators by default
+  registerMode({ mode: 'default', postCoreEvaluators: [] })
+  registerMode({ mode: 'acceptEdits', postCoreEvaluators: [] })
+  registerMode({ mode: 'plan', postCoreEvaluators: [] })
+  registerMode({ mode: 'bypassPermissions', postCoreEvaluators: [] })
+
+  // dontAsk: result transformer converts ask->deny
+  registerMode({
+    mode: 'dontAsk',
+    postCoreEvaluators: [],
+    resultTransformer: (result) => dontAskResultTransformer(result, 'tool'),
+  })
+
+  // auto: post-core evaluator for classifier (feature-gated)
+  if (feature('TRANSCRIPT_CLASSIFIER')) {
+    registerMode({
+      mode: 'auto',
+      postCoreEvaluators: [],
+      featureFlag: 'TRANSCRIPT_CLASSIFIER',
+    })
+  }
+}

@@ -63,6 +63,11 @@ const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
   ? (require('./autoModeState.js') as typeof import('./autoModeState.js'))
   : null
 
+// Lazy-loaded evaluator chain (Phase 1: parallel path for validation)
+const evaluatorChainModule = feature('PERMISSION_EVALUATOR_CHAIN')
+  ? (require('./evaluator/chainRunner.js') as typeof import('./evaluator/chainRunner.js'))
+  : null
+
 import {
   addToTurnClassifierDuration,
   getTotalCacheCreationInputTokens,
@@ -477,7 +482,10 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
   assistantMessage,
   toolUseID,
 ): Promise<PermissionDecision> => {
-  const result = await hasPermissionsToUseToolInner(tool, input, context)
+  // Phase 1: feature-flagged parallel path — use evaluator chain or original
+  const result = feature('PERMISSION_EVALUATOR_CHAIN')
+    ? await hasPermissionsToUseToolInner_v2(tool, input, context)
+    : await hasPermissionsToUseToolInner(tool, input, context)
 
 
   // Reset consecutive denials on any allowed tool use in auto mode.
@@ -1153,6 +1161,125 @@ export async function checkRuleBasedPermissions(
 
   // No rule-based objection
   return null
+}
+
+// ============================================================================
+// Evaluator Chain (Phase 1: parallel implementation for validation)
+// ============================================================================
+
+/**
+ * Builds the core evaluator chain that mirrors the steps of
+ * hasPermissionsToUseToolInner. Each evaluator corresponds to one step.
+ */
+export function buildCoreEvaluatorChain() {
+  // Lazy-load evaluators to avoid circular dependency with permissions.ts
+  const { denyRuleEvaluator } = require('./evaluator/denyRuleEvaluator.js') as typeof import('./evaluator/denyRuleEvaluator.js')
+  const { askRuleEvaluator } = require('./evaluator/askRuleEvaluator.js') as typeof import('./evaluator/askRuleEvaluator.js')
+  const { toolEvaluator } = require('./evaluator/toolEvaluator.js') as typeof import('./evaluator/toolEvaluator.js')
+  const { toolDenyEvaluator } = require('./evaluator/toolDenyEvaluator.js') as typeof import('./evaluator/toolDenyEvaluator.js')
+  const { userInteractionEvaluator } = require('./evaluator/userInteractionEvaluator.js') as typeof import('./evaluator/userInteractionEvaluator.js')
+  const { contentAskRuleEvaluator } = require('./evaluator/contentAskRuleEvaluator.js') as typeof import('./evaluator/contentAskRuleEvaluator.js')
+  const { safetyCheckEvaluator } = require('./evaluator/safetyCheckEvaluator.js') as typeof import('./evaluator/safetyCheckEvaluator.js')
+  const { bypassModeEvaluator } = require('./evaluator/bypassModeEvaluator.js') as typeof import('./evaluator/bypassModeEvaluator.js')
+  const { allowRuleEvaluator } = require('./evaluator/allowRuleEvaluator.js') as typeof import('./evaluator/allowRuleEvaluator.js')
+  const { passthroughEvaluator } = require('./evaluator/passthroughEvaluator.js') as typeof import('./evaluator/passthroughEvaluator.js')
+
+  return [
+    denyRuleEvaluator,          // 1a
+    askRuleEvaluator,           // 1b
+    toolEvaluator,              // 1c (stores result in chainState)
+    toolDenyEvaluator,          // 1d
+    userInteractionEvaluator,   // 1e
+    contentAskRuleEvaluator,    // 1f
+    safetyCheckEvaluator,       // 1g
+    bypassModeEvaluator,        // 2a
+    allowRuleEvaluator,         // 2b
+    passthroughEvaluator,       // 3
+  ]
+}
+
+/**
+ * Convert a DecisionResult from the evaluator chain to a PermissionDecision.
+ */
+function decisionResultToPermissionDecision(
+  result: import('./evaluator/DecisionResult.js').DecisionResult,
+  toolName: string,
+): PermissionDecision {
+  switch (result.verdict) {
+    case 'allow': {
+      const rule = result.metadata?.rule
+      const mode = result.metadata?.mode
+      const decisionReason: PermissionDecisionReason = rule
+        ? { type: 'rule', rule }
+        : mode
+          ? { type: 'mode', mode: mode as import('./PermissionMode.js').PermissionMode }
+          : { type: 'other', reason: 'Allowed by evaluator chain' }
+      return {
+        behavior: 'allow',
+        updatedInput: result.updatedInput,
+        decisionReason,
+      }
+    }
+    case 'deny': {
+      const rule = result.metadata?.rule
+      return {
+        behavior: 'deny',
+        message: result.reason ?? `${toolName} denied by evaluator chain`,
+        decisionReason: rule
+          ? { type: 'rule', rule }
+          : { type: 'other', reason: result.reason ?? 'Denied by evaluator chain' },
+      }
+    }
+    case 'ask': {
+      const rule = result.metadata?.rule
+      const reasonType = result.metadata?.reasonType
+      const decisionReason: PermissionDecisionReason | undefined = rule
+        ? { type: 'rule', rule }
+        : reasonType === 'safetyCheck'
+          ? { type: 'safetyCheck', reason: result.reason ?? '', classifierApprovable: result.metadata?.classifierApprovable ?? true }
+          : reasonType
+            ? { type: reasonType, reason: result.reason ?? '' }
+            : undefined
+      return {
+        behavior: 'ask',
+        message: result.reason ?? `${toolName} requires approval`,
+        decisionReason,
+        suggestions: result.suggestions,
+        blockedPath: result.blockedPath,
+        pendingClassifierCheck: result.metadata?.pendingClassifierCheck,
+      }
+    }
+  }
+}
+
+/**
+ * Evaluator-chain-based implementation of hasPermissionsToUseToolInner.
+ * This is a parallel implementation for validation — the original
+ * hasPermissionsToUseToolInner is unchanged.
+ */
+async function hasPermissionsToUseToolInner_v2(
+  tool: Tool,
+  input: { [key: string]: unknown },
+  context: ToolUseContext,
+): Promise<PermissionDecision> {
+  if (context.abortController.signal.aborted) {
+    throw new AbortError()
+  }
+
+  if (!evaluatorChainModule) {
+    // Fallback: should not happen if feature flag is on
+    return hasPermissionsToUseToolInner(tool, input, context)
+  }
+
+  const evaluators = buildCoreEvaluatorChain()
+  const result = await evaluatorChainModule.runEvaluatorChain(
+    evaluators,
+    tool,
+    input,
+    context,
+  )
+
+  return decisionResultToPermissionDecision(result, tool.name)
 }
 
 async function hasPermissionsToUseToolInner(
