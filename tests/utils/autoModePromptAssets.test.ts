@@ -70,7 +70,7 @@ describe('auto mode prompt assets', () => {
     const buildScript = readFileSync(join(repoRoot, 'scripts', 'build.mjs'), 'utf8')
 
     expect(buildScript).toContain(
-      "const defaultFeatures = ['VOICE_MODE', 'TRANSCRIPT_CLASSIFIER']",
+      "const defaultFeatures = ['VOICE_MODE', 'TRANSCRIPT_CLASSIFIER', 'NEW_INIT']",
     )
     expect(buildScript).toContain("'POWERSHELL_AUTO_MODE'")
     expect(buildScript).not.toContain(
