@@ -81,22 +81,12 @@ export function setupVscodeSdkMcp(sdkClients: MCPServerConnection[]): void {
 
     // Send necessary experiment gates to VSCode immediately.
     const gates: Record<string, boolean | string> = {
-      tengu_vscode_review_upsell: checkStatsigFeatureGate_CACHED_MAY_BE_STALE(
-        'tengu_vscode_review_upsell',
-      ),
-      tengu_vscode_onboarding: checkStatsigFeatureGate_CACHED_MAY_BE_STALE(
-        'tengu_vscode_onboarding',
-      ),
+      tengu_vscode_review_upsell: false,
+      tengu_vscode_onboarding: false,
       // Browser support.
-      tengu_quiet_fern: getFeatureValue_CACHED_MAY_BE_STALE(
-        'tengu_quiet_fern',
-        false,
-      ),
+      tengu_quiet_fern: false,
       // In-band OAuth via claude_authenticate (vs. extension-native PKCE).
-      tengu_vscode_cc_auth: getFeatureValue_CACHED_MAY_BE_STALE(
-        'tengu_vscode_cc_auth',
-        false,
-      ),
+      tengu_vscode_cc_auth: false,
     }
     // Tri-state: 'enabled' | 'disabled' | 'opt-in'. Omit if unknown so VSCode
     // fails closed (treats absent as 'disabled').

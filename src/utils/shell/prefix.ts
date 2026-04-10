@@ -9,7 +9,6 @@
 
 import chalk from 'chalk'
 import type { QuerySource } from '../../constants/querySource.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import {
   type SafeEventValue,
   logEvent,
@@ -212,11 +211,7 @@ async function getCommandPrefixImpl(
       isNonInteractiveSession,
     )
 
-    const useSystemPromptPolicySpec = getFeatureValue_CACHED_MAY_BE_STALE(
-      'tengu_cork_m4q',
-      false,
-    )
-
+    const useSystemPromptPolicySpec = false
     const response = await queryHaiku({
       systemPrompt: asSystemPrompt(
         useSystemPromptPolicySpec

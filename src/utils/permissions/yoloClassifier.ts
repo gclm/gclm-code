@@ -10,7 +10,6 @@ import {
   getSessionId,
   setLastClassifierRequests,
 } from '../../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import { logEvent } from '../../services/analytics/index.js'
 import type { SafeLogValue } from '../../services/toolLogging/metadata.js'
 import { getCacheControl } from '../../services/api/claude.js'
@@ -69,10 +68,8 @@ const ANTHROPIC_PERMISSIONS_TEMPLATE: string =
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 
 function isUsingExternalPermissions(): boolean {
-  const config = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_auto_mode_config',
-    {} as AutoModeConfig,
-  )
+  if (process.env.USER_TYPE !== 'ant') return true
+  const config = {} as AutoModeConfig
   return config?.forceExternalPermissions === true
 }
 
@@ -1333,10 +1330,7 @@ function getClassifierModel(): string {
     const envModel = process.env.CLAUDE_CODE_AUTO_MODE_MODEL
     if (envModel) return envModel
   }
-  const config = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_auto_mode_config',
-    {} as AutoModeConfig,
-  )
+  const config = {} as AutoModeConfig
   if (config?.model) {
     return config.model
   }
@@ -1358,10 +1352,7 @@ function resolveTwoStageClassifier():
     if (isEnvTruthy(env)) return true
     if (isEnvDefinedFalsy(env)) return false
   }
-  const config = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_auto_mode_config',
-    {} as AutoModeConfig,
-  )
+  const config = {} as AutoModeConfig
   return config?.twoStageClassifier
 }
 
@@ -1379,10 +1370,7 @@ function isJsonlTranscriptEnabled(): boolean {
     if (isEnvTruthy(env)) return true
     if (isEnvDefinedFalsy(env)) return false
   }
-  const config = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_auto_mode_config',
-    {} as AutoModeConfig,
-  )
+  const config = {} as AutoModeConfig
   return config?.jsonlTranscript === true
 }
 

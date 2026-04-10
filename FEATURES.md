@@ -53,12 +53,18 @@ explicitly called out as default-on.
   Enables the interactive prompt history picker.
 - `HOOK_PROMPTS`
   Passes the prompt/request text into hook execution flows.
+- `KAIROS`
+  Enables the full assistant multi-agent collaboration stack. Restored with
+  stubbed dependencies — no GrowthBook gate, runs immediately when enabled.
 - `KAIROS_BRIEF`
   Enables brief-only transcript layout and BriefTool-oriented UX without the
   full assistant stack.
 - `KAIROS_CHANNELS`
   Enables channel notices and channel callback plumbing around MCP/channel
   messaging.
+- `KAIROS_DREAM`
+  Enables dream mode for long-running async task execution. Restored with
+  stubbed dependencies.
 - `LODESTONE`
   Enables deep-link / protocol-registration related flows and settings wiring.
 - `MESSAGE_ACTIONS`
@@ -188,6 +194,9 @@ have meaningful runtime caveats:
 - `KAIROS_BRIEF`, `KAIROS_CHANNELS`
   Bundle cleanly, but they do not restore the full missing assistant stack.
   They only expose the brief/channel-specific surfaces that still exist.
+- `KAIROS`, `KAIROS_DREAM`
+  Previously broken; restored with stubbed dependencies and GrowthBook removal.
+  No runtime gates — enabled flags take effect immediately.
 - `CHICAGO_MCP`
   Bundles cleanly, but the runtime path still reaches externalized
   `@ant/computer-use-*` packages. This is compile-safe, not fully
@@ -292,10 +301,6 @@ than a single wrapper or asset.
 These are the ones that still look expensive to restore because the first
 missing import is only the visible edge of a broader absent subsystem.
 
-- `KAIROS`
-  Missing `src/assistant/index.js` and much of the assistant stack with it.
-- `KAIROS_DREAM`
-  Missing `src/dream.js` and related dream-task behavior.
 - `PROACTIVE`
   Missing `src/proactive/index.js` and the proactive task/tool stack.
 

@@ -1,4 +1,3 @@
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 
 /**
  * Whether inference-config commands (/model, /fast, /effort) should execute
@@ -8,5 +7,7 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/g
  * Always enabled for ants; gated by experiment for external users.
  */
 export function shouldInferenceConfigCommandBeImmediate(): boolean {
-  return true
+  return (
+    process.env.USER_TYPE === 'ant' ||
+    false)
 }

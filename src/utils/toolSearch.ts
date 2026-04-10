@@ -7,7 +7,6 @@
  */
 
 import memoize from 'lodash-es/memoize.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import {
   type SafeEventValue,
   logEvent,
@@ -627,7 +626,9 @@ export type DeferredToolsDeltaScanContext = {
  * header prepend (the attachment does not fire).
  */
 export function isDeferredToolsDeltaEnabled(): boolean {
-  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_glacier_2xr', false)
+  return (
+    process.env.USER_TYPE === 'ant' ||
+    false)
 }
 
 /**

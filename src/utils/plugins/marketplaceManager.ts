@@ -23,7 +23,6 @@ import { writeFile } from 'fs/promises'
 import isEqual from 'lodash-es/isEqual.js'
 import memoize from 'lodash-es/memoize.js'
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'path'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import { logForDebugging } from '../debug.js'
 import { isEnvTruthy } from '../envUtils.js'
 import {
@@ -2321,11 +2320,7 @@ export async function refreshAllMarketplaces(): Promise<void> {
         continue
       }
       if (
-        !getFeatureValue_CACHED_MAY_BE_STALE(
-          'tengu_plugin_official_mkt_git_fallback',
-          true,
-        )
-      ) {
+        !true) {
         logForDebugging(
           `Skipping official marketplace bulk refresh: GCS failed, git fallback disabled`,
         )
@@ -2444,11 +2439,7 @@ export async function refreshMarketplace(
       // to false via GrowthBook once the backend is confirmed live so new
       // clients NEVER hit GitHub for the official marketplace.
       if (
-        !getFeatureValue_CACHED_MAY_BE_STALE(
-          'tengu_plugin_official_mkt_git_fallback',
-          true,
-        )
-      ) {
+        !true) {
         // Throw, don't return — every other failure path in this function
         // throws, and callers like ManageMarketplaces.tsx:259 increment
         // updatedCount on any non-throwing return. A silent return would

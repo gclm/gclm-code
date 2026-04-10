@@ -70,6 +70,7 @@ type State = {
   modelStrings: ModelStrings | null
   isInteractive: boolean
   kairosActive: boolean
+  replBridgeActive: boolean
   // When true, ensureToolResultPairing throws on mismatch instead of
   // repairing with synthetic placeholders. HFI opts in at startup so
   // trajectories fail fast rather than conditioning the model on fake
@@ -299,6 +300,7 @@ function getInitialState(): State {
     modelStrings: null,
     isInteractive: false,
     kairosActive: false,
+    replBridgeActive: false,
     strictToolResultPairing: false,
     sdkAgentProgressSummariesEnabled: false,
     userMsgOptIn: false,
@@ -1084,6 +1086,14 @@ export function getKairosActive(): boolean {
 
 export function setKairosActive(value: boolean): void {
   STATE.kairosActive = value
+}
+
+export function isReplBridgeActive(): boolean {
+  return STATE.replBridgeActive
+}
+
+export function setReplBridgeActive(value: boolean): void {
+  STATE.replBridgeActive = value
 }
 
 export function getStrictToolResultPairing(): boolean {

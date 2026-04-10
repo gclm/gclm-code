@@ -1,5 +1,4 @@
 import { feature } from 'bun:bundle'
-import { getFeatureValue_CACHED_WITH_REFRESH } from '../../services/runtimeConfig/growthbook.js'
 import { DEFAULT_CRON_JITTER_CONFIG } from '../../utils/cronTasks.js'
 import { isEnvTruthy } from '../../utils/envUtils.js'
 
@@ -36,12 +35,7 @@ export const DEFAULT_MAX_AGE_DAYS =
 export function isKairosCronEnabled(): boolean {
   return feature('AGENT_TRIGGERS')
     ? !isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_CRON) &&
-        getFeatureValue_CACHED_WITH_REFRESH(
-          'tengu_kairos_cron',
-          true,
-          KAIROS_CRON_REFRESH_MS,
-        )
-    : false
+        true: false
 }
 
 /**
@@ -54,12 +48,7 @@ export function isKairosCronEnabled(): boolean {
  * scheduler via isKairosCronEnabled).
  */
 export function isDurableCronEnabled(): boolean {
-  return getFeatureValue_CACHED_WITH_REFRESH(
-    'tengu_kairos_cron_durable',
-    true,
-    KAIROS_CRON_REFRESH_MS,
-  )
-}
+  return true}
 
 export const CRON_CREATE_TOOL_NAME = 'CronCreate'
 export const CRON_DELETE_TOOL_NAME = 'CronDelete'

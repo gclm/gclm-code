@@ -29,8 +29,6 @@ import { jsonParse, jsonStringify } from '../utils/slowOperations.js'
 const KEEPALIVE_MSG = '{"type":"KeepAlive"}'
 const CLOSE_STREAM_MSG = '{"type":"CloseStream"}'
 
-import { getFeatureValue_CACHED_MAY_BE_STALE } from './runtimeConfig/growthbook.js'
-
 // ─── Constants ───────────────────────────────────────────────────────
 
 const VOICE_STREAM_PATH = '/api/ws/speech_to_text/voice_stream'
@@ -154,10 +152,7 @@ export async function connectVoiceStream(
   // the server's project_bell_v2_config GrowthBook gate). The server
   // side is anthropics/anthropic#278327 + #281372; this lets us ramp
   // clients independently.
-  const isNova3 = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_cobalt_frost',
-    false,
-  )
+  const isNova3 = false
   if (isNova3) {
     params.set('use_conversation_engine', 'true')
     params.set('stt_provider', 'deepgram-nova3')

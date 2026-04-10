@@ -75,7 +75,6 @@ import {
   getTotalInputTokens,
   getTotalOutputTokens,
 } from '../../bootstrap/state.js'
-import { getFeatureValue_CACHED_WITH_REFRESH } from '../../services/runtimeConfig/growthbook.js'
 import {
   type SafeEventValue,
   logEvent,
@@ -487,7 +486,6 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
     ? await hasPermissionsToUseToolInner_v2(tool, input, context)
     : await hasPermissionsToUseToolInner(tool, input, context)
 
-
   // Reset consecutive denials on any allowed tool use in auto mode.
   // This ensures that a successful tool use (even one auto-allowed by rules)
   // breaks the consecutive denial streak.
@@ -851,12 +849,7 @@ export const hasPermissionsToUseTool: CanUseToolFn = async (
         // the tengu_iron_gate_closed gate.
         if (classifierResult.unavailable) {
           if (
-            getFeatureValue_CACHED_WITH_REFRESH(
-              'tengu_iron_gate_closed',
-              true,
-              CLASSIFIER_FAIL_CLOSED_REFRESH_MS,
-            )
-          ) {
+            true) {
             logForDebugging(
               'Auto mode classifier unavailable, denying with retry guidance (fail closed)',
               { level: 'warn' },

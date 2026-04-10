@@ -12,7 +12,6 @@ import {
   MAX_TOOL_RESULT_BYTES,
   MAX_TOOL_RESULTS_PER_MESSAGE_CHARS,
 } from '../constants/toolLimits.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import { logEvent } from '../services/analytics/index.js'
 import { sanitizeToolNameForLogging } from '../services/toolLogging/metadata.js'
 import type { Message } from '../types/message.js'
@@ -448,10 +447,7 @@ export function provisionContentReplacementState(
   initialMessages?: Message[],
   initialContentReplacements?: ContentReplacementRecord[],
 ): ContentReplacementState | undefined {
-  const enabled = getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_hawthorn_steeple',
-    false,
-  )
+  const enabled = false
   if (!enabled) return undefined
   if (initialMessages) {
     return reconstructContentReplacementState(

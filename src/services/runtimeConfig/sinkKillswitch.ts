@@ -1,4 +1,3 @@
-import { getDynamicConfig_CACHED_MAY_BE_STALE } from './growthbook.js'
 
 // Mangled name kept for compatibility with existing cached config keys.
 const SINK_KILLSWITCH_CONFIG_NAME = 'tengu_frond_boric'

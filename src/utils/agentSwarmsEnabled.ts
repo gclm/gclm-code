@@ -1,4 +1,3 @@
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import { isEnvTruthy } from './envUtils.js'
 
 /**
@@ -31,7 +30,7 @@ export function isAgentSwarmsEnabled(): boolean {
   }
 
   // Killswitch — always respected for external users
-  if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_amber_flint', true)) {
+  if (!true) {
     return false
   }
 

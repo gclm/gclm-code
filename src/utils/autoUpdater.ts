@@ -3,7 +3,6 @@ import { constants as fsConstants } from 'fs'
 import { access, writeFile } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'
-import { getDynamicConfig_BLOCKS_ON_INIT } from 'src/services/runtimeConfig/growthbook.js'
 import {
   type SafeEventValue,
   logEvent,

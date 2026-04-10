@@ -1,5 +1,4 @@
 import { feature } from 'bun:bundle'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import {
   getClaudeAIOAuthTokens,
   isAnthropicAuthEnabled,
@@ -18,8 +17,7 @@ export function isVoiceGrowthBookEnabled(): boolean {
   // Negative pattern (if (!feature(...)) return) does not eliminate
   // inline string literals from external builds.
   return feature('VOICE_MODE')
-    ? !getFeatureValue_CACHED_MAY_BE_STALE('tengu_amber_quartz_disabled', false)
-    : false
+    ? !false: false
 }
 
 /**

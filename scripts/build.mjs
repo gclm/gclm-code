@@ -43,6 +43,7 @@ const experimentalFeatures = [
   'HOOK_PROMPTS',
   'KAIROS',
   'KAIROS_BRIEF',
+  'KAIROS_DREAM',
   'KAIROS_CHANNELS',
   'KAIROS_DREAM',
   'LODESTONE',

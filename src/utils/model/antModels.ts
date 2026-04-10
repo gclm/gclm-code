@@ -1,4 +1,3 @@
-import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/runtimeConfig/growthbook.js'
 import type { EffortLevel } from '../effort.js'
 
 export type AntModel = {

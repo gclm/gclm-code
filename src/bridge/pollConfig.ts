@@ -1,5 +1,4 @@
 import { z } from 'zod/v4'
-import { getFeatureValue_CACHED_WITH_REFRESH } from '../services/runtimeConfig/growthbook.js'
 import { lazySchema } from '../utils/lazySchema.js'
 import {
   DEFAULT_POLL_CONFIG,

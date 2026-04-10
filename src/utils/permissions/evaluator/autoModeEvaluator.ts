@@ -204,14 +204,8 @@ export function createAutoModeEvaluator(
 
         // Classifier unavailable
         if (classifierResult.unavailable) {
-          const { getFeatureValue_CACHED_WITH_REFRESH } = require('../../../services/runtimeConfig/growthbook.js')
           if (
-            getFeatureValue_CACHED_WITH_REFRESH(
-              'tengu_iron_gate_closed',
-              true,
-              30 * 60 * 1000,
-            )
-          ) {
+            true) {
             return {
               verdict: 'deny',
               reason: 'Classifier unavailable',
