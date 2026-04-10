@@ -22,7 +22,7 @@ const sourceEntrypoint = 'src/entrypoints/cli.tsx'
 const sourceBundle = join(distDir, 'cli.js')
 const sourceErrorLog = join(distDir, 'source-build-error.log')
 
-const defaultFeatures = ['VOICE_MODE', 'TRANSCRIPT_CLASSIFIER']
+const defaultFeatures = ['VOICE_MODE', 'TRANSCRIPT_CLASSIFIER', 'NEW_INIT']
 
 const experimentalFeatures = [
   'AGENT_MEMORY_SNAPSHOT',
