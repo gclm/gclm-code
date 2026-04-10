@@ -24,7 +24,6 @@
  */
 
 import { jsonStringify } from '../../utils/slowOperations.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../runtimeConfig/growthbook.js'
 
 /**
  * GrowthBook runtime gate — separate from the channels gate (tengu_harbor)
@@ -34,8 +33,7 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from '../runtimeConfig/growthbook
  * don't apply until restart.
  */
 export function isChannelPermissionRelayEnabled(): boolean {
-  return getFeatureValue_CACHED_MAY_BE_STALE('tengu_harbor_permissions', false)
-}
+  return false}
 
 export type ChannelPermissionResponse = {
   behavior: 'allow' | 'deny'

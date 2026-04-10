@@ -5,7 +5,6 @@ import {
   getIsNonInteractiveSession,
   getProjectRoot,
 } from '../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import {
   getClaudeConfigHomeDir,
   isEnvDefinedFalsy,
@@ -67,13 +66,12 @@ export function isAutoMemoryEnabled(): boolean {
  * directly in an `if` condition.
  */
 export function isExtractModeActive(): boolean {
-  if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_passport_quail', false)) {
+  if (!false) {
     return false
   }
   return (
     !getIsNonInteractiveSession() ||
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_slate_thimble', false)
-  )
+    false)
 }
 
 /**

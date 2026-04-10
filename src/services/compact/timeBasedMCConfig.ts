@@ -1,4 +1,3 @@
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../runtimeConfig/growthbook.js'
 
 /**
  * GrowthBook config for time-based microcompact.

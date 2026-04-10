@@ -1,7 +1,6 @@
 import { feature } from 'bun:bundle'
 import { z } from 'zod/v4'
 import { getKairosActive, setUserMsgOptIn } from '../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import {
   type SafeEventValue,
   logEvent,

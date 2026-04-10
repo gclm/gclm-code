@@ -1,4 +1,3 @@
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import { logEvent } from '../services/analytics/index.js'
 import type {
   ConnectedMCPServer,
@@ -39,8 +38,7 @@ export function isMcpInstructionsDeltaEnabled(): boolean {
   if (isEnvDefinedFalsy(process.env.CLAUDE_CODE_MCP_INSTR_DELTA)) return false
   return (
     process.env.USER_TYPE === 'ant' ||
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_basalt_3kr', false)
-  )
+    false)
 }
 
 /**

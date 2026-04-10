@@ -1,5 +1,4 @@
 import { useEffect, useReducer } from 'react'
-import { onGrowthBookRefresh } from '../services/runtimeConfig/growthbook.js'
 import { useAppState } from '../state/AppState.js'
 import {
   getDefaultMainLoopModelSetting,
@@ -23,7 +22,6 @@ export function useMainLoopModel(): ModelName {
   // happens to re-render the component — the API would sample one model
   // while /model (which also re-resolves) displays another.
   const [, forceRerender] = useReducer(x => x + 1, 0)
-  useEffect(() => onGrowthBookRefresh(forceRerender), [])
 
   const model = parseUserSpecifiedModel(
     mainLoopModelForSession ??

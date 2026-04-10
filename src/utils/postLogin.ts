@@ -5,7 +5,6 @@ import {
 } from '../bridge/trustedDevice.js'
 import { refreshPolicyLimits } from '../services/policyLimits/index.js'
 import { refreshRemoteManagedSettings } from '../services/remoteManagedSettings/index.js'
-import { refreshGrowthBookAfterAuthChange } from '../services/runtimeConfig/growthbook.js'
 import { isFirstPartyAnthropicBaseUrl } from './model/providers.js'
 import { resetUserCache } from './user.js'
 
@@ -29,7 +28,6 @@ export function runPostLoginEffects(): void {
 
   void refreshRemoteManagedSettings()
   void refreshPolicyLimits()
-  refreshGrowthBookAfterAuthChange()
   clearTrustedDeviceToken()
   void enrollTrustedDevice()
 }

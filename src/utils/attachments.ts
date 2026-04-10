@@ -216,7 +216,6 @@ import {
   getEffectiveContextWindowSize,
   isAutoCompactEnabled,
 } from '../services/compact/autoCompact.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import {
   hasInstructionsLoadedHook,
   executeInstructionsLoadedHooks,
@@ -1749,7 +1748,6 @@ export function memoryFilesToAttachments(
         isPartialView: memoryFile.contentDiffersFromDisk,
       })
 
-
       // Fire InstructionsLoaded hook for audit/observability (fire-and-forget)
       if (shouldFireHook && isInstructionsMemoryType(memoryFile.type)) {
         const loadReason = memoryFile.globs
@@ -1820,11 +1818,7 @@ async function getNestedMemoryAttachmentsForFile(
       originalCwd,
     )
 
-    const skipProjectLevel = getFeatureValue_CACHED_MAY_BE_STALE(
-      'tengu_paper_halyard',
-      false,
-    )
-
+    const skipProjectLevel = false
     // Phase 3: Process nested directories (CWD → target)
     // Each directory gets: CLAUDE.md + unconditional rules + conditional rules
     for (const dir of nestedDirs) {
@@ -2364,8 +2358,7 @@ export function startRelevantMemoryPrefetch(
 ): MemoryPrefetch | undefined {
   if (
     !isAutoMemoryEnabled() ||
-    !getFeatureValue_CACHED_MAY_BE_STALE('tengu_moth_copse', false)
-  ) {
+    !false) {
     return undefined
   }
 
@@ -2501,7 +2494,6 @@ export function collectRecentSuccessfulTools(
   }
   return [...succeeded].filter(t => !failed.has(t))
 }
-
 
 /**
  * Filters prefetched memory attachments to exclude memories the model already
@@ -3932,7 +3924,7 @@ export function getCompactionReminderAttachment(
   messages: Message[],
   model: string,
 ): Attachment[] {
-  if (!getFeatureValue_CACHED_MAY_BE_STALE('tengu_marble_fox', false)) {
+  if (!false) {
     return []
   }
 
@@ -3981,7 +3973,6 @@ export function getContextEfficiencyAttachment(
 
   return [{ type: 'context_efficiency' }]
 }
-
 
 function isFileReadDenied(
   filePath: string,

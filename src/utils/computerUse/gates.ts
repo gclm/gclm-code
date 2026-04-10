@@ -1,6 +1,5 @@
 import type { CoordinateMode, CuSubGates } from '@ant/computer-use-mcp/types'
 
-import { getDynamicConfig_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import { getSubscriptionType } from '../auth.js'
 import { isEnvTruthy } from '../envUtils.js'
 

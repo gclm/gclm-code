@@ -6,7 +6,6 @@
  * workSecret.ts without pulling in these retag functions.
  *
  * The isCseShimEnabled kill switch is injected via setCseShimGate() to avoid
- * a static import of bridgeEnabled.ts → growthbook.ts → config.ts — all
  * banned from the sdk.mjs bundle (scripts/build-agent-sdk.sh). Callers that
  * already import bridgeEnabled.ts register the gate; the SDK path never does,
  * so the shim defaults to active (matching isCseShimEnabled()'s own default).

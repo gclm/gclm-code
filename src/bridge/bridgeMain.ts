@@ -3,7 +3,6 @@ import { randomUUID } from 'crypto'
 import { hostname, tmpdir } from 'os'
 import { basename, join, resolve } from 'path'
 import { getRemoteSessionUrl } from '../constants/product.js'
-import { checkGate_CACHED_OR_BLOCKING } from '../services/runtimeConfig/growthbook.js'
 import {
   type SafeEventValue,
   logEvent,
@@ -92,8 +91,7 @@ const SPAWN_SESSIONS_DEFAULT = 32
  * disk cache for next time.
  */
 async function isMultiSessionSpawnEnabled(): Promise<boolean> {
-  return checkGate_CACHED_OR_BLOCKING('tengu_ccr_bridge_multi_session')
-}
+  return false}
 
 /**
  * Returns the threshold for detecting system sleep/wake in the poll loop.

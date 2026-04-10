@@ -87,7 +87,6 @@ import {
   tokenCountWithEstimation,
 } from './utils/tokens.js'
 import { ESCALATED_MAX_TOKENS } from './utils/context.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from './services/runtimeConfig/growthbook.js'
 import { SLEEP_TOOL_NAME } from './tools/SleepTool/prompt.js'
 import { executePostSamplingHooks } from './utils/hooks/postSamplingHooks.js'
 import { executeStopFailureHooks } from './utils/hooks.js'
@@ -1236,10 +1235,7 @@ async function* queryLoop(
         // override check), then falls through to multi-turn recovery if
         // 64k also hits the cap.
         // 3P default: false (not validated on Bedrock/Vertex)
-        const capEnabled = getFeatureValue_CACHED_MAY_BE_STALE(
-          'tengu_otk_slot_v1',
-          false,
-        )
+        const capEnabled = false
         if (
           capEnabled &&
           maxOutputTokensOverride === undefined &&
@@ -1405,7 +1401,6 @@ async function* queryLoop(
     let updatedToolUseContext = toolUseContext
 
     queryCheckpoint('query_tool_execution_start')
-
 
     if (streamingToolExecutor) {
       logEvent('tengu_streaming_tool_execution_used', {
@@ -1656,7 +1651,6 @@ async function* queryLoop(
       }
       pendingMemoryPrefetch.consumedOnIteration = turnCount - 1
     }
-
 
     // Inject prefetched skill discovery. collectSkillDiscoveryPrefetch emits
     // hidden_by_main_turn — true when the prefetch resolved before this point

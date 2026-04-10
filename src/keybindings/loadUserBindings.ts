@@ -13,7 +13,6 @@ import chokidar, { type FSWatcher } from 'chokidar'
 import { readFileSync } from 'fs'
 import { readFile, stat } from 'fs/promises'
 import { dirname, join } from 'path'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 import { logEvent } from '../services/analytics/index.js'
 import { registerCleanup } from '../utils/cleanupRegistry.js'
 import { logForDebugging } from '../utils/debug.js'
@@ -39,10 +38,7 @@ import {
  * can check the same condition consistently.
  */
 export function isKeybindingCustomizationEnabled(): boolean {
-  return getFeatureValue_CACHED_MAY_BE_STALE(
-    'tengu_keybinding_customization_release',
-    false,
-  )
+  return false
 }
 
 /**

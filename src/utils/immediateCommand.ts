@@ -1,4 +1,3 @@
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/growthbook.js'
 
 /**
  * Whether inference-config commands (/model, /fast, /effort) should execute
@@ -10,6 +9,5 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/runtimeConfig/g
 export function shouldInferenceConfigCommandBeImmediate(): boolean {
   return (
     process.env.USER_TYPE === 'ant' ||
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_immediate_model_command', false)
-  )
+    false)
 }

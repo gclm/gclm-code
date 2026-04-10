@@ -7,7 +7,6 @@ import {
   getIsNonInteractiveSession,
   getSessionBypassPermissionsMode,
 } from '../../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import type { ScopedMcpServerConfig } from '../../services/mcp/types.js'
 import { isInBundledMode } from '../bundledMode.js'
 import { getGlobalConfig, saveGlobalConfig } from '../config.js'
@@ -78,7 +77,7 @@ export function shouldAutoEnableClaudeInChrome(): boolean {
     getIsInteractive() &&
     isChromeExtensionInstalled_CACHED_MAY_BE_STALE() &&
     (process.env.USER_TYPE === 'ant' ||
-      getFeatureValue_CACHED_MAY_BE_STALE('tengu_chrome_auto_enable', false))
+      false)
 
   return shouldAutoEnable
 }

@@ -1,4 +1,3 @@
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 
 /**
  * Runtime gate for /ultrareview. GB config's `enabled` field controls

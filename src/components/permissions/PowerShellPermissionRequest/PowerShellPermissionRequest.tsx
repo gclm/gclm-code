@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, Text, useTheme } from '../../../ink.js';
 import { useKeybinding } from '../../../keybindings/useKeybinding.js';
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../../services/runtimeConfig/growthbook.js';
 import { type SafeEventValue, logEvent } from '../../../services/analytics/index.js';
 import { sanitizeToolNameForLogging } from '../../../services/toolLogging/metadata.js';
 import { getDestructiveCommandWarning } from '../../../tools/PowerShellTool/destructiveCommandWarning.js';
@@ -57,7 +56,7 @@ export function PowerShellPermissionRequest(props: PermissionRequestProps): Reac
     onReject,
     explainerVisible: explainerState.visible
   });
-  const destructiveWarning = getFeatureValue_CACHED_MAY_BE_STALE('tengu_destructive_command_warning', false) ? getDestructiveCommandWarning(command) : null;
+  const destructiveWarning = false? getDestructiveCommandWarning(command) : null;
   const [showPermissionDebug, setShowPermissionDebug] = useState(false);
 
   // Editable prefix — compute static prefix locally (no LLM call).

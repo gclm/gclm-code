@@ -3,7 +3,6 @@ import React, { useMemo, useState } from 'react';
 import type { CommandResultDisplay, LocalJSXCommandContext } from '../../commands.js';
 import { type OptionWithDescription, Select } from '../../components/CustomSelect/select.js';
 import { Dialog } from '../../components/design-system/Dialog.js';
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js';
 import { logEvent } from '../../services/analytics/index.js';
 import { useClaudeAiLimits } from '../../services/claudeAiLimitsHook.js';
 import type { ToolUseContext } from '../../Tool.js';
@@ -49,7 +48,7 @@ function RateLimitOptionsMenu(t0) {
   const isMax = subscriptionType === "max";
   const isMax20x = isMax && rateLimitTier === "default_claude_max_20x";
   const isTeamOrEnterprise = subscriptionType === "team" || subscriptionType === "enterprise";
-  const buyFirst = getFeatureValue_CACHED_MAY_BE_STALE("tengu_jade_anvil_4", false);
+  const buyFirst = false;
   let t3;
   bb0: {
     let actionOptions;

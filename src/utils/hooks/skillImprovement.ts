@@ -1,6 +1,5 @@
 import { feature } from 'bun:bundle'
 import { getInvokedSkillsForAgent } from '../../bootstrap/state.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/runtimeConfig/growthbook.js'
 import {
   type SafeEventValue,
   type PiiEventValue,
@@ -175,8 +174,7 @@ Output <updates>[]</updates> if no updates are needed.`,
 export function initSkillImprovement(): void {
   if (
     feature('SKILL_IMPROVEMENT') &&
-    getFeatureValue_CACHED_MAY_BE_STALE('tengu_copper_panda', false)
-  ) {
+    false) {
     registerPostSamplingHook(createSkillImprovementHook())
   }
 }
