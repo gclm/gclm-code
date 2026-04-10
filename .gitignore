@@ -26,3 +26,4 @@ gen
 # local logs
 *.log
 /harness/.runtime/
+/.claude/
