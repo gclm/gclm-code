@@ -80,7 +80,6 @@ const coordinatorModeModule = feature('COORDINATOR_MODE') ? require('./coordinat
 // Dead code elimination: conditional import for KAIROS (assistant mode)
 /* eslint-disable @typescript-eslint/no-require-imports */
 const assistantModule = feature('KAIROS') ? require('./assistant/index.js') as typeof import('./assistant/index.js') : null;
-const kairosGate = feature('KAIROS') ? require('./assistant/gate.js') as typeof import('./assistant/gate.js') : null;
 import { relative, resolve } from 'path';
 import { isNonEssentialTrafficDisabled } from 'src/services/runtimeConfig/nonEssentialTraffic.js';
 import { getFeatureValue_CACHED_MAY_BE_STALE } from 'src/services/runtimeConfig/growthbook.js';
@@ -1052,16 +1051,14 @@ async function run(): Promise<CommanderCommand> {
     // re-init the team or override teammateMode/proactive/brief.
     !(options as {
       agentId?: unknown;
-    }).agentId && kairosGate) {
+    }).agentId) {
       if (!checkHasTrustDialogAccepted()) {
         // biome-ignore lint/suspicious/noConsole:: intentional console output
         console.warn(chalk.yellow('Assistant mode disabled: directory is not trusted. Accept the trust dialog and restart.'));
       } else {
-        // Blocking gate check — returns cached `true` instantly; if disk
-        // cache is false/missing, lazily inits GrowthBook and fetches fresh
-        // (max ~5s). --assistant skips the gate entirely (daemon is
-        // pre-entitled).
-        kairosEnabled = assistantModule.isAssistantForced() || (await kairosGate.isKairosEnabled());
+        // Open build has no remote GrowthBook, so skip the entitlement gate
+        // entirely. KAIROS is enabled when compiled with the feature flag.
+        kairosEnabled = true;
         if (kairosEnabled) {
           const opts = options as {
             brief?: boolean;
