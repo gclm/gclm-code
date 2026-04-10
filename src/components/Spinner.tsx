@@ -519,7 +519,7 @@ export function Spinner() {
     }
     let t1;
     if ($[1] !== ref) {
-      t1 = <Box ref={ref} flexWrap="wrap" height={1} width={2}>{t0}</Box>;
+      t1 = <Box ref={ref} flexWrap="wrap" height={1} width={1}>{t0}</Box>;
       $[1] = ref;
       $[2] = t1;
     } else {
@@ -539,7 +539,7 @@ export function Spinner() {
   }
   let t2;
   if ($[5] !== ref || $[6] !== t1) {
-    t2 = <Box ref={ref} flexWrap="wrap" height={1} width={2}>{t1}</Box>;
+    t2 = <Box ref={ref} flexWrap="wrap" height={1} width={1}>{t1}</Box>;
     $[5] = ref;
     $[6] = t1;
     $[7] = t2;

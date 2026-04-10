@@ -242,7 +242,7 @@ function SpinnerModeGlyph(t0) {
       {
         let t1;
         if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-          t1 = <Box width={2}><Text dimColor={true}>{figures.arrowDown}</Text></Box>;
+          t1 = <Box width={1}><Text dimColor={true}>{figures.arrowDown}</Text></Box>;
           $[0] = t1;
         } else {
           t1 = $[0];
@@ -253,7 +253,7 @@ function SpinnerModeGlyph(t0) {
       {
         let t1;
         if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
-          t1 = <Box width={2}><Text dimColor={true}>{figures.arrowUp}</Text></Box>;
+          t1 = <Box width={1}><Text dimColor={true}>{figures.arrowUp}</Text></Box>;
           $[1] = t1;
         } else {
           t1 = $[1];
