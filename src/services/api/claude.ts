@@ -404,9 +404,7 @@ function should1hCacheTTL(querySource?: QuerySource): boolean {
   // would bust the server-side prompt cache (~20K tokens per flip).
   let userEligible = getPromptCache1hEligible()
   if (userEligible === null) {
-    userEligible =
-      process.env.USER_TYPE === 'ant' ||
-      (isClaudeAISubscriber() && !currentLimits.isUsingOverage)
+    userEligible = true
     setPromptCache1hEligible(userEligible)
   }
   if (!userEligible) return false
@@ -453,8 +451,8 @@ function configureEffortParams(
     // Send string effort level as is
     outputConfig.effort = effortValue
     betas.push(EFFORT_BETA_HEADER)
-  } else if (process.env.USER_TYPE === 'ant') {
-    // Numeric effort override - ant-only (uses anthropic_internal)
+  } else {
+    // Numeric effort override - uses anthropic_internal
     const existingInternal =
       (extraBodyParams.anthropic_internal as Record<string, unknown>) || {}
     extraBodyParams.anthropic_internal = {
@@ -1977,10 +1975,7 @@ async function* queryModel(
             usage = updateUsage(usage, part.message?.usage)
             // Capture research from message_start if available (internal only).
             // Always overwrite with the latest value.
-            if (
-              process.env.USER_TYPE === 'ant' &&
-              'research' in (part.message as unknown as Record<string, unknown>)
-            ) {
+            if ('research' in (part.message as unknown as Record<string, unknown>)) {
               research = (part.message as unknown as Record<string, unknown>)
                 .research
             }
@@ -2157,7 +2152,7 @@ async function* queryModel(
             }
             // Capture research from content_block_delta if available (internal only).
             // Always overwrite with the latest value.
-            if (process.env.USER_TYPE === 'ant' && 'research' in part) {
+            if ('research' in part) {
               research = (part as { research: unknown }).research
             }
             break
@@ -2196,8 +2191,7 @@ async function* queryModel(
               type: 'assistant',
               uuid: randomUUID(),
               timestamp: new Date().toISOString(),
-              ...(process.env.USER_TYPE === 'ant' &&
-                research !== undefined && { research }),
+              ...(research !== undefined && { research }),
               ...(advisorModel && { advisorModel }),
             }
             newMessages.push(m)
@@ -2211,7 +2205,6 @@ async function* queryModel(
             // already-yielded messages since message_delta arrives after
             // content_block_stop.
             if (
-              process.env.USER_TYPE === 'ant' &&
               'research' in (part as unknown as Record<string, unknown>)
             ) {
               research = (part as unknown as Record<string, unknown>).research
@@ -2575,10 +2568,9 @@ async function* queryModel(
         type: 'assistant',
         uuid: randomUUID(),
         timestamp: new Date().toISOString(),
-        ...(process.env.USER_TYPE === 'ant' &&
-          research !== undefined && {
-            research,
-          }),
+        ...(research !== undefined && {
+          research,
+        }),
         ...(advisorModel && {
           advisorModel,
         }),
@@ -2672,8 +2664,7 @@ async function* queryModel(
           type: 'assistant',
           uuid: randomUUID(),
           timestamp: new Date().toISOString(),
-          ...(process.env.USER_TYPE === 'ant' &&
-            research !== undefined && { research }),
+          ...(research !== undefined && { research }),
           ...(advisorModel && { advisorModel }),
         }
         newMessages.push(m)

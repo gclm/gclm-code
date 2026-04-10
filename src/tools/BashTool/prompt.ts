@@ -45,17 +45,15 @@ function getCommitAndPRInstructions(): string {
   // hiding are mechanical and work regardless, but the explicit "don't blow
   // your cover" instructions are the last line of defense against the model
   // volunteering an internal codename in a commit message.
-  const undercoverSection =
-    process.env.USER_TYPE === 'ant' && isUndercover()
-      ? getUndercoverInstructions() + '\n'
-      : ''
+  const undercoverSection = isUndercover()
+    ? getUndercoverInstructions() + '\n'
+    : ''
 
   if (!shouldIncludeGitInstructions()) return undercoverSection
 
-  // For ant users, use the short version pointing to skills
-  if (process.env.USER_TYPE === 'ant') {
-    const skillsSection = !isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)
-      ? `For git commits and pull requests, use the \`/commit\` and \`/commit-push-pr\` skills:
+  // Use the short version pointing to skills
+  const skillsSection = !isEnvTruthy(process.env.CLAUDE_CODE_SIMPLE)
+    ? `For git commits and pull requests, use the \`/commit\` and \`/commit-push-pr\` skills:
 - \`/commit\` - Create a git commit with staged changes
 - \`/commit-push-pr\` - Commit, push, and create a pull request
 
@@ -64,8 +62,8 @@ These skills handle git safety protocols, proper commit message formatting, and 
 Before creating a pull request, run \`/simplify\` to review your changes, then test end-to-end (e.g. via \`/tmux\` for interactive features).
 
 `
-      : ''
-    return `${undercoverSection}# Git operations
+    : ''
+  return `${undercoverSection}# Git operations
 
 ${skillsSection}IMPORTANT: NEVER skip hooks (--no-verify, --no-gpg-sign, etc) unless the user explicitly requests it.
 
@@ -73,9 +71,6 @@ Use the gh command via the Bash tool for other GitHub-related tasks including wo
 
 # Other common operations
 - View comments on a Github PR: gh api repos/foo/bar/pulls/123/comments`
-  }
-
-  // For external users, include full inline instructions
   const { commit: commitAttribution, pr: prAttribution } = getAttributionTexts()
 
   return `# Committing changes with git

@@ -844,10 +844,7 @@ export function hasAccessToIDEExtensionDiffFeature(
   )
 }
 
-const EXTENSION_ID =
-  process.env.USER_TYPE === 'ant'
-    ? 'anthropic.claude-code-internal'
-    : 'anthropic.claude-code'
+const EXTENSION_ID = 'anthropic.claude-code-internal'
 
 export async function isIDEExtensionInstalled(
   ideType: IdeType,
@@ -881,27 +878,7 @@ async function installIDEExtension(ideType: IdeType): Promise<string | null> {
     const command = await getVSCodeIDECommand(ideType)
 
     if (command) {
-      if (process.env.USER_TYPE === 'ant') {
-        return await installFromArtifactory(command)
-      }
-      let version = await getInstalledVSCodeExtensionVersion(command)
-      // If it's not installed or the version is older than the one we have bundled,
-      if (!version || lt(version, getClaudeCodeVersion())) {
-        // `code` may crash when invoked too quickly in succession
-        await sleep(500)
-        const result = await execFileNoThrowWithCwd(
-          command,
-          ['--force', '--install-extension', 'anthropic.claude-code'],
-          {
-            env: getInstallationEnv(),
-          },
-        )
-        if (result.code !== 0) {
-          throw new Error(`${result.code}: ${result.error} ${result.stderr}`)
-        }
-        version = getClaudeCodeVersion()
-      }
-      return version
+      return await installFromArtifactory(command)
     }
   }
   // No automatic installation for JetBrains IDEs as it is not supported in native

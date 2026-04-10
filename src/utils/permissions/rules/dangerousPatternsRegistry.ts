@@ -175,20 +175,18 @@ function registerDefaults(): void {
   })
 
   // Anthropic-internal patterns
-  if (process.env.USER_TYPE === 'ant') {
-    registerDangerousPattern({
-      name: 'ant-internal-tools',
-      tools: ['Bash'],
-      patterns: [
-        'fa run', 'coo',
-        'gh', 'gh api',
-        'curl', 'wget',
-        'git', // config core.sshCommand / hooks = arbitrary code
-        'kubectl', 'aws', 'gcloud', 'gsutil',
-      ],
-      severity: 'block-auto',
-    })
-  }
+  registerDangerousPattern({
+    name: 'ant-internal-tools',
+    tools: ['Bash'],
+    patterns: [
+      'fa run', 'coo',
+      'gh', 'gh api',
+      'curl', 'wget',
+      'git', // config core.sshCommand / hooks = arbitrary code
+      'kubectl', 'aws', 'gcloud', 'gsutil',
+    ],
+    severity: 'block-auto',
+  })
 }
 
 // Register defaults on module load

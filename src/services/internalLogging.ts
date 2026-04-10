@@ -15,9 +15,6 @@ import {
  * ...
  */
 const getKubernetesNamespace = memoize(async (): Promise<string | null> => {
-  if (process.env.USER_TYPE !== 'ant') {
-    return null
-  }
   const namespacePath =
     '/var/run/secrets/kubernetes.io/serviceaccount/namespace'
   const namespaceNotFound = 'namespace not found'
@@ -33,9 +30,6 @@ const getKubernetesNamespace = memoize(async (): Promise<string | null> => {
  * Get the OCI container ID from within a running container
  */
 export const getContainerId = memoize(async (): Promise<string | null> => {
-  if (process.env.USER_TYPE !== 'ant') {
-    return null
-  }
   const containerIdPath = '/proc/self/mountinfo'
   const containerIdNotFound = 'container ID not found'
   const containerIdNotFoundInMountinfo = 'container ID not found in mountinfo'
@@ -72,10 +66,6 @@ export async function logPermissionContextForAnts(
   toolPermissionContext: ToolPermissionContext | null,
   moment: 'summary' | 'initialization',
 ): Promise<void> {
-  if (process.env.USER_TYPE !== 'ant') {
-    return
-  }
-
   void logEvent('tengu_internal_record_permission_context', {
     moment:
       moment as SafeEventValue,

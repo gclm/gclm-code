@@ -211,8 +211,8 @@ export function getAllBaseTools(): Tools {
     AskUserQuestionTool,
     SkillTool,
     EnterPlanModeTool,
-    ...(process.env.USER_TYPE === 'ant' ? [ConfigTool] : []),
-    ...(process.env.USER_TYPE === 'ant' ? [TungstenTool] : []),
+    ...([ConfigTool]),
+    ...([TungstenTool]),
     ...(SuggestBackgroundPRTool ? [SuggestBackgroundPRTool] : []),
     ...(WebBrowserTool ? [WebBrowserTool] : []),
     ...(isTodoV2Enabled()
@@ -229,7 +229,7 @@ export function getAllBaseTools(): Tools {
       ? [getTeamCreateTool(), getTeamDeleteTool()]
       : []),
     ...(VerifyPlanExecutionTool ? [VerifyPlanExecutionTool] : []),
-    ...(process.env.USER_TYPE === 'ant' && REPLTool ? [REPLTool] : []),
+    ...(REPLTool ? [REPLTool] : []),
     ...(WorkflowTool ? [WorkflowTool] : []),
     ...(SleepTool ? [SleepTool] : []),
     ...cronTools,

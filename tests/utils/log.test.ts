@@ -246,7 +246,7 @@ describe('log utils', () => {
     expect(sink.logError).not.toHaveBeenCalled()
   })
 
-  test('captures last API request only for main-thread sources and only stores messages for ant users', async () => {
+  test('captures last API request only for main-thread sources and stores messages', async () => {
     const logModule = await loadFreshLogModule()
     const params = {
       model: 'claude-sonnet-4-6',
@@ -263,16 +263,11 @@ describe('log utils', () => {
     expect(getLastAPIRequest()).toBeNull()
     expect(getLastAPIRequestMessages()).toBeNull()
 
-    process.env.USER_TYPE = 'external'
     logModule.captureAPIRequest(params, 'repl_main_thread:outputStyle:custom' as never)
     expect(getLastAPIRequest()).toEqual({
       model: 'claude-sonnet-4-6',
       max_tokens: 256,
     })
-    expect(getLastAPIRequestMessages()).toBeNull()
-
-    process.env.USER_TYPE = 'ant'
-    logModule.captureAPIRequest(params, 'repl_main_thread' as never)
     expect(getLastAPIRequestMessages()).toEqual(params.messages)
   })
 

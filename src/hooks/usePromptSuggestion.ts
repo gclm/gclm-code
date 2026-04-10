@@ -148,7 +148,7 @@ export function usePromptSuggestion({
           Math.round(
             (finalInput.length / (suggestionText?.length || 1)) * 100,
           ) / 100,
-        ...(process.env.USER_TYPE === 'ant' && {
+        ...(suggestionText && {
           suggestion:
             suggestionText as SafeEventValue,
           userInput:

@@ -116,10 +116,7 @@ export function shouldMaintainProjectWorkingDir(): boolean {
  * Check if running on Homespace (ant-internal cloud environment)
  */
 export function isRunningOnHomespace(): boolean {
-  return (
-    process.env.USER_TYPE === 'ant' &&
-    isEnvTruthy(process.env.COO_RUNNING_ON_HOMESPACE)
-  )
+  return isEnvTruthy(process.env.COO_RUNNING_ON_HOMESPACE)
 }
 
 /**
@@ -134,16 +131,13 @@ export function isRunningOnHomespace(): boolean {
  * Used for telemetry to measure auto-mode usage in sensitive environments.
  */
 export function isInProtectedNamespace(): boolean {
-  // USER_TYPE is build-time --define'd; in external builds this block is
-  // DCE'd so the require() and namespace allowlist never appear in the bundle.
-  if (process.env.USER_TYPE === 'ant') {
-    /* eslint-disable @typescript-eslint/no-require-imports */
-    return (
-      require('./protectedNamespace.js') as typeof import('./protectedNamespace.js')
-    ).checkProtectedNamespace()
-    /* eslint-enable @typescript-eslint/no-require-imports */
-  }
-  return false
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  return process.env.USER_TYPE === 'ant'
+    ? (
+        require('./protectedNamespace.js') as typeof import('./protectedNamespace.js')
+      ).checkProtectedNamespace()
+    : false
+  /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
 // @[MODEL LAUNCH]: Add a Vertex region override env var for the new model.

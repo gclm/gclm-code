@@ -29,10 +29,7 @@ export function isFirstPartyAnthropicBaseUrl(): boolean {
   }
   try {
     const host = new URL(baseUrl).host
-    const allowedHosts = ['api.anthropic.com']
-    if (process.env.USER_TYPE === 'ant') {
-      allowedHosts.push('api-staging.anthropic.com')
-    }
+    const allowedHosts = ['api.anthropic.com', 'api-staging.anthropic.com']
     return allowedHosts.includes(host)
   } catch {
     return false

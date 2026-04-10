@@ -131,7 +131,7 @@ describe('slowOperations', () => {
   })
 
   test('selects slow-operation thresholds from env overrides and runtime defaults', async () => {
-    expect(SLOW_OPERATION_THRESHOLD_MS).toBe(Infinity)
+    expect(SLOW_OPERATION_THRESHOLD_MS).toBe(300)
     expect(
       (
         await importFreshSlowOperations({
@@ -163,7 +163,7 @@ describe('slowOperations', () => {
           USER_TYPE: 'external',
         })
       ).threshold,
-    ).toBeNull()
+    ).toBe(300)
   })
 
   test('returns a disposable slow logger on the fast path', () => {

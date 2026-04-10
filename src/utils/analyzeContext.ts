@@ -412,7 +412,7 @@ async function countBuiltInToolTokens(
   // split of the bulk count based on rough schema size estimation). Excludes
   // SkillTool since its tokens are shown in the separate Skills category.
   let systemToolDetails: SystemToolDetail[] = []
-  if (process.env.USER_TYPE === 'ant') {
+  {
     const toolsForBreakdown = alwaysLoadedTools.filter(
       t => !toolMatchesName(t, SKILL_TOOL_NAME),
     )
@@ -1021,10 +1021,7 @@ export async function analyzeContextUsage(
   const systemToolsTokens = builtInToolTokens - skillFrontmatterTokens
   if (systemToolsTokens > 0) {
     cats.push({
-      name:
-        process.env.USER_TYPE === 'ant'
-          ? '[ANT-ONLY] System tools'
-          : 'System tools',
+      name: '[ANT-ONLY] System tools',
       tokens: systemToolsTokens,
       color: 'inactive',
     })
@@ -1350,12 +1347,9 @@ export async function analyzeContextUsage(
     model: runtimeModel,
     memoryFiles: memoryFileDetails,
     mcpTools: mcpToolDetails,
-    deferredBuiltinTools:
-      process.env.USER_TYPE === 'ant' ? deferredBuiltinDetails : undefined,
-    systemTools:
-      process.env.USER_TYPE === 'ant' ? systemToolDetails : undefined,
-    systemPromptSections:
-      process.env.USER_TYPE === 'ant' ? systemPromptSections : undefined,
+    deferredBuiltinTools: deferredBuiltinDetails,
+    systemTools: systemToolDetails,
+    systemPromptSections: systemPromptSections,
     agents: agentDetails,
     slashCommands:
       slashCommandTokens > 0

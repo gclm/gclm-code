@@ -10,11 +10,8 @@ const cost = {
   name: 'cost',
   description: 'Show the total cost and duration of the current session',
   get isHidden() {
-    // Keep visible for Ants even if they're subscribers (they see cost breakdowns)
-    if (process.env.USER_TYPE === 'ant') {
-      return false
-    }
-    return isClaudeAISubscriber()
+    // Keep visible even if they're subscribers (they see cost breakdowns)
+    return false
   },
   supportsNonInteractive: true,
   load: () => import('./cost.js'),

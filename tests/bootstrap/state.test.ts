@@ -83,13 +83,16 @@ describe('bootstrap state', () => {
     dateNowSpy.mockRestore()
   })
 
-  test('ignores slow operations for external users and editor prompts', () => {
-    process.env.USER_TYPE = 'external'
+  test('tracks slow operations and skips editor prompts', () => {
     addSlowOperation('fs.readFile', 10)
-    expect(getSlowOperations()).toEqual([])
+    expect(getSlowOperations()).toContainEqual(
+      expect.objectContaining({ operation: 'fs.readFile', durationMs: 10 }),
+    )
 
-    process.env.USER_TYPE = 'ant'
+    // Editor prompts are always skipped from tracking
     addSlowOperation('exec claude-prompt-tempfile', 1000)
-    expect(getSlowOperations()).toEqual([])
+    expect(getSlowOperations()).not.toContainEqual(
+      expect.objectContaining({ operation: expect.stringContaining('claude-prompt-') }),
+    )
   })
 })

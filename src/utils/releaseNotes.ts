@@ -313,8 +313,8 @@ export async function checkForReleaseNotes(
   lastSeenVersion: string | null | undefined,
   currentVersion: string = MACRO.VERSION,
 ): Promise<{ hasReleaseNotes: boolean; releaseNotes: string[] }> {
-  // For Ant builds, use VERSION_CHANGELOG bundled at build time
-  if (process.env.USER_TYPE === 'ant') {
+  // Use VERSION_CHANGELOG bundled at build time
+  {
     const changelog = MACRO.VERSION_CHANGELOG
     if (changelog) {
       const commits = changelog.trim().split('\n').filter(Boolean)
@@ -361,25 +361,17 @@ export function checkForReleaseNotesSync(
   lastSeenVersion: string | null | undefined,
   currentVersion: string = MACRO.VERSION,
 ): { hasReleaseNotes: boolean; releaseNotes: string[] } {
-  // For Ant builds, use VERSION_CHANGELOG bundled at build time
-  if (process.env.USER_TYPE === 'ant') {
-    const changelog = MACRO.VERSION_CHANGELOG
-    if (changelog) {
-      const commits = changelog.trim().split('\n').filter(Boolean)
-      return {
-        hasReleaseNotes: commits.length > 0,
-        releaseNotes: commits,
-      }
-    }
+  // Use VERSION_CHANGELOG bundled at build time
+  const changelog = MACRO.VERSION_CHANGELOG
+  if (changelog) {
+    const commits = changelog.trim().split('\n').filter(Boolean)
     return {
-      hasReleaseNotes: false,
-      releaseNotes: [],
+      hasReleaseNotes: commits.length > 0,
+      releaseNotes: commits,
     }
   }
-
-  const releaseNotes = getRecentReleaseNotes(currentVersion, lastSeenVersion)
   return {
-    hasReleaseNotes: releaseNotes.length > 0,
-    releaseNotes,
+    hasReleaseNotes: false,
+    releaseNotes: [],
   }
 }

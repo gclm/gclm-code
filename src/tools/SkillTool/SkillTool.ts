@@ -167,19 +167,19 @@ async function executeForkedSkill(
         parentAgentId as SafeEventValue,
     }),
     ...wasDiscoveredField,
-    ...(process.env.USER_TYPE === 'ant' && {
+    ...(command.type === 'prompt' && {
       skill_name:
         commandName as SafeEventValue,
       skill_source:
         command.source as SafeEventValue,
-      ...(command.loadedFrom && {
-        skill_loaded_from:
-          command.loadedFrom as SafeEventValue,
-      }),
-      ...(command.kind && {
-        skill_kind:
-          command.kind as SafeEventValue,
-      }),
+    }),
+    ...(command.loadedFrom && {
+      skill_loaded_from:
+        command.loadedFrom as SafeEventValue,
+    }),
+    ...(command.kind && {
+      skill_kind:
+        command.kind as SafeEventValue,
     }),
     ...(command.pluginInfo && {
       // _PROTO_* routes to PII-tagged plugin_name/marketplace_name BQ columns
@@ -372,10 +372,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
     // Remote canonical skill handling (ant-only experimental). Intercept
     // `_canonical_<slug>` names before local command lookup since remote
     // skills are not in the local command registry.
-    if (
-      feature('EXPERIMENTAL_SKILL_SEARCH') &&
-      process.env.USER_TYPE === 'ant'
-    ) {
+    if (feature('EXPERIMENTAL_SKILL_SEARCH')) {
       const slug = remoteSkillModules!.stripCanonicalPrefix(
         normalizedCommandName,
       )
@@ -487,10 +484,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
     // Placed AFTER the deny loop so a user-configured Skill(_canonical_:*)
     // deny rule is honored (same pattern as safe-properties auto-allow below).
     // The skill content itself is canonical/curated, not user-authored.
-    if (
-      feature('EXPERIMENTAL_SKILL_SEARCH') &&
-      process.env.USER_TYPE === 'ant'
-    ) {
+    if (feature('EXPERIMENTAL_SKILL_SEARCH')) {
       const slug = remoteSkillModules!.stripCanonicalPrefix(commandName)
       if (slug !== null) {
         return {
@@ -600,10 +594,7 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
     // AKI/GCS (with local cache), injects content directly as a user message.
     // Remote skills are declarative markdown so no slash-command expansion
     // (no !command substitution, no $ARGUMENTS interpolation) is needed.
-    if (
-      feature('EXPERIMENTAL_SKILL_SEARCH') &&
-      process.env.USER_TYPE === 'ant'
-    ) {
+    if (feature('EXPERIMENTAL_SKILL_SEARCH')) {
       const slug = remoteSkillModules!.stripCanonicalPrefix(commandName)
       if (slug !== null) {
         return executeRemoteSkill(slug, commandName, parentMessage, context)
@@ -689,21 +680,21 @@ export const SkillTool: Tool<InputSchema, Output, Progress> = buildTool({
           parentAgentId as SafeEventValue,
       }),
       ...wasDiscoveredField,
-      ...(process.env.USER_TYPE === 'ant' && {
+      ...(command?.type === 'prompt' && {
         skill_name:
           commandName as SafeEventValue,
-        ...(command?.type === 'prompt' && {
+        ...(command?.source && {
           skill_source:
             command.source as SafeEventValue,
         }),
-        ...(command?.loadedFrom && {
-          skill_loaded_from:
-            command.loadedFrom as SafeEventValue,
-        }),
-        ...(command?.kind && {
-          skill_kind:
-            command.kind as SafeEventValue,
-        }),
+      }),
+      ...(command?.loadedFrom && {
+        skill_loaded_from:
+          command.loadedFrom as SafeEventValue,
+      }),
+      ...(command?.kind && {
+        skill_kind:
+          command.kind as SafeEventValue,
       }),
       ...(command?.type === 'prompt' &&
         command.pluginInfo && {
@@ -1045,12 +1036,10 @@ async function executeRemoteSkill(
     is_remote: true,
     remote_cache_hit: cacheHit,
     remote_load_latency_ms: latencyMs,
-    ...(process.env.USER_TYPE === 'ant' && {
-      skill_name:
-        commandName as SafeEventValue,
-      remote_slug:
-        slug as SafeEventValue,
-    }),
+    skill_name:
+      commandName as SafeEventValue,
+    remote_slug:
+      slug as SafeEventValue,
   })
 
   recordSkillUsage(commandName)

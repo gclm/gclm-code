@@ -596,7 +596,5 @@ export async function cleanupOldMessageFilesInBackground(): Promise<void> {
   if (removedWorktrees > 0) {
     logEvent('tengu_worktree_cleanup', { removed: removedWorktrees })
   }
-  if (process.env.USER_TYPE === 'ant') {
-    await cleanupNpmCacheForAnthropicPackages()
-  }
+  await cleanupNpmCacheForAnthropicPackages()
 }

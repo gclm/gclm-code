@@ -342,7 +342,7 @@ const COMMANDS = memoize((): Command[] => [
   ...(workflowsCmd ? [workflowsCmd] : []),
   ...(torch ? [torch] : []),
   ...(ultraplan ? [ultraplan] : []),
-  ...(process.env.USER_TYPE === 'ant' && !process.env.IS_DEMO
+  ...(!process.env.IS_DEMO
     ? INTERNAL_ONLY_COMMANDS
     : []),
 ])

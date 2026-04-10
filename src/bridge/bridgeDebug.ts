@@ -3,7 +3,7 @@ import { BridgeFatalError } from './bridgeApi.js'
 import type { BridgeApiClient } from './types.js'
 
 /**
- * Ant-only fault injection for manually testing bridge recovery paths.
+ * Fault injection for manually testing bridge recovery paths.
  *
  * Real failure modes this targets (BQ 2026-03-12, 7-day window):
  *   poll 404 not_found_error   — 147K sessions/week, dead onEnvironmentLost gate
@@ -79,7 +79,7 @@ export function injectBridgeFault(fault: BridgeFault): void {
  * matching fault is queued, throw the specified error instead of calling
  * through. Delegates everything else to the real client.
  *
- * Only called when USER_TYPE === 'ant' — zero overhead in external builds.
+ * Zero overhead in external builds (rawApi passes through unchanged).
  */
 export function wrapApiForFaultInjection(
   api: BridgeApiClient,

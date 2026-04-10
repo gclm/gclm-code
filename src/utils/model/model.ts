@@ -1,9 +1,7 @@
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 /**
  * Ensure that any model codenames introduced here are also added to
- * scripts/excluded-strings.txt to avoid leaking them. Wrap any codename string
- * literals with process.env.USER_TYPE === 'ant' for Bun to remove the codenames
- * during dead code elimination
+ * scripts/excluded-strings.txt to avoid leaking them.
  */
 import { getMainLoopModelOverride } from '../../bootstrap/state.js'
 import {
@@ -177,28 +175,11 @@ export function getRuntimeMainLoopModel(params: {
  * @returns The default model setting to use
  */
 export function getDefaultMainLoopModelSetting(): ModelName | ModelAlias {
-
-  // Ants default to defaultModel from flag config, or Opus 1M if not configured
-  if (process.env.USER_TYPE === 'ant') {
-    return (
-      getAntModelOverrideConfig()?.defaultModel ??
-      getDefaultOpusModel() + '[1m]'
-    )
-  }
-
-  // Max users get Opus as default
-  if (isMaxSubscriber()) {
-    return getDefaultOpusModel() + (isOpus1mMergeEnabled() ? '[1m]' : '')
-  }
-
-  // Team Premium gets Opus (same as Max)
-  if (isTeamPremiumSubscriber()) {
-    return getDefaultOpusModel() + (isOpus1mMergeEnabled() ? '[1m]' : '')
-  }
-
-  // PAYG (1P and 3P), Enterprise, Team Standard, and Pro get Sonnet as default
-  // Note that PAYG (3P) may default to an older Sonnet model
-  return getDefaultSonnetModel()
+  // Default to defaultModel from flag config, or Opus 1M if not configured
+  return (
+    getAntModelOverrideConfig()?.defaultModel ??
+    getDefaultOpusModel() + '[1m]'
+  )
 }
 
 /**
@@ -399,7 +380,7 @@ export function renderModelName(model: ModelName): string {
   if (publicName) {
     return publicName
   }
-  if (process.env.USER_TYPE === 'ant') {
+  {
     const resolved = parseUserSpecifiedModel(model)
     const antModel = resolveAntModel(model)
     if (antModel) {
@@ -484,7 +465,7 @@ export function parseUserSpecifiedModel(
     return getDefaultOpusModel() + (has1mTag ? '[1m]' : '')
   }
 
-  if (process.env.USER_TYPE === 'ant') {
+  {
     const has1mAntTag = has1mContext(normalizedModel)
     const baseAntModel = normalizedModel.replace(/\[1m]$/i, '').trim()
 
@@ -557,12 +538,7 @@ export function isLegacyModelRemapEnabled(): boolean {
 
 export function modelDisplayString(model: ModelSetting): string {
   if (model === null) {
-    if (process.env.USER_TYPE === 'ant') {
-      return `Default for Ants (${renderDefaultModelSetting(getDefaultMainLoopModelSetting())})`
-    } else if (isClaudeAISubscriber()) {
-      return `Default (${getClaudeAiUserDefaultModelDescription()})`
-    }
-    return `Default (${getDefaultMainLoopModel()})`
+    return `Default for Ants (${renderDefaultModelSetting(getDefaultMainLoopModelSetting())})`
   }
   const resolvedModel = parseUserSpecifiedModel(model)
   return model === resolvedModel ? resolvedModel : `${model} (${resolvedModel})`

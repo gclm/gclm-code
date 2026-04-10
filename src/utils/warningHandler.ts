@@ -99,10 +99,8 @@ export function initializeWarningHandler(): void {
         occurrence_count: count + 1,
         classname:
           warning.name as SafeEventValue,
-        ...(process.env.USER_TYPE === 'ant' && {
-          message:
-            warning.message as SafeEventValue,
-        }),
+        message:
+          warning.message as SafeEventValue,
       })
 
       // In debug mode, show all warnings with context

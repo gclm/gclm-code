@@ -161,7 +161,7 @@ export async function initReplBridge(
     return null
   }
 
-  // When CLAUDE_BRIDGE_OAUTH_TOKEN is set (ant-only local dev), the bridge
+  // When CLAUDE_BRIDGE_OAUTH_TOKEN is set (local dev override), the bridge
   // uses that token directly via getBridgeAccessToken() — keychain state is
   // irrelevant. Skip 2b/2c to preserve that decoupling: an expired keychain
   // token shouldn't block a bridge connection that doesn't use it.
@@ -465,7 +465,6 @@ export async function initReplBridge(
   const branch = await getBranch()
   const gitRepoUrl = await getRemoteUrl()
   const sessionIngressUrl =
-    process.env.USER_TYPE === 'ant' &&
     process.env.CLAUDE_BRIDGE_SESSION_INGRESS_URL
       ? process.env.CLAUDE_BRIDGE_SESSION_INGRESS_URL
       : baseUrl

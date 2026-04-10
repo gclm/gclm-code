@@ -947,12 +947,8 @@ export async function runInProcessTeammate(
       // Log agent memory loaded event for in-process teammates
       if (agentDefinition.memory) {
         logEvent('tengu_agent_memory_loaded', {
-          ...(process.env.USER_TYPE === 'ant'
-            ? {
-                agent_type:
-                  agentDefinition.agentType as SafeEventValue,
-              }
-            : {}),
+          agent_type:
+            agentDefinition.agentType as SafeEventValue,
           scope:
             agentDefinition.memory as SafeEventValue,
           source:

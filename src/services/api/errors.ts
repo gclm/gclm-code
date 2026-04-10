@@ -684,20 +684,11 @@ export function getAssistantMessageFromError(
       }
     }
 
-    if (process.env.USER_TYPE === 'ant') {
+    {
       const baseMessage = `API Error: 400 ${error.message}\n\nRun /share and post the JSON file to ${MACRO.FEEDBACK_CHANNEL}.`
       const rewindInstruction = getIsNonInteractiveSession()
         ? ''
         : ' Then, use /rewind to recover the conversation.'
-      return createAssistantAPIErrorMessage({
-        content: baseMessage + rewindInstruction,
-        error: 'invalid_request',
-      })
-    } else {
-      const baseMessage = 'API Error: 400 due to tool use concurrency issues.'
-      const rewindInstruction = getIsNonInteractiveSession()
-        ? ''
-        : ' Run /rewind to recover the conversation.'
       return createAssistantAPIErrorMessage({
         content: baseMessage + rewindInstruction,
         error: 'invalid_request',
@@ -747,11 +738,10 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for invalid model name error for Ant users. Gclm Code may be
-  // defaulting to a custom internal-only model for Ants, and there might be
-  // Ants using new or unknown org IDs that haven't been gated in.
+  // Check for invalid model name error. Gclm Code may be
+  // defaulting to a custom internal-only model, and there might be
+  // users using new or unknown org IDs that haven't been gated in.
   if (
-    process.env.USER_TYPE === 'ant' &&
     !process.env.ANTHROPIC_MODEL &&
     error instanceof Error &&
     error.message.toLowerCase().includes('invalid model name')

@@ -174,9 +174,8 @@ export function createAutoModeEvaluator(
         clearClassifierChecking(toolUseID)
       }
 
-      // Error dump notification for ants
+      // Error dump notification
       if (
-        process.env.USER_TYPE === 'ant' &&
         classifierResult.errorDumpPath &&
         context.addNotification
       ) {

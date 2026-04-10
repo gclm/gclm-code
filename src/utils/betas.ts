@@ -163,9 +163,7 @@ export function modelSupportsAutoMode(model: string): boolean {
     // External: firstParty-only at launch (PI probes not wired for
     // Bedrock/Vertex/Foundry yet). Checked before allowModels so the GB
     // override can't enable auto mode on unsupported providers.
-    if (process.env.USER_TYPE !== 'ant' && getAPIProvider() !== 'firstParty') {
-      return false
-    }
+    // Provider check removed (previously gated non-ant users to firstParty only)
     // GrowthBook override: tengu_auto_mode_config.allowModels force-enables
     // auto mode for listed models, bypassing the denylist/allowlist below.
     // Exact model IDs (e.g. "claude-strudel-v6-p") match only that model;
@@ -181,13 +179,11 @@ export function modelSupportsAutoMode(model: string): boolean {
     ) {
       return true
     }
-    if (process.env.USER_TYPE === 'ant') {
-      // Denylist: block known-unsupported claude models, allow everything else (ant-internal models etc.)
-      if (m.includes('claude-3-')) return false
-      // claude-*-4 not followed by -[6-9]: blocks bare -4, -4-YYYYMMDD, -4@, -4-0 thru -4-5
-      if (/claude-(opus|sonnet|haiku)-4(?!-[6-9])/.test(m)) return false
-      return true
-    }
+    // Denylist: block known-unsupported claude models, allow everything else (ant-internal models etc.)
+    if (m.includes('claude-3-')) return false
+    // claude-*-4 not followed by -[6-9]: blocks bare -4, -4-YYYYMMDD, -4@, -4-0 thru -4-5
+    if (/claude-(opus|sonnet|haiku)-4(?!-[6-9])/.test(m)) return false
+    return true
     // External builds: allow all models on first-party provider paths.
     return true
   }
@@ -239,13 +235,8 @@ export const getAllModelBetas = memoize((model: string): string[] => {
 
   if (!isHaiku) {
     betaHeaders.push(CLAUDE_CODE_20250219_BETA_HEADER)
-    if (
-      process.env.USER_TYPE === 'ant' &&
-      process.env.CLAUDE_CODE_ENTRYPOINT === 'cli'
-    ) {
-      if (CLI_INTERNAL_BETA_HEADER) {
-        betaHeaders.push(CLI_INTERNAL_BETA_HEADER)
-      }
+    if (CLI_INTERNAL_BETA_HEADER) {
+      betaHeaders.push(CLI_INTERNAL_BETA_HEADER)
     }
   }
   if (isClaudeAISubscriber()) {
@@ -288,7 +279,6 @@ export const getAllModelBetas = memoize((model: string): string[] => {
   // into), unset defers to GB.
   if (
     SUMMARIZE_CONNECTOR_TEXT_BETA_HEADER &&
-    process.env.USER_TYPE === 'ant' &&
     includeFirstPartyOnlyBetas &&
     !isEnvDefinedFalsy(process.env.USE_CONNECTOR_TEXT_SUMMARIZATION) &&
     (isEnvTruthy(process.env.USE_CONNECTOR_TEXT_SUMMARIZATION) ||
@@ -299,8 +289,7 @@ export const getAllModelBetas = memoize((model: string): string[] => {
 
   // Add context management beta for tool clearing (ant opt-in) or thinking preservation
   const antOptedIntoToolClearing =
-    isEnvTruthy(process.env.USE_API_CONTEXT_MANAGEMENT) &&
-    process.env.USER_TYPE === 'ant'
+    isEnvTruthy(process.env.USE_API_CONTEXT_MANAGEMENT)
 
   const thinkingPreservationEnabled = modelSupportsContextManagement(model)
 
@@ -335,7 +324,6 @@ export const getAllModelBetas = memoize((model: string): string[] => {
   // isolate the CC A/B cohort from ~9.2M/week existing v1 senders. Ant-only
   // while the restored JsonToolUseOutputParser soaks.
   if (
-    process.env.USER_TYPE === 'ant' &&
     includeFirstPartyOnlyBetas &&
     tokenEfficientToolsEnabled
   ) {
@@ -408,7 +396,6 @@ export function getMergedBetas(
       baseBetas.push(CLAUDE_CODE_20250219_BETA_HEADER)
     }
     if (
-      process.env.USER_TYPE === 'ant' &&
       process.env.CLAUDE_CODE_ENTRYPOINT === 'cli' &&
       CLI_INTERNAL_BETA_HEADER &&
       !baseBetas.includes(CLI_INTERNAL_BETA_HEADER)

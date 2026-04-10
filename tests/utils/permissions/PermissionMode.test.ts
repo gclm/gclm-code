@@ -55,17 +55,15 @@ describe('PermissionMode', () => {
     expect(toExternalPermissionMode('plan')).toBe('plan')
   })
 
-  test('detects default mode and external mode eligibility by user type', () => {
+  test('detects default mode and external mode eligibility', () => {
     expect(isDefaultMode(undefined)).toBe(true)
     expect(isDefaultMode('default')).toBe(true)
     expect(isDefaultMode('plan')).toBe(false)
 
-    process.env.USER_TYPE = 'external'
-    expect(isExternalPermissionMode('auto' as PermissionMode)).toBe(true)
-
-    process.env.USER_TYPE = 'ant'
+    // 'auto' and 'bubble' are internal modes, not external
     expect(isExternalPermissionMode('plan')).toBe(true)
     expect(isExternalPermissionMode('auto' as PermissionMode)).toBe(false)
     expect(isExternalPermissionMode('bubble' as PermissionMode)).toBe(false)
+    expect(isExternalPermissionMode('default')).toBe(true)
   })
 })

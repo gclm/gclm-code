@@ -41,11 +41,10 @@ export function createMovedToPluginCommand({
       args: string,
       context: ToolUseContext,
     ): Promise<ContentBlockParam[]> {
-      if (process.env.USER_TYPE === 'ant') {
-        return [
-          {
-            type: 'text',
-            text: `This command has been moved to a plugin. Tell the user:
+      return [
+        {
+          type: 'text',
+          text: `This command has been moved to a plugin. Tell the user:
 
 1. To install the plugin, run:
    gc plugin install ${pluginName}@claude-code-marketplace
@@ -55,11 +54,8 @@ export function createMovedToPluginCommand({
 3. For more information, see: https://github.com/anthropics/claude-code-marketplace/blob/main/${pluginName}/README.md
 
 Do not attempt to run the command. Simply inform the user about the plugin installation.`,
-          },
-        ]
-      }
-
-      return getPromptWhileMarketplaceIsPrivate(args, context)
+        },
+      ]
     },
   }
 }

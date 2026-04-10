@@ -146,11 +146,7 @@ function getEmail(): string | undefined {
     return oauthAccount.emailAddress
   }
 
-  // Ant-only fallbacks below (no execSync)
-  if (process.env.USER_TYPE !== 'ant') {
-    return undefined
-  }
-
+  // Fallbacks below (no execSync)
   if (process.env.COO_CREATOR) {
     return `${process.env.COO_CREATOR}@anthropic.com`
   }
@@ -166,11 +162,7 @@ async function getEmailAsync(): Promise<string | undefined> {
     return oauthAccount.emailAddress
   }
 
-  // Ant-only fallbacks below
-  if (process.env.USER_TYPE !== 'ant') {
-    return undefined
-  }
-
+  // Fallbacks below
   if (process.env.COO_CREATOR) {
     return `${process.env.COO_CREATOR}@anthropic.com`
   }

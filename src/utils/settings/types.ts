@@ -710,11 +710,7 @@ export const SettingsSchema = lazySchema(() =>
             'enabled automatically for supported models.',
         ),
       effortLevel: z
-        .enum(
-          process.env.USER_TYPE === 'ant'
-            ? ['low', 'medium', 'high', 'max']
-            : ['low', 'medium', 'high'],
-        )
+        .enum(['low', 'medium', 'high', 'max'])
         .optional()
         .catch(undefined)
         .describe('Persisted effort level for supported models.'),
@@ -837,16 +833,12 @@ export const SettingsSchema = lazySchema(() =>
           'Custom directory for plan files, relative to project root. ' +
             'If not set, defaults to ~/.claude/plans/',
         ),
-      ...(process.env.USER_TYPE === 'ant'
-        ? {
-            classifierPermissionsEnabled: z
-              .boolean()
-              .optional()
-              .describe(
-                'Enable AI-based classification for Bash(prompt:...) permission rules',
-              ),
-          }
-        : {}),
+      classifierPermissionsEnabled: z
+        .boolean()
+        .optional()
+        .describe(
+          'Enable AI-based classification for Bash(prompt:...) permission rules',
+        ),
       ...(feature('PROACTIVE') || feature('KAIROS')
         ? {
             minSleepDurationMs: z
@@ -998,12 +990,8 @@ export const SettingsSchema = lazySchema(() =>
                   .array(z.string())
                   .optional()
                   .describe('Rules for the auto mode classifier deny section'),
-                ...(process.env.USER_TYPE === 'ant'
-                  ? {
-                      // Back-compat alias for ant users; external users use soft_deny
-                      deny: z.array(z.string()).optional(),
-                    }
-                  : {}),
+                // Back-compat alias for ant users; external users use soft_deny
+                deny: z.array(z.string()).optional(),
                 environment: z
                   .array(z.string())
                   .optional()

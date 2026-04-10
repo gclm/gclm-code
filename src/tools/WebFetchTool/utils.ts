@@ -397,12 +397,10 @@ export async function getURLMarkdownContent(
       }
     }
 
-    if (process.env.USER_TYPE === 'ant') {
-      logEvent('tengu_web_fetch_host', {
-        hostname:
-          hostname as SafeEventValue,
-      })
-    }
+    logEvent('tengu_web_fetch_host', {
+      hostname:
+        hostname as SafeEventValue,
+    })
   } catch (e) {
     if (
       e instanceof DomainBlockedError ||

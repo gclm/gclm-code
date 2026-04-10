@@ -120,10 +120,6 @@ function logClassifierResultForAnts(
   descriptions: string[],
   result: ClassifierResult,
 ): void {
-  if (process.env.USER_TYPE !== 'ant') {
-    return
-  }
-
   logEvent('tengu_internal_bash_classifier_result', {
     behavior:
       behavior as SafeEventValue,
@@ -170,8 +166,7 @@ export function getSimpleCommandPrefix(command: string): string | null {
   let i = 0
   while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
     const varName = tokens[i]!.split('=')[0]!
-    const isAntOnlySafe =
-      process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+    const isAntOnlySafe = ANT_ONLY_SAFE_ENV_VARS.has(varName)
     if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
       return null
     }
@@ -246,8 +241,7 @@ export function getFirstWordPrefix(command: string): string | null {
   let i = 0
   while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
     const varName = tokens[i]!.split('=')[0]!
-    const isAntOnlySafe =
-      process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+    const isAntOnlySafe = ANT_ONLY_SAFE_ENV_VARS.has(varName)
     if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
       return null
     }
@@ -325,8 +319,7 @@ function extractPrefixBeforeHeredoc(command: string): string | null {
   let i = 0
   while (i < tokens.length && ENV_VAR_ASSIGN_RE.test(tokens[i]!)) {
     const varName = tokens[i]!.split('=')[0]!
-    const isAntOnlySafe =
-      process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+    const isAntOnlySafe = ANT_ONLY_SAFE_ENV_VARS.has(varName)
     if (!SAFE_ENV_VARS.has(varName) && !isAntOnlySafe) {
       return null
     }
@@ -430,13 +423,11 @@ const SAFE_ENV_VARS = new Set([
 ])
 
 /**
- * ANT-ONLY environment variables that are safe to strip from commands.
- * These are only enabled when USER_TYPE === 'ant'.
+ * Additional environment variables that are safe to strip from commands.
  *
  * SECURITY: These env vars are stripped before permission-rule matching, which
  * means `DOCKER_HOST=tcp://evil.com docker ps` matches a `Bash(docker ps:*)`
- * rule after stripping. This is INTENTIONALLY ANT-ONLY (gated at line ~380)
- * and MUST NEVER ship to external users. DOCKER_HOST redirects the Docker
+ * rule after stripping. DOCKER_HOST redirects the Docker
  * daemon endpoint — stripping it defeats prefix-based permission restrictions
  * by hiding the network endpoint from the permission check. KUBECONFIG
  * similarly controls which cluster kubectl talks to. These are convenience
@@ -587,8 +578,7 @@ export function stripSafeWrappers(command: string): string {
     const envVarMatch = stripped.match(ENV_VAR_PATTERN)
     if (envVarMatch) {
       const varName = envVarMatch[1]!
-      const isAntOnlySafe =
-        process.env.USER_TYPE === 'ant' && ANT_ONLY_SAFE_ENV_VARS.has(varName)
+      const isAntOnlySafe = ANT_ONLY_SAFE_ENV_VARS.has(varName)
       if (SAFE_ENV_VARS.has(varName) || isAntOnlySafe) {
         stripped = stripped.replace(ENV_VAR_PATTERN, '')
       }

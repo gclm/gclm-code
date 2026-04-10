@@ -487,7 +487,7 @@ export function logSuggestionOutcome(
     }),
     ...(!wasAccepted && { timeToIgnoreMs: timeMs }),
     similarity,
-    ...(process.env.USER_TYPE === 'ant' && {
+    ...(suggestion && {
       suggestion:
         suggestion as SafeEventValue,
       userInput:
@@ -514,8 +514,7 @@ export function logSuggestionSuppressed(
       reason as SafeEventValue,
     prompt_id:
       resolvedPromptId as SafeEventValue,
-    ...(process.env.USER_TYPE === 'ant' &&
-      suggestion && {
+    ...(suggestion && {
         suggestion:
           suggestion as SafeEventValue,
       }),

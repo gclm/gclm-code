@@ -343,7 +343,7 @@ export function groupHooksByEventAndMatcher(
               pluginName: matcher.pluginId,
             })
           }
-        } else if (process.env.USER_TYPE === 'ant') {
+        } else {
           eventGroup[matcherKey] ??= []
           for (const _hook of matcher.hooks) {
             eventGroup[matcherKey].push({

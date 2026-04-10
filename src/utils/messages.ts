@@ -2684,12 +2684,10 @@ export function normalizeContentFromAPI(
               toolName: sanitizeToolNameForLogging(contentBlock.name),
               inputLen: contentBlock.input.length,
             })
-            if (process.env.USER_TYPE === 'ant') {
-              logForDebugging(
-                `tool input JSON parse fail: ${contentBlock.input.slice(0, 200)}`,
-                { level: 'warn' },
-              )
-            }
+            logForDebugging(
+              `tool input JSON parse fail: ${contentBlock.input.slice(0, 200)}`,
+              { level: 'warn' },
+            )
           }
           normalizedInput = parsed ?? {}
         } else {

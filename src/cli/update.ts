@@ -308,11 +308,7 @@ export async function update() {
     process.stderr.write('Try:\n')
     process.stderr.write('  • Check your internet connection\n')
     process.stderr.write('  • Run with --debug flag for more details\n')
-    const packageName =
-      packageUrl ||
-      (process.env.USER_TYPE === 'ant'
-        ? '@anthropic-ai/claude-cli'
-        : '@anthropic-ai/claude-code')
+    const packageName = packageUrl || '@anthropic-ai/claude-cli'
     process.stderr.write(
       `  • Manually check: npm view ${packageName} version\n`,
     )
